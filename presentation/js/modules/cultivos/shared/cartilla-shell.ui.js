@@ -196,6 +196,6 @@ export class CartillaShellUi {
     this.setAuxButtonsDisabled(true);
     this.setLiveStatus(false);
     this.renderExcelInsightEmpty();
-    hydrateLucideIcons(this.root);
+    if (refs.resultsIconEl) hydrateLucideIcons(refs.resultsIconEl);
   }
 }

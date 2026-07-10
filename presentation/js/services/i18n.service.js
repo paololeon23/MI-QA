@@ -76,7 +76,11 @@ class InternationalizationService {
     }
 
     await this.registerLanguageResources(languageCode);
-    this.fallbackDictionary = await this.fetchLanguageDictionary(languageCode);
+    // Reutilizar bundle ya cargado (evita 2º fetch del mismo JSON)
+    if (window.i18next?.getResourceBundle) {
+      const bundle = window.i18next.getResourceBundle(languageCode, "translation");
+      if (bundle) this.fallbackDictionary = bundle;
+    }
 
     if (window.i18next?.isInitialized) {
       await window.i18next.changeLanguage(languageCode);

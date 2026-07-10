@@ -17,6 +17,8 @@ class Router {
     this.isStarted = false;
     this.boundNavigate = () => this.navigate();
     this.navigationAbortController = null;
+    this.prefetchBound = false;
+    this.idlePrefetchDone = false;
   }
 
   async navigate() {
@@ -28,16 +30,20 @@ class Router {
       this.navigationAbortController.abort();
     }
     this.navigationAbortController = new AbortController();
+    const { signal } = this.navigationAbortController;
 
     stateStore.set({ currentRoute: currentHash });
     updateTopbarTitle(routeDefinition.titleKey);
     updateActiveSidebarLink(currentHash);
     updateBreadcrumbModule(currentHash);
 
-    pushSidebarActivity({
-      type: "nav",
-      label: i18nService.translate(routeDefinition.titleKey),
-      detail: currentHash.replace(/^#\//, "")
+    // No bloquear el paint con la actividad del sidebar
+    queueMicrotask(() => {
+      pushSidebarActivity({
+        type: "nav",
+        label: i18nService.translate(routeDefinition.titleKey),
+        detail: currentHash.replace(/^#\//, "")
+      });
     });
 
     const moduleInnerContainer = document.getElementById("dynamicModuleInner");
@@ -45,26 +51,42 @@ class Router {
       return;
     }
 
-    moduleInnerContainer.innerHTML = renderModuleSkeleton();
+    const alreadyCached = moduleLoaderService.isRouteCached(
+      routeDefinition.viewPath,
+      routeDefinition.modulePath
+    );
+
+    // Solo skeleton si aún no está en cache (primera visita)
+    if (!alreadyCached) {
+      moduleInnerContainer.innerHTML = renderModuleSkeleton();
+    }
 
     try {
-      const viewContent = await moduleLoaderService.loadView(
+      const { viewContent, dynamicModule } = await moduleLoaderService.preloadRoute(
         routeDefinition.viewPath,
-        this.navigationAbortController.signal
+        routeDefinition.modulePath,
+        signal
       );
 
-      moduleInnerContainer.innerHTML = `<div class="fade-in-up">${viewContent}</div>`;
-      applyTranslationsToContainer(moduleInnerContainer);
+      if (signal.aborted) return;
 
-      await moduleLoaderService.mountModule(routeDefinition.modulePath, {
-        routeHash: currentHash,
-        language: stateStore.get().currentLanguage
-      });
+      moduleInnerContainer.innerHTML = viewContent;
+      applyTranslationsToContainer(moduleInnerContainer, { hydrateIcons: false });
+
+      await moduleLoaderService.mountModule(
+        routeDefinition.modulePath,
+        {
+          routeHash: currentHash,
+          language: stateStore.get().currentLanguage
+        },
+        dynamicModule
+      );
+
+      this.scheduleIdlePrefetch();
     } catch (navigationError) {
       if (navigationError.name !== "AbortError") {
         moduleInnerContainer.innerHTML = `
-          <div class="module-empty-state fade-in">
-            <img class="module-empty-state__illustration" src="presentation/images/illustrations/ai-automation.svg" alt="" />
+          <div class="module-empty-state">
             <h2 class="module-empty-state__title">${i18nService.translate("errors.moduleLoad")}</h2>
             <p class="module-empty-state__text">${navigationError.message}</p>
           </div>
@@ -73,11 +95,61 @@ class Router {
     }
   }
 
+  /** Prefetch al pasar el mouse / focus sobre links del menú */
+  bindSidebarPrefetch() {
+    if (this.prefetchBound) return;
+    this.prefetchBound = true;
+
+    const prefetchFromLink = (link) => {
+      const href = link.getAttribute("href");
+      if (!href || !routesConfig[href]) return;
+      const route = routesConfig[href];
+      moduleLoaderService.prefetchRoute(route.viewPath, route.modulePath);
+    };
+
+    document.addEventListener(
+      "pointerenter",
+      (event) => {
+        const link = event.target?.closest?.("a[href^='#/']");
+        if (link) prefetchFromLink(link);
+      },
+      true
+    );
+
+    document.addEventListener(
+      "focusin",
+      (event) => {
+        const link = event.target?.closest?.("a[href^='#/']");
+        if (link) prefetchFromLink(link);
+      },
+      true
+    );
+  }
+
+  /** Tras la primera ruta, precarga el resto en idle (todas las pestañas listas) */
+  scheduleIdlePrefetch() {
+    if (this.idlePrefetchDone) return;
+    this.idlePrefetchDone = true;
+
+    const run = () => {
+      Object.values(routesConfig).forEach((route) => {
+        moduleLoaderService.prefetchRoute(route.viewPath, route.modulePath);
+      });
+    };
+
+    if (typeof window.requestIdleCallback === "function") {
+      window.requestIdleCallback(run, { timeout: 2500 });
+    } else {
+      window.setTimeout(run, 800);
+    }
+  }
+
   start() {
     if (!this.isStarted) {
       window.addEventListener("hashchange", this.boundNavigate);
       this.isStarted = true;
     }
+    this.bindSidebarPrefetch();
     this.navigate();
   }
 

@@ -58,11 +58,9 @@ export class ModuleController extends GenericModuleController {
 
 
 
-    applyTranslationsToContainer(root);
+    applyTranslationsToContainer(root, { hydrateIcons: false });
 
     applyAttributeTranslations(appRoot);
-
-    hydrateLucideIcons(root);
 
 
 

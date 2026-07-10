@@ -8,6 +8,11 @@ export function hydrateLucideIcons(root = document) {
     return;
   }
 
+  const scope = root instanceof Element ? root : document;
+  if (!scope.querySelector?.("[data-lucide]")) {
+    return;
+  }
+
   const options = {
     attrs: {
       class: "lucide",

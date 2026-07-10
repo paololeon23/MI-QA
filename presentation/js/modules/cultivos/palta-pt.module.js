@@ -28,9 +28,8 @@ export class ModuleController extends GenericModuleController {
     const appRoot = document.getElementById("agvPtApp");
     if (!root || !appRoot) return;
 
-    applyTranslationsToContainer(root);
+    applyTranslationsToContainer(root, { hydrateIcons: false });
     applyAttributeTranslations(appRoot);
-    hydrateLucideIcons(root);
 
     await this.service.init(appRoot);
     hydrateLucideIcons(root);

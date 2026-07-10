@@ -1,10 +1,16 @@
 import { i18nService } from "../services/i18n.service.js";
 import { hydrateLucideIcons } from "./lucide-icon.util.js";
 
-export function applyTranslationsToContainer(containerElement) {
+/**
+ * @param {ParentNode|null} containerElement
+ * @param {{ hydrateIcons?: boolean }} [options]
+ */
+export function applyTranslationsToContainer(containerElement, options = {}) {
   if (!containerElement) {
     return;
   }
+
+  const { hydrateIcons = true } = options;
 
   const translatableElements = containerElement.querySelectorAll("[data-i18n]");
   translatableElements.forEach((element) => {
@@ -18,5 +24,7 @@ export function applyTranslationsToContainer(containerElement) {
     element.setAttribute("placeholder", i18nService.translate(translationKey));
   });
 
-  hydrateLucideIcons(containerElement);
+  if (hydrateIcons) {
+    hydrateLucideIcons(containerElement);
+  }
 }

@@ -26,14 +26,17 @@ import {
 } from "./palta-mp.validation.js";
 import {
   renderPaltaMpResultsTable,
-  htmlTablaFilasConError,
-  hydrateLucideIcons as hydrateTableIcons
+  htmlTablaFilasConError
 } from "./palta-mp-table.js";
 import {
   buildFilteredSheetData,
   buildFullSheetDataWithErrors,
   writePaltaWorkbook
 } from "./palta-mp-export.js";
+import {
+  buildLazyDateDetailPlaceholders,
+  bindLazyDateDetailTables
+} from "../shared/mp-results-perf.util.js";
 
 function t(key, vars = {}) {
   let text = i18nService.translate(key);
@@ -575,7 +578,6 @@ export class PaltaMpService {
 
     this.lastReviewKey = `MPCP|${fechaISO}`;
     this.syncActionButtons();
-    hydrateLucideIcons(this.root);
 
     if (lotesDuplicados.length) {
       showMpDialog({
@@ -660,21 +662,9 @@ export class PaltaMpService {
       })
       .join("");
 
-    const details = items
-      .filter((item) => item.filasDetalle?.length)
-      .map(
-        (item) => `
-        <section class="agv-mp-date-detail">
-          <header class="agv-mp-date-detail__head">
-            <h4 class="agv-mp-date-detail__title">${htmlEscape(item.fecha)}</h4>
-            <span class="agv-mp-date-detail__meta">${htmlEscape(
-              t("plagasArandano.errorRowsCount", { errors: item.filasConError, total: item.totalFilas })
-            )}</span>
-          </header>
-          ${htmlTablaFilasConError(this.headers, item.filasDetalle, { htmlEscape, t, titled: false })}
-        </section>`
-      )
-      .join("");
+    const details = buildLazyDateDetailPlaceholders(items, htmlEscape, (item) =>
+      t("plagasArandano.errorRowsCount", { errors: item.filasConError, total: item.totalFilas })
+    );
 
     const detailsBlock = details
       ? `<div class="agv-mp-dashboard__details">
@@ -732,7 +722,9 @@ export class PaltaMpService {
         ${detailsBlock}
       </div>`;
     el.hidden = false;
-    hydrateTableIcons(el);
+    bindLazyDateDetailTables(el, items, (item) =>
+      htmlTablaFilasConError(this.headers, item.filasDetalle, { htmlEscape, t, titled: false })
+    );
   }
 
   onReviewAll() {

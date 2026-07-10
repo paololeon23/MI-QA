@@ -19,13 +19,21 @@ const CLAVES_METADATO_COLUMNA = new Set([
   "aplica-a-cartilla"
 ]);
 
+/** Cache en memoria: evita re-fetch de rules JSON en cada visita al módulo. */
+const reglasCache = new Map();
+
 export async function cargarReglasDesdeRuta(rutaRelativa) {
   const ruta = String(rutaRelativa || "").replace(/^\//, "");
+  if (reglasCache.has(ruta)) {
+    return reglasCache.get(ruta);
+  }
   const response = await fetch(ruta);
   if (!response.ok) {
     throw new Error(`No se encontró el archivo de reglas: ${ruta}`);
   }
-  return response.json();
+  const json = await response.json();
+  reglasCache.set(ruta, json);
+  return json;
 }
 
 export async function cargarReglas(cultivo, modulo) {

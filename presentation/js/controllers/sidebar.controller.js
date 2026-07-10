@@ -261,7 +261,7 @@ class SidebarController {
           } else {
             closePrimaryPanelModules();
             setPinnedPrimaryModule(null);
-            updateActiveSidebarLink(hash, "route");
+            updateActiveSidebarLink(hash, "collapse");
           }
           return;
         }
@@ -280,15 +280,17 @@ class SidebarController {
           } else {
             closePrimaryPanelModules();
             setPinnedPrimaryModule(null);
-            updateActiveSidebarLink(hash, "route");
+            updateActiveSidebarLink(hash, "collapse");
           }
           return;
         }
 
         if (!wasExpanded) {
           closePrimaryPanelModules();
+          updateActiveSidebarLink(hash, "route");
+        } else {
+          updateActiveSidebarLink(hash, "collapse");
         }
-        updateActiveSidebarLink(hash, "route");
       });
     });
   }

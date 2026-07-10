@@ -1,3 +1,5 @@
+import { ensureChartJs } from "../utils/ensure-chart.util.js";
+
 class ChartService {
   constructor() {
     this.instances = new Map();
@@ -6,6 +8,10 @@ class ChartService {
   getDevicePixelRatio() {
     const ratio = window.devicePixelRatio || 1;
     return Math.min(Math.max(ratio, 1), 2.5);
+  }
+
+  async ensureReady() {
+    await ensureChartJs();
   }
 
   render(chartId, chartConfiguration) {
@@ -36,6 +42,11 @@ class ChartService {
 
     this.instances.set(chartId, chartInstance);
     return chartInstance;
+  }
+
+  async renderWhenReady(chartId, chartConfiguration) {
+    await this.ensureReady();
+    return this.render(chartId, chartConfiguration);
   }
 
   applyCanvasDimensions(canvasElement, devicePixelRatio = this.getDevicePixelRatio()) {

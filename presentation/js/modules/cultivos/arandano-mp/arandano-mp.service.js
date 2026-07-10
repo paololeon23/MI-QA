@@ -8,6 +8,11 @@ import {
   buildFilteredSheetData,
   buildFullSheetDataWithErrors
 } from "./arandano-mp-export.js";
+import {
+  pickResultColumns,
+  buildLazyDateDetailPlaceholders,
+  bindLazyDateDetailTables
+} from "../shared/mp-results-perf.util.js";
 
 const STICKY_COLUMNS = [0, 1, 6, 9]; // Id, Inspección código, Usuario, Lote
 const FILAS_SKIP = 5;
@@ -826,7 +831,14 @@ export class ArandanoMpService {
           originalIndex: i
         }));
 
-        const filas = sheet.slice(1).filter((row) => row.some((cell) => cell !== "" && cell != null));
+        const colFechaJs = this.colFechaInspeccionJsFor(cartilla);
+        const filas = sheet
+          .slice(1)
+          .filter((row) => row.some((cell) => cell !== "" && cell != null))
+          .map((row) => {
+            row._fechaInspeccionISO = parseExcelDateISO(row[colFechaJs]);
+            return row;
+          });
         if (filas.length) {
           this.cartillaStatus[cartilla] = true;
           this.rawRows.push(...filas);
@@ -1248,7 +1260,8 @@ export class ArandanoMpService {
     const { titled = true } = options;
     if (!filas?.length) return "";
 
-    const columns = this.columnsByCartilla[cartilla] || [];
+    const allColumns = this.columnsByCartilla[cartilla] || [];
+    const columns = pickResultColumns(allColumns, errorMap, filas);
     const thead = columns
       .map((col) => {
         const sticky = isPinnedColumn(col.originalIndex)
@@ -1345,26 +1358,12 @@ export class ArandanoMpService {
       })
       .join("");
 
-    const details = items
-      .filter((item) => item.filasDetalle?.length)
-      .map(
-        (item) => `
-        <section class="agv-mp-date-detail">
-          <header class="agv-mp-date-detail__head">
-            <h4 class="agv-mp-date-detail__title">${htmlEscape(item.fecha)}</h4>
-            <span class="agv-mp-date-detail__meta">${htmlEscape(
-              t("plagasArandano.errorRowsCount", {
-                errors: item.filasConError,
-                total: item.totalFilas
-              })
-            )}</span>
-          </header>
-          ${this.htmlTablaFilasConError(cartilla, item.filasDetalle, item.errorMap, item.duplicateLotes, {
-            titled: false
-          })}
-        </section>`
-      )
-      .join("");
+    const details = buildLazyDateDetailPlaceholders(items, htmlEscape, (item) =>
+      t("plagasArandano.errorRowsCount", {
+        errors: item.filasConError,
+        total: item.totalFilas
+      })
+    );
 
     const detailsBlock = details
       ? `<div class="agv-mp-dashboard__details">
@@ -1422,7 +1421,11 @@ export class ArandanoMpService {
         ${detailsBlock}
       </div>`;
     el.hidden = false;
-    hydrateLucideIcons(el);
+    bindLazyDateDetailTables(el, items, (item) =>
+      this.htmlTablaFilasConError(cartilla, item.filasDetalle, item.errorMap, item.duplicateLotes, {
+        titled: false
+      })
+    );
   }
 
   onReviewAll() {
@@ -1595,7 +1598,8 @@ export class ArandanoMpService {
   renderResultsTable(allRows, filasConError, cartilla, fechaISO) {
     const refs = this.shell.refs;
     const headers = this.headersByCartilla[cartilla] || [];
-    const columns = this.columnsByCartilla[cartilla] || [];
+    const allColumns = this.columnsByCartilla[cartilla] || [];
+    const columns = pickResultColumns(allColumns, this.lastErrorMap, filasConError);
 
     if (refs.resultsHeader) refs.resultsHeader.innerHTML = "";
     if (refs.resultsBody) refs.resultsBody.innerHTML = "";
@@ -1634,20 +1638,23 @@ export class ArandanoMpService {
       const tr = document.createElement("tr");
       tr.className = "agv-mp-row-ok";
       const td = document.createElement("td");
-      td.colSpan = Math.max(headers.length, 1);
+      td.colSpan = Math.max(columns.length || headers.length, 1);
       td.textContent = "No se encontraron errores en esta inspección";
       tr.appendChild(td);
       refs.resultsBody?.appendChild(tr);
     } else {
+      const headerFrag = document.createDocumentFragment();
       columns.forEach((col) => {
         const th = document.createElement("th");
         th.className = "agv-mp-table__col-header";
         th.dataset.colIndex = String(col.originalIndex);
         th.textContent = col.header;
         applyStickyColumnClasses(th, col.originalIndex);
-        refs.resultsHeader?.appendChild(th);
+        headerFrag.appendChild(th);
       });
+      refs.resultsHeader?.appendChild(headerFrag);
 
+      const bodyFrag = document.createDocumentFragment();
       filasConError.forEach((row) => {
         const tr = document.createElement("tr");
         columns.forEach((col) => {
@@ -1660,12 +1667,13 @@ export class ArandanoMpService {
           applyStickyColumnClasses(td, col.originalIndex);
           tr.appendChild(td);
         });
-        refs.resultsBody?.appendChild(tr);
+        bodyFrag.appendChild(tr);
       });
+      refs.resultsBody?.appendChild(bodyFrag);
     }
 
     if (refs.resultsTable) refs.resultsTable.hidden = false;
-    hydrateLucideIcons(this.root);
+    if (refs.resultsIconEl) hydrateLucideIcons(refs.resultsIconEl);
   }
 
   destroy() {

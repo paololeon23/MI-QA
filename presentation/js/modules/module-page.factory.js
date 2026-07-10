@@ -8,7 +8,6 @@ export class GenericModuleController {
     if (!moduleRoot) {
       return;
     }
-    moduleRoot.classList.add("fade-in");
   }
 
   destroy() {}

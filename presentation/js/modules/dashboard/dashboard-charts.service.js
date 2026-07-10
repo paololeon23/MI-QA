@@ -13,7 +13,8 @@ const baseTooltip = {
   cornerRadius: 10
 };
 
-export function renderPlantGrowthChart() {
+export async function renderPlantGrowthChart() {
+  await chartService.ensureReady();
   chartService.render("chartPlantGrowth", {
     type: "line",
     data: {
@@ -80,7 +81,8 @@ export function renderPlantGrowthChart() {
   });
 }
 
-export function renderProductionSummaryChart() {
+export async function renderProductionSummaryChart() {
+  await chartService.ensureReady();
   chartService.render("chartProductionSummary", {
     type: "bar",
     data: {

@@ -950,19 +950,19 @@ function refreshSingleChart(filterKey) {
   const chartFilters = getInicioChartFilters();
 
   requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
+    requestAnimationFrame(async () => {
       if (filterKey === "donut-etapa") {
-        renderInicioDonutCharts(chartFilters.donut);
+        await renderInicioDonutCharts(chartFilters.donut);
         return;
       }
 
       if (filterKey === "varieties-fundo") {
-        renderInicioVarietiesChart(chartFilters.varieties);
+        await renderInicioVarietiesChart(chartFilters.varieties);
         return;
       }
 
       if (filterKey === "etapas-fundo") {
-        renderInicioEtapasChart(chartFilters.etapas);
+        await renderInicioEtapasChart(chartFilters.etapas);
       }
     });
   });
@@ -970,9 +970,9 @@ function refreshSingleChart(filterKey) {
 
 function scheduleChartRender() {
   requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
+    requestAnimationFrame(async () => {
       renderChartFilterControls();
-      renderInicioVarietyCharts(getInicioChartFilters());
+      await renderInicioVarietyCharts(getInicioChartFilters());
       applyTranslationsToContainer(document.getElementById("sectionVarietiesAnalytics"));
     });
   });

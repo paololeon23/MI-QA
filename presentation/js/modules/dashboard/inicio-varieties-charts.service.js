@@ -501,24 +501,28 @@ export function updateInicioChartCenterLabel(filters = {}) {
   centerValue.textContent = formatAreaHa(stats.totalAreaHa);
 }
 
-export function renderInicioDonutCharts(filters = {}) {
+export async function renderInicioDonutCharts(filters = {}) {
+  await chartService.ensureReady();
   updateInicioChartCenterLabel(filters);
   renderInicioFundoChartLegend(filters);
   renderInicioFundoAreaChart(filters);
 }
 
-export function renderInicioVarietiesChart(filters = {}) {
+export async function renderInicioVarietiesChart(filters = {}) {
+  await chartService.ensureReady();
   renderInicioTopVarietiesChart(filters);
 }
 
-export function renderInicioEtapasChart(filters = {}) {
+export async function renderInicioEtapasChart(filters = {}) {
+  await chartService.ensureReady();
   renderInicioEtapaAreaChart(filters);
 }
 
-export function renderInicioVarietyCharts(chartFilters = {}) {
-  renderInicioDonutCharts(chartFilters.donut ?? {});
-  renderInicioVarietiesChart(chartFilters.varieties ?? {});
-  renderInicioEtapasChart(chartFilters.etapas ?? {});
+export async function renderInicioVarietyCharts(chartFilters = {}) {
+  await chartService.ensureReady();
+  await renderInicioDonutCharts(chartFilters.donut ?? {});
+  await renderInicioVarietiesChart(chartFilters.varieties ?? {});
+  await renderInicioEtapasChart(chartFilters.etapas ?? {});
 }
 
 export function destroyInicioVarietyCharts() {

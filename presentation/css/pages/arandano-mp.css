@@ -1465,6 +1465,30 @@
   overflow: hidden;
 }
 
+#agvMpApp .agv-mp-date-detail > summary.agv-mp-date-detail__head {
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+}
+
+#agvMpApp .agv-mp-date-detail > summary.agv-mp-date-detail__head::-webkit-details-marker {
+  display: none;
+}
+
+#agvMpApp details.agv-mp-date-detail[open] > summary.agv-mp-date-detail__head {
+  border-bottom: 1px solid var(--agv-mp-line);
+}
+
+#agvMpApp .agv-mp-date-detail__body {
+  padding: 0.5rem 0.75rem 0.75rem;
+}
+
+#agvMpApp .agv-mp-date-detail__loading {
+  margin: 0.5rem 0;
+  font-size: 0.8125rem;
+  color: var(--agv-mp-muted, #64748b);
+}
+
 #agvMpApp .agv-mp-date-detail__head {
   display: flex;
   align-items: center;

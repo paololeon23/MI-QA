@@ -28,9 +28,8 @@ export class ModuleController extends GenericModuleController {
     const pmparRoot = document.getElementById("pmparApp");
     if (!root || !pmparRoot) return;
 
-    applyTranslationsToContainer(root);
+    applyTranslationsToContainer(root, { hydrateIcons: false });
     applyAttributeTranslations(pmparRoot);
-    hydrateLucideIcons(root);
 
     await this.service.init(pmparRoot);
     hydrateLucideIcons(root);

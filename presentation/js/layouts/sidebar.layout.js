@@ -263,6 +263,31 @@ export function updateActiveSidebarLink(activeHash, focus = "route") {
   const panel = document.querySelector(".sidebar__primary-panel");
   const childInPrimary = panel?.querySelector(`.sidebar-nav-tree__link[href="${activeHash}"]`);
   const primaryLinkMatch = panel?.querySelector(`.sidebar-nav-link[href="${activeHash}"]`);
+
+  // Cierre manual del usuario: no reabrir el grupo aunque la ruta hija siga activa
+  if (focus === "collapse") {
+    const allLinks = document.querySelectorAll(".sidebar-nav-link, .sidebar-nav-tree__link");
+    allLinks.forEach((navigationLink) => {
+      const isActive = navigationLink.getAttribute("href") === activeHash;
+      navigationLink.classList.toggle("is-active", isActive);
+    });
+    syncSidebarGroupActiveStates(activeHash);
+    applyPrimaryPanelExclusivity(activeHash, "route");
+
+    const applicationRoot = document.getElementById("applicationRoot");
+    const cropMatch = activeHash.match(/#\/([^/]+)/);
+    const cropId = cropMatch?.[1];
+    const knownCrops = ["uva", "arandano", "esparrago", "palta"];
+    if (applicationRoot) {
+      if (knownCrops.includes(cropId)) {
+        applicationRoot.dataset.activeCrop = cropId;
+      } else {
+        delete applicationRoot.dataset.activeCrop;
+      }
+    }
+    return;
+  }
+
   const keepModuleOpen = focus === "module" || Boolean(childInPrimary);
 
   if (!keepModuleOpen) {

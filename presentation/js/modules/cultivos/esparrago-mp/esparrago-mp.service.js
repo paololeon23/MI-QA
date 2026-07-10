@@ -10,6 +10,8 @@ import {
 } from "./esparrago-mp-export.js";
 
 const STICKY_COLUMNS = [0, 1, 6, 9]; // Id, Inspección código, Usuario, Lote
+/** Columnas de contexto siempre visibles en la tabla de errores (JS 0-based). */
+const CONTEXT_COLUMNS_JS = [0, 1, 6, 9, 10]; // + Cant Muestra
 const FILAS_SKIP = 5;
 
 /** Columnas Excel (1-based) para verificación visual de sumas en tabla de revisión */
@@ -221,10 +223,34 @@ function computeFechaLmrMayoritaria(rows, colLmrJs) {
 
 function rowToRegistro(row, filaNum) {
   const _cols = {};
-  row.forEach((val, idx) => {
-    _cols[String(idx + 1)] = val ?? "";
-  });
+  const len = row.length;
+  for (let idx = 0; idx < len; idx++) {
+    _cols[String(idx + 1)] = row[idx] ?? "";
+  }
   return { fila: filaNum, _cols };
+}
+
+/** Solo sticky + contexto + columnas con error en las filas mostradas (evita pintar ~189 cols). */
+function pickResultColumns(allColumns, errorMap, filas) {
+  const needed = new Set(CONTEXT_COLUMNS_JS);
+  filas.forEach((row) => {
+    const filaMap = errorMap?.get(row._filaNum);
+    if (!filaMap) return;
+    filaMap.forEach((_err, colNum) => needed.add(colNum - 1));
+  });
+  return allColumns.filter((col) => needed.has(col.originalIndex));
+}
+
+function groupRowsByInspectionDate(rows, colFechaJs) {
+  const byDate = new Map();
+  rows.forEach((row) => {
+    const iso = row._fechaInspeccionISO || parseExcelDateISO(row[colFechaJs]);
+    if (!iso) return;
+    if (!row._fechaInspeccionISO) row._fechaInspeccionISO = iso;
+    if (!byDate.has(iso)) byDate.set(iso, []);
+    byDate.get(iso).push(row);
+  });
+  return byDate;
 }
 
 function buildCompuestaColumnMap(reglas) {
@@ -481,6 +507,7 @@ export class EsparragoMpService {
     return this.rawRows.map((row, idx) => {
       const copy = [...row];
       copy._filaNum = idx + 1;
+      if (row._fechaInspeccionISO) copy._fechaInspeccionISO = row._fechaInspeccionISO;
       return copy;
     });
   }
@@ -494,15 +521,9 @@ export class EsparragoMpService {
     const colLoteJs = this.colLoteJsFor(cartilla);
     const reglas = this.getReglas(cartilla);
     const compuestaMap = this.compuestaMapFor(cartilla);
+    const byDate = groupRowsByInspectionDate(rows, colFechaInspeccionJs);
 
-    const fechas = [
-      ...new Set(rows.map((r) => parseExcelDateISO(r[colFechaInspeccionJs])).filter(Boolean))
-    ];
-
-    fechas.forEach((fechaISO) => {
-      const fechaRows = rows.filter(
-        (r) => parseExcelDateISO(r[colFechaInspeccionJs]) === fechaISO
-      );
+    byDate.forEach((fechaRows) => {
       const fechaLmrMayoritaria = computeFechaLmrMayoritaria(fechaRows, colFechaLmrJs);
       const registros = fechaRows.map((row) => rowToRegistro(row, row._filaNum));
       const resultado = analizarReporte(
@@ -556,10 +577,11 @@ export class EsparragoMpService {
   getRowsForCartillaFecha(cartilla, fechaISO) {
     const colFechaJs = this.colFechaInspeccionJsFor(cartilla);
     return this.rawRows
-      .filter((r) => parseExcelDateISO(r[colFechaJs]) === fechaISO)
+      .filter((r) => (r._fechaInspeccionISO || parseExcelDateISO(r[colFechaJs])) === fechaISO)
       .map((row, idx) => {
         const copy = [...row];
         copy._filaNum = idx + 1;
+        copy._fechaInspeccionISO = row._fechaInspeccionISO || fechaISO;
         return copy;
       });
   }
@@ -902,7 +924,14 @@ export class EsparragoMpService {
           originalIndex: i
         }));
 
-        const filas = sheet.slice(1).filter((row) => row.some((cell) => cell !== "" && cell != null));
+        const colFechaJs = this.colFechaInspeccionJsFor(cartilla);
+        const filas = sheet
+          .slice(1)
+          .filter((row) => row.some((cell) => cell !== "" && cell != null))
+          .map((row) => {
+            row._fechaInspeccionISO = parseExcelDateISO(row[colFechaJs]);
+            return row;
+          });
         if (filas.length) {
           this.cartillaStatus[cartilla] = true;
           this.rawRows.push(...filas);
@@ -983,20 +1012,22 @@ export class EsparragoMpService {
 
   detectMissingInspectionDates() {
     const errors = [];
+    const cartilla = "MPES";
+    const regla = (this.getReglas(cartilla)?.["validaciones-carga"] || []).find(
+      (v) => v.tipo === "aviso-fecha-inspeccion-faltante"
+    );
+    const colJs =
+      (regla?.columna || this.getCfgCartilla(cartilla)["columna-fecha-inspeccion"] || 41) - 1;
+    const colsMostrar = regla?.["columnas-mostrar"] || [1, 10];
+    const idJs = (colsMostrar[0] || 1) - 1;
+    const loteJs = (colsMostrar[1] || 10) - 1;
 
     this.rawRows.forEach((r) => {
-      const cartilla = "MPES";
-      const regla = (this.getReglas(cartilla)?.["validaciones-carga"] || []).find(
-        (v) => v.tipo === "aviso-fecha-inspeccion-faltante"
-      );
-      const colJs =
-        (regla?.columna || this.getCfgCartilla(cartilla)["columna-fecha-inspeccion"] || 41) - 1;
-      const colsMostrar = regla?.["columnas-mostrar"] || [1, 10];
-
-      if (!parseExcelDateISO(r[colJs])) {
+      const iso = r._fechaInspeccionISO || parseExcelDateISO(r[colJs]);
+      if (!iso) {
         errors.push({
-          id: r[(colsMostrar[0] || 1) - 1] || "",
-          lote: r[(colsMostrar[1] || 10) - 1] || ""
+          id: r[idJs] || "",
+          lote: r[loteJs] || ""
         });
       }
     });
@@ -1133,7 +1164,7 @@ export class EsparragoMpService {
     const fechas = [
       ...new Set(
         this.rawRows
-          .map((r) => parseExcelDateISO(r[this.colFechaInspeccionJs]))
+          .map((r) => r._fechaInspeccionISO || parseExcelDateISO(r[this.colFechaInspeccionJs]))
           .filter(Boolean)
       )
     ].sort();
@@ -1165,7 +1196,7 @@ export class EsparragoMpService {
     if (!cartilla || !fechaISO || !lmrSelect) return;
 
     const rows = this.rawRows.filter(
-      (r) => parseExcelDateISO(r[this.colFechaInspeccionJs]) === fechaISO
+      (r) => (r._fechaInspeccionISO || parseExcelDateISO(r[this.colFechaInspeccionJs])) === fechaISO
     );
 
     const lmrDates = rows.map((r) => parseExcelDateISO(r[this.colFechaLmrJs])).filter(Boolean);
@@ -1223,16 +1254,11 @@ export class EsparragoMpService {
     const reglas = this.getReglas(cartilla);
     const compuestaMap = this.compuestaMapFor(cartilla);
     const items = [];
-    const fechas = [
-      ...new Set(
-        cartillaRows.map((r) => parseExcelDateISO(r[colFechaInspeccionJs])).filter(Boolean)
-      )
-    ].sort();
+    const byDate = groupRowsByInspectionDate(cartillaRows, colFechaInspeccionJs);
+    const fechas = [...byDate.keys()].sort();
 
     fechas.forEach((fechaISO) => {
-      const rows = cartillaRows.filter(
-        (r) => parseExcelDateISO(r[colFechaInspeccionJs]) === fechaISO
-      );
+      const rows = byDate.get(fechaISO) || [];
       const fechaLmrMayoritaria = computeFechaLmrMayoritaria(rows, colFechaLmrJs);
       const registros = rows.map((row) => rowToRegistro(row, row._filaNum));
       const resultado = analizarReporte(
@@ -1319,7 +1345,8 @@ export class EsparragoMpService {
     const { titled = true } = options;
     if (!filas?.length) return "";
 
-    const columns = this.columnsByCartilla[cartilla] || [];
+    const allColumns = this.columnsByCartilla[cartilla] || [];
+    const columns = pickResultColumns(allColumns, errorMap, filas);
     const thead =
       columns
         .map((col) => {
@@ -1421,21 +1448,21 @@ export class EsparragoMpService {
     const details = items
       .filter((item) => item.filasDetalle?.length)
       .map(
-        (item) => `
-        <section class="agv-mp-date-detail">
-          <header class="agv-mp-date-detail__head">
+        (item, idx) => `
+        <details class="agv-mp-date-detail" data-todo-detail="${idx}">
+          <summary class="agv-mp-date-detail__head">
             <h4 class="agv-mp-date-detail__title">${htmlEscape(item.fecha)}</h4>
             <span class="agv-mp-date-detail__meta">${htmlEscape(
               t("plagasArandano.errorRowsCount", {
                 errors: item.filasConError,
                 total: item.totalFilas
               })
-            )}</span>
-          </header>
-          ${this.htmlTablaFilasConError(cartilla, item.filasDetalle, item.errorMap, item.duplicateLotes, {
-            titled: false
-          })}
-        </section>`
+            )} · clic para ver</span>
+          </summary>
+          <div class="agv-mp-date-detail__body" data-todo-body="${idx}">
+            <p class="agv-mp-date-detail__loading">Cargando tabla…</p>
+          </div>
+        </details>`
       )
       .join("");
 
@@ -1495,7 +1522,25 @@ export class EsparragoMpService {
         ${detailsBlock}
       </div>`;
     el.hidden = false;
-    hydrateLucideIcons(el);
+
+    const detailItems = items.filter((item) => item.filasDetalle?.length);
+    el.querySelectorAll("details[data-todo-detail]").forEach((detailsEl) => {
+      detailsEl.addEventListener("toggle", () => {
+        if (!detailsEl.open || detailsEl.dataset.loaded === "1") return;
+        const idx = Number(detailsEl.dataset.todoDetail);
+        const item = detailItems[idx];
+        const body = detailsEl.querySelector(`[data-todo-body="${idx}"]`);
+        if (!item || !body) return;
+        body.innerHTML = this.htmlTablaFilasConError(
+          cartilla,
+          item.filasDetalle,
+          item.errorMap,
+          item.duplicateLotes,
+          { titled: false }
+        );
+        detailsEl.dataset.loaded = "1";
+      });
+    });
   }
 
   onReviewAll() {
@@ -1590,10 +1635,11 @@ export class EsparragoMpService {
     }
 
     const rows = this.rawRows
-      .filter((r) => parseExcelDateISO(r[this.colFechaInspeccionJs]) === fechaISO)
+      .filter((r) => (r._fechaInspeccionISO || parseExcelDateISO(r[this.colFechaInspeccionJs])) === fechaISO)
       .map((row, idx) => {
         const copy = [...row];
         copy._filaNum = idx + 1;
+        copy._fechaInspeccionISO = row._fechaInspeccionISO || fechaISO;
         return copy;
       });
 
@@ -1664,7 +1710,8 @@ export class EsparragoMpService {
   renderResultsTable(allRows, filasConError, cartilla, fechaISO) {
     const refs = this.shell.refs;
     const headers = this.headersByCartilla[cartilla] || [];
-    const columns = this.columnsByCartilla[cartilla] || [];
+    const allColumns = this.columnsByCartilla[cartilla] || [];
+    const columns = pickResultColumns(allColumns, this.lastErrorMap, filasConError);
 
     if (refs.resultsHeader) refs.resultsHeader.innerHTML = "";
     if (refs.resultsBody) refs.resultsBody.innerHTML = "";
@@ -1703,21 +1750,24 @@ export class EsparragoMpService {
       const tr = document.createElement("tr");
       tr.className = "agv-mp-row-ok";
       const td = document.createElement("td");
-      td.colSpan = Math.max(headers.length, 1);
+      td.colSpan = Math.max(columns.length || headers.length, 1);
       td.textContent = "No se encontraron errores en esta inspección";
       tr.appendChild(td);
       refs.resultsBody?.appendChild(tr);
     } else {
+      const headerFrag = document.createDocumentFragment();
       columns.forEach((col) => {
         const th = document.createElement("th");
         th.className = "agv-mp-table__col-header";
         th.dataset.colIndex = String(col.originalIndex);
         th.textContent = col.header;
         applyStickyColumnClasses(th, col.originalIndex);
-        refs.resultsHeader?.appendChild(th);
+        headerFrag.appendChild(th);
       });
+      refs.resultsHeader?.appendChild(headerFrag);
       appendSumVerificationHeaders(refs.resultsHeader);
 
+      const bodyFrag = document.createDocumentFragment();
       filasConError.forEach((row) => {
         const tr = document.createElement("tr");
         columns.forEach((col) => {
@@ -1731,12 +1781,13 @@ export class EsparragoMpService {
           tr.appendChild(td);
         });
         appendSumVerificationCells(tr, row);
-        refs.resultsBody?.appendChild(tr);
+        bodyFrag.appendChild(tr);
       });
+      refs.resultsBody?.appendChild(bodyFrag);
     }
 
     if (refs.resultsTable) refs.resultsTable.hidden = false;
-    hydrateLucideIcons(this.root);
+    if (refs.resultsIconEl) hydrateLucideIcons(refs.resultsIconEl);
   }
 
   destroy() {
