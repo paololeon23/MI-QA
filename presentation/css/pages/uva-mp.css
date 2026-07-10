@@ -1,0 +1,76 @@
+/**
+ * Uva MP / Plagas — columnas fijas en orden visual (Id, Inspección, Usuario, Lote).
+ * Subconjunto sin columnas 2–5; evita desalineación header/body al desplazar.
+ */
+#agvMpApp .agv-mp-table.agv-mp-table--uva .agv-mp-sticky-col {
+  position: -webkit-sticky;
+  position: sticky;
+  background: #fff;
+}
+
+#agvMpApp .agv-mp-table.agv-mp-table--uva .agv-mp-sticky-col-0 {
+  left: 0;
+  min-width: 90px;
+}
+
+#agvMpApp .agv-mp-table.agv-mp-table--uva .agv-mp-sticky-col-1 {
+  left: 90px;
+  min-width: 108px;
+}
+
+#agvMpApp .agv-mp-table.agv-mp-table--uva .agv-mp-sticky-col-6 {
+  left: 198px;
+  min-width: 200px;
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#agvMpApp .agv-mp-table.agv-mp-table--uva .agv-mp-sticky-col-9 {
+  left: 398px;
+  min-width: 100px;
+}
+
+#agvMpApp .agv-mp-table.agv-mp-table--uva tbody td.agv-mp-sticky-col-0 {
+  z-index: 4;
+}
+
+#agvMpApp .agv-mp-table.agv-mp-table--uva tbody td.agv-mp-sticky-col-1,
+#agvMpApp .agv-mp-table.agv-mp-table--uva tbody td.agv-mp-sticky-col-6,
+#agvMpApp .agv-mp-table.agv-mp-table--uva tbody td.agv-mp-sticky-col-9 {
+  z-index: 3;
+}
+
+#agvMpApp .agv-mp-table.agv-mp-table--uva thead th.agv-mp-sticky-col {
+  background: #f1f5f9;
+  top: 0;
+  z-index: 8;
+  box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.06);
+}
+
+#agvMpApp .agv-mp-table.agv-mp-table--uva thead th.agv-mp-sticky-col-0 {
+  z-index: 9;
+}
+
+#agvMpApp .agv-mp-table.agv-mp-table--uva thead th.agv-mp-sticky-col-1,
+#agvMpApp .agv-mp-table.agv-mp-table--uva thead th.agv-mp-sticky-col-6,
+#agvMpApp .agv-mp-table.agv-mp-table--uva thead th.agv-mp-sticky-col-9 {
+  z-index: 9;
+}
+
+#agvMpApp .agv-mp-table.agv-mp-table--uva tbody tr:nth-child(even) td.agv-mp-sticky-col {
+  background: #f8fafc;
+}
+
+#agvMpApp .agv-mp-table.agv-mp-table--uva tbody tr:hover td.agv-mp-sticky-col {
+  background: #f1f5f9;
+}
+
+#agvMpApp .agv-mp-table.agv-mp-table--uva tbody td.agv-mp-sticky-col.agv-mp-cell-error-empty {
+  background: var(--agv-mp-err) !important;
+}
+
+#agvMpApp .agv-mp-table.agv-mp-table--uva tbody td.agv-mp-sticky-col.agv-mp-cell-error-value {
+  background: #fee2e2 !important;
+}

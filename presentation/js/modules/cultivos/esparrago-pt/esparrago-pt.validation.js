@@ -1,0 +1,285 @@
+/** Validaciones PT Espárrago — avisos globales y por celda */
+
+import { getPesoRango, getPesoRangosForFormato, resolveClienteKey } from "./esparrago-pt-pesos.catalog.js";
+import { getValidationConfig, getReglasOrigen } from "./esparrago-pt.config.js";
+import {
+  getFailMessageFromReglas,
+  getLongitudExactaDesdeConfig
+} from "../../../../../engine/cartilla-rules.adapter.js";
+import {
+  cellDisplayValue,
+  getCellValidationIssues,
+  paintCellValidation,
+  parseFlexibleNumber
+} from "../../../../../engine/cartilla-cell-validation.js";
+
+const CRITICOS_VACIOS = [9, 10, 37, 49, 50, 53, 64];
+const MERCADOS_VALIDOS = ["USA", "EUROPA", "ASIA"];
+export const LINEA_JS = 26;
+export const LINEA_ASP_JS = 50;
+
+export function resolveLineaAspValue(row) {
+  if (!row) return "";
+  const lineaAsp = cellDisplayValue(row[LINEA_ASP_JS]).trim();
+  if (lineaAsp) return lineaAsp;
+  return cellDisplayValue(row[LINEA_JS]).trim();
+}
+
+export function serialExcelAFecha(serial) {
+  if (!serial || Number.isNaN(Number(serial))) return serial;
+  const fecha = new Date(Math.round((Number(serial) - 25569) * 86400 * 1000));
+  const dia = fecha.getUTCDate().toString().padStart(2, "0");
+  const mes = (fecha.getUTCMonth() + 1).toString().padStart(2, "0");
+  const anio = fecha.getUTCFullYear();
+  return `${dia}/${mes}/${anio}`;
+}
+
+export function formatCellDisplay(val, colIdx, row = null) {
+  if (colIdx === LINEA_ASP_JS && row) return resolveLineaAspValue(row);
+  if ((colIdx === 3 || colIdx === 46) && typeof val === "number") return serialExcelAFecha(val);
+  if (val === null || val === undefined) return "";
+  return String(val);
+}
+
+function normalizeFechaInspeccion(val) {
+  if (typeof val === "number" && Number.isFinite(val)) return serialExcelAFecha(val);
+  return String(val ?? "").trim();
+}
+
+function getJulianoFromDMY(dmy) {
+  const partes = String(dmy || "").trim().split("/");
+  if (partes.length !== 3) return null;
+  const fechaObj = new Date(Number(partes[2]), Number(partes[1]) - 1, Number(partes[0]));
+  const inicioAnio = new Date(fechaObj.getFullYear(), 0, 0);
+  const unDia = 1000 * 60 * 60 * 24;
+  return Math.floor((fechaObj - inicioAnio) / unDia)
+    .toString()
+    .padStart(3, "0");
+}
+
+function hasSapData(fila) {
+  for (let i = 12; i <= 26; i++) {
+    const val = fila[i];
+    if (val !== undefined && val !== null && String(val).trim() !== "") return true;
+  }
+  for (let i = 28; i <= 32; i++) {
+    const val = fila[i];
+    if (val !== undefined && val !== null && String(val).trim() !== "") return true;
+  }
+  return false;
+}
+
+function defectoFueraRango(fila, colIdx, min, max) {
+  const raw = fila[colIdx];
+  if (raw === undefined || raw === null || String(raw).trim() === "") return false;
+  const n = Number.parseFloat(raw);
+  return !Number.isNaN(n) && (n < min || n > max);
+}
+
+function calidadIncompleta(fila) {
+  for (let i = 77; i <= 132; i++) {
+    const val = fila[i];
+    if (val === undefined || val === null || String(val).trim() === "") return true;
+  }
+  return false;
+}
+
+function setCellTitle(td, title, additive = false) {
+  if (!title) return;
+  if (additive && td.title) {
+    if (!td.title.includes(title)) td.title = `${td.title} · ${title}`;
+    return;
+  }
+  if (!td.title) {
+    td.title = title;
+    return;
+  }
+  if (!td.title.includes(title)) td.title = `${td.title} · ${title}`;
+}
+
+export function scanGlobalWarnings(filas) {
+  let errorSAP = false;
+  let errorDefectos = false;
+  let errorCalidad = false;
+
+  filas.forEach((fila) => {
+    if (!errorSAP && hasSapData(fila)) errorSAP = true;
+    if (!errorDefectos && (defectoFueraRango(fila, 40, 0, 20) || defectoFueraRango(fila, 42, 0, 70) || defectoFueraRango(fila, 66, 0, 80))) {
+      errorDefectos = true;
+    }
+    if (!errorCalidad && calidadIncompleta(fila)) errorCalidad = true;
+  });
+
+  return { errorSAP, errorDefectos, errorCalidad };
+}
+
+export function applyCellValidation(td, fila, colIdx, valor) {
+  const valorEfectivo = colIdx === LINEA_ASP_JS ? resolveLineaAspValue(fila) : valor;
+  let cfg = null;
+  let reglas = null;
+  try {
+    cfg = getValidationConfig();
+    reglas = getReglasOrigen() || cfg?._reglasOrigen || null;
+  } catch {
+    cfg = null;
+    reglas = null;
+  }
+
+  const stickyClasses = [...td.classList].filter((cls) => cls.startsWith("agv-pt-sticky-col"));
+  const copyClass = td.classList.contains("agv-pt-cell-copy");
+  td.className = "";
+  stickyClasses.forEach((cls) => td.classList.add(cls));
+  if (copyClass) td.classList.add("agv-pt-cell-copy");
+  td.title = "";
+
+  const ctx = { row: fila };
+  const configIssues = cfg ? getCellValidationIssues(colIdx, valorEfectivo, ctx, cfg) : [];
+  if (configIssues.length) {
+    paintCellValidation(td, configIssues, "agv-pt");
+  }
+
+  const hasEmptyError = configIssues.some((i) => i.kind === "empty");
+  const hasValueError = configIssues.some((i) => i.kind === "value");
+  const valStr = cellDisplayValue(valorEfectivo);
+  const valUpper = valStr.toUpperCase();
+  const valNum = parseFlexibleNumber(valorEfectivo);
+  const longitudLoteEsperada = colIdx === 9 && cfg ? getLongitudExactaDesdeConfig(cfg, 9) : null;
+  const hasLengthError =
+    colIdx === 9 &&
+    longitudLoteEsperada != null &&
+    valUpper &&
+    valUpper.length !== longitudLoteEsperada;
+  const mercado = cellDisplayValue(fila[53]).toUpperCase();
+  const cliente = cellDisplayValue(fila[37]);
+  const formato = cellDisplayValue(fila[49]).toUpperCase().replace(/\s/g, "");
+  const embalaje = cellDisplayValue(fila[71]).toUpperCase();
+  const presentacion = cellDisplayValue(fila[64]);
+  const calibre = cellDisplayValue(fila[36]).toUpperCase();
+
+  const markEmpty = (title) => {
+    td.classList.add("agv-pt-cell-error-empty");
+    setCellTitle(td, title);
+  };
+
+  const markValue = (title, { additive = false } = {}) => {
+    td.classList.remove("agv-pt-cell-error-empty");
+    td.classList.add("agv-pt-cell-error-value");
+    setCellTitle(td, title, additive);
+  };
+
+  const failMsg = (col, fallback, extras = {}, tipoFallo = null) =>
+    getFailMessageFromReglas(reglas, col, fallback, extras, tipoFallo);
+
+  if (!hasEmptyError && CRITICOS_VACIOS.includes(colIdx) && !valUpper) {
+    markEmpty(failMsg(colIdx, "Este campo es obligatorio y está vacío"));
+    return;
+  }
+
+  if (!hasValueError && colIdx === 40 && valStr !== "" && Number.isFinite(valNum) && (valNum < 0 || valNum > 20)) {
+    markValue(failMsg(colIdx, "El valor debe estar entre 0 y 20"));
+    return;
+  }
+
+  if (!hasValueError && colIdx === 42 && valStr !== "" && Number.isFinite(valNum) && (valNum < 0 || valNum > 70)) {
+    markValue(failMsg(colIdx, "El valor debe estar entre 0 y 70"));
+    return;
+  }
+
+  if (!hasValueError && colIdx === 66 && valStr !== "" && Number.isFinite(valNum) && (valNum < 0 || valNum > 80)) {
+    markValue(failMsg(colIdx, "El valor debe estar entre 0 y 80"));
+    return;
+  }
+
+  if (!hasEmptyError && colIdx >= 77 && colIdx <= 132 && !valUpper) {
+    markEmpty(failMsg(colIdx, "Este campo no debe estar vacío (columnas de datos obligatorios)"));
+    return;
+  }
+
+  const clienteKey = resolveClienteKey(mercado, cliente, calibre);
+  const rangosFormato = getPesoRangosForFormato(mercado, cliente, formato, calibre);
+  const rango = getPesoRango(mercado, cliente, formato, calibre, presentacion);
+
+  if (colIdx === 49 && clienteKey && !rangosFormato.length) {
+    td.classList.add("agv-pt-cell-warn-format");
+    td.title = `Formato ${formato} no registrado para ${clienteKey}`;
+  }
+
+  if (colIdx >= 58 && colIdx <= 62 && Number.isFinite(valNum) && rango) {
+    if (valNum < rango.min || valNum > rango.max) {
+      markValue(
+        calibre === "SMALL"
+          ? `Peso incorrecto: El formato ${formato} con Calibre SMALL debe pesar entre ${rango.min}g y ${rango.max}g (Atado)`
+          : `Peso incorrecto: El formato ${formato} para Calibre ${calibre || "Estándar"} debe estar entre ${rango.min}g y ${rango.max}g`
+      );
+      return;
+    }
+  }
+
+  if (colIdx === 71 && rango && embalaje !== rango.tipo) {
+    markValue(`Error de embalaje: Para ${formato} debe ser ${rango.tipo}`);
+    return;
+  }
+
+  if (colIdx === 64 && rangosFormato.length) {
+    const allowed = rangosFormato
+      .map((item) => item.presentacion)
+      .filter((pres) => pres && pres !== "no validar");
+    if (allowed.length && presentacion) {
+      const ok = allowed.some((pres) => presentacion.toUpperCase() === pres.toUpperCase());
+      if (!ok) {
+        markValue(
+          `Presentación incorrecta: Para ${clienteKey} con formato ${formato} debe ser "${allowed.join('" o "')}"`
+        );
+        return;
+      }
+    }
+  } else if (colIdx === 64 && rango && rango.presentacion !== "no validar") {
+    if (presentacion.toUpperCase() !== rango.presentacion.toUpperCase()) {
+      markValue(
+        `Presentación incorrecta: Para ${clienteKey} con formato ${formato} debe ser "${rango.presentacion}"`
+      );
+      return;
+    }
+  }
+
+  if (colIdx === 9 && valUpper && !hasEmptyError) {
+    const longitudEsperada = longitudLoteEsperada ?? 13;
+    let msgError = "";
+    if (!hasLengthError && longitudEsperada != null && valUpper.length !== longitudEsperada) {
+      msgError = failMsg(
+        colIdx,
+        `El lote debe tener exactamente ${longitudEsperada} caracteres (detectados: ${valUpper.length})`,
+        {
+          valor: valStr,
+          texto: valStr,
+          lote: valStr,
+          detectado: valUpper.length,
+          "longitud-detectada": String(valUpper.length)
+        },
+        "longitud"
+      );
+    } else if (!hasLengthError) {
+      const fechaInspeccionStr = normalizeFechaInspeccion(fila[46]);
+      const julianoEsperado = getJulianoFromDMY(fechaInspeccionStr);
+      if (julianoEsperado) {
+        const julianoEnLote = valUpper.slice(-3);
+        if (julianoEnLote !== julianoEsperado) {
+          msgError = `Día juliano incorrecto: para fecha de inspección ${fechaInspeccionStr} el lote debe terminar en ${julianoEsperado} (detectado: ${julianoEnLote})`;
+        }
+      }
+    }
+    if (msgError) {
+      markValue(msgError, { additive: hasLengthError || configIssues.length > 0 });
+      return;
+    }
+  }
+
+  if (colIdx === 10 && !hasValueError && !hasEmptyError && Number.isFinite(valNum) && valNum < 100) {
+    markValue(failMsg(colIdx, "La muestra mínima es de 100 unidades"));
+    return;
+  }
+
+  if (colIdx === 53 && valUpper && !MERCADOS_VALIDOS.includes(valUpper)) {
+    markEmpty(failMsg(colIdx, "Mercado no válido. Solo se permite USA, EUROPA o ASIA"));
+  }
+}

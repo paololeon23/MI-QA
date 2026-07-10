@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 320" fill="none" role="img" aria-label="Campo Olmos AGV">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#E8F0EA"/>
+      <stop offset="100%" stop-color="#F4F7F6"/>
+    </linearGradient>
+    <linearGradient id="field" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#0B2418" stop-opacity="0.08"/>
+      <stop offset="50%" stop-color="#D1F366" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#0B2418" stop-opacity="0.1"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="320" fill="url(#sky)"/>
+  <ellipse cx="520" cy="72" rx="48" ry="48" fill="#D1F366" opacity="0.35"/>
+  <path d="M0 230 Q120 205 240 218 T480 210 T640 220 V320 H0 Z" fill="url(#field)"/>
+  <path d="M0 248 Q160 232 320 242 T640 236" stroke="#0B2418" stroke-width="1.5" opacity="0.12"/>
+  <path d="M40 260 Q200 245 400 255 T620 250" stroke="#0B2418" stroke-width="1" opacity="0.08"/>
+  <g opacity="0.95">
+    <path d="M380 95 L470 55 L560 95 L560 210 L380 210 Z" fill="#ffffff" stroke="#0B2418" stroke-width="2"/>
+    <path d="M380 95 L470 55 L560 95" fill="none" stroke="#0B2418" stroke-width="2"/>
+    <rect x="405" y="120" width="130" height="70" rx="4" fill="#D1F366" opacity="0.35"/>
+    <path d="M405 120 H535" stroke="#0B2418" stroke-width="1" opacity="0.15"/>
+    <path d="M405 155 H535" stroke="#0B2418" stroke-width="1" opacity="0.15"/>
+    <path d="M470 120 V190" stroke="#0B2418" stroke-width="1" opacity="0.15"/>
+  </g>
+  <g opacity="0.9">
+    <path d="M60 130 L130 95 L200 130 L200 215 L60 215 Z" fill="#ffffff" stroke="#0B2418" stroke-width="1.5"/>
+    <path d="M60 130 L130 95 L200 130" fill="none" stroke="#0B2418" stroke-width="1.5"/>
+    <rect x="78" y="148" width="104" height="52" rx="3" fill="#D1F366" opacity="0.4"/>
+  </g>
+  <rect x="230" y="175" width="72" height="40" rx="6" fill="#0B2418" opacity="0.75"/>
+  <rect x="248" y="188" width="36" height="18" rx="3" fill="#D1F366" opacity="0.55"/>
+  <circle cx="248" cy="168" r="11" fill="#0B2418" opacity="0.45"/>
+  <rect x="318" y="198" width="14" height="22" rx="3" fill="#0B2418" opacity="0.2"/>
+  <rect x="338" y="192" width="14" height="28" rx="3" fill="#0B2418" opacity="0.25"/>
+  <rect x="358" y="200" width="14" height="20" rx="3" fill="#0B2418" opacity="0.18"/>
+  <rect x="48" y="228" width="44" height="18" rx="4" fill="#D1F366" opacity="0.65"/>
+  <rect x="100" y="232" width="40" height="16" rx="4" fill="#D1F366" opacity="0.5"/>
+  <rect x="148" y="230" width="42" height="17" rx="4" fill="#D1F366" opacity="0.58"/>
+  <rect x="198" y="234" width="38" height="15" rx="4" fill="#D1F366" opacity="0.45"/>
+  <rect x="500" y="228" width="48" height="16" rx="4" fill="#D1F366" opacity="0.55"/>
+  <rect x="556" y="232" width="44" height="14" rx="4" fill="#D1F366" opacity="0.42"/>
+  <text x="470" y="278" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" font-weight="600" fill="#64748B" opacity="0.85">Olmos · AGV</text>
+</svg>

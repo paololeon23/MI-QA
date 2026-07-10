@@ -1,0 +1,120 @@
+/**
+ * Espárrago PT — columnas fijas contiguas (Id, Inspección, Usuario, Lote).
+ * Anchos y offsets alineados con arándano MP (90 + 108 + 246 + 130); sin huecos 2–5.
+ * Scope: #agvPtApp .agv-pt-table--esparrago
+ */
+
+#agvPtApp .agv-pt-table--esparrago.agv-pt-table--compact {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+#agvPtApp .agv-pt-table--esparrago .agv-pt-sticky-col {
+  position: -webkit-sticky;
+  position: sticky;
+  background: #fff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+
+#agvPtApp .agv-pt-table--esparrago .agv-pt-sticky-col-0 {
+  left: 0;
+  width: 90px;
+  min-width: 90px;
+  max-width: 90px;
+}
+
+#agvPtApp .agv-pt-table--esparrago .agv-pt-sticky-col-1 {
+  left: 90px;
+  width: 108px;
+  min-width: 108px;
+  max-width: 108px;
+}
+
+#agvPtApp .agv-pt-table--esparrago .agv-pt-sticky-col-6 {
+  left: 198px;
+  width: 246px;
+  min-width: 246px;
+  max-width: 246px;
+}
+
+#agvPtApp .agv-pt-table--esparrago .agv-pt-sticky-col-9 {
+  left: 444px;
+  width: 130px;
+  min-width: 130px;
+  max-width: 130px;
+  border-right: 2px solid #cbd5e1;
+  box-shadow: 2px 0 6px rgba(15, 23, 42, 0.08);
+}
+
+#agvPtApp .agv-pt-table--esparrago tbody td.agv-pt-sticky-col-0 {
+  z-index: 4;
+}
+
+#agvPtApp .agv-pt-table--esparrago tbody td.agv-pt-sticky-col-1,
+#agvPtApp .agv-pt-table--esparrago tbody td.agv-pt-sticky-col-6,
+#agvPtApp .agv-pt-table--esparrago tbody td.agv-pt-sticky-col-9 {
+  z-index: 3;
+}
+
+#agvPtApp .agv-pt-table--esparrago tbody tr:nth-child(even) td.agv-pt-sticky-col {
+  background: #f8fafc;
+}
+
+#agvPtApp .agv-pt-table--esparrago tbody tr:hover td.agv-pt-sticky-col {
+  background: #eef4fb;
+}
+
+#agvPtApp .agv-pt-table--esparrago tbody td.agv-pt-sticky-col.agv-pt-cell-error-empty {
+  background: var(--agv-pt-err) !important;
+}
+
+#agvPtApp .agv-pt-table--esparrago tbody td.agv-pt-sticky-col.agv-pt-cell-error-value {
+  background: #fee2e2 !important;
+}
+
+/* Encabezados sticky por encima del scroll horizontal (mismo criterio que arándano MP / uva MP) */
+#agvPtApp .agv-pt-table--esparrago thead th.agv-pt-data-header:not(.agv-pt-sticky-col) {
+  z-index: 4;
+}
+
+#agvPtApp .agv-pt-table--esparrago thead th.agv-pt-sticky-col {
+  position: -webkit-sticky;
+  position: sticky;
+  background: #f1f5f9;
+  top: 0;
+  z-index: 8;
+  box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.06);
+}
+
+#agvPtApp .agv-pt-table--esparrago thead th.agv-pt-sticky-col-0 {
+  z-index: 10;
+}
+
+#agvPtApp .agv-pt-table--esparrago thead th.agv-pt-sticky-col-1,
+#agvPtApp .agv-pt-table--esparrago thead th.agv-pt-sticky-col-6,
+#agvPtApp .agv-pt-table--esparrago thead th.agv-pt-sticky-col-9 {
+  z-index: 9;
+}
+
+#agvPtApp .agv-pt-table--esparrago .agv-pt-data-header {
+  cursor: pointer;
+}
+
+#agvPtApp .agv-pt-table--esparrago .agv-pt-data-header--filter {
+  min-width: 7.5rem;
+}
+
+#agvPtApp .agv-pt-table--esparrago th.agv-pt-data-header--filter[data-excel-col="37"] {
+  min-width: 11rem;
+}
+
+#agvPtApp .agv-pt-table--esparrago th.agv-pt-data-header--filter[data-excel-col="49"] {
+  min-width: 6.5rem;
+}
+
+#agvPtApp .agv-pt-filter-option--invalid {
+  color: #c62828;
+}

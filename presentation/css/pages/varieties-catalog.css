@@ -1,0 +1,575 @@
+/* Catálogo de variedades — Arándanos (tokens alineados con Inicio / AGV) */
+
+.var-catalog-page {
+  --color-submenu-bg: #1f3668;
+  --color-title: #1f3668;
+  --color-active-green: #7de2ff;
+  --color-surface: #ffffff;
+  --color-surface-soft: #f4f7fb;
+  --color-surface-muted: #eef2f8;
+  --color-border-soft: #e8ecf1;
+  --color-text-dark: #0e1b40;
+  --color-text-muted: #64748b;
+  --color-text-subtle: #94a3b8;
+  --color-shadow: rgba(14, 27, 64, 0.08);
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-5);
+  max-width: 100%;
+}
+
+/* ── Encabezado ── */
+.var-catalog-page__header {
+  position: relative;
+  padding: 1.375rem 1.5rem 1.5rem;
+  border-radius: 1rem;
+  border: 1px solid var(--color-border-soft);
+  background:
+    radial-gradient(circle at 88% 18%, rgba(125, 226, 255, 0.22) 0%, transparent 42%),
+    radial-gradient(circle at 72% 72%, rgba(91, 33, 182, 0.08) 0%, transparent 36%),
+    linear-gradient(135deg, #ffffff 0%, #f4f7fb 58%, rgba(125, 226, 255, 0.12) 100%);
+  box-shadow: 0 4px 18px rgba(14, 27, 64, 0.06);
+  overflow: hidden;
+}
+
+.var-catalog-page__header-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(11rem, 17rem);
+  gap: 1.25rem;
+  align-items: center;
+}
+
+.var-catalog-page__hero-visual {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 11rem;
+  pointer-events: none;
+}
+
+.var-catalog-page__hero-berry {
+  position: relative;
+  z-index: 2;
+  width: min(100%, 17.5rem);
+  height: auto;
+  filter: drop-shadow(0 18px 28px rgba(49, 46, 129, 0.22));
+  animation: var-catalog-berry-float 5.5s ease-in-out infinite;
+}
+
+.var-catalog-page__hero-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(0.5px);
+}
+
+.var-catalog-page__hero-orb--1 {
+  top: 8%;
+  right: 10%;
+  width: 5.5rem;
+  height: 5.5rem;
+  background: radial-gradient(circle at 30% 30%, rgba(167, 139, 250, 0.55), rgba(91, 33, 182, 0.08));
+  animation: var-catalog-orb-drift 7s ease-in-out infinite;
+}
+
+.var-catalog-page__hero-orb--2 {
+  bottom: 6%;
+  left: 4%;
+  width: 4.25rem;
+  height: 4.25rem;
+  background: radial-gradient(circle at 35% 35%, rgba(125, 226, 255, 0.45), rgba(31, 54, 104, 0.06));
+  animation: var-catalog-orb-drift 6s ease-in-out infinite reverse;
+}
+
+.var-catalog-page__hero-orb--3 {
+  top: 42%;
+  left: 18%;
+  width: 2.75rem;
+  height: 2.75rem;
+  background: radial-gradient(circle at 40% 40%, rgba(196, 181, 253, 0.5), transparent 70%);
+  animation: var-catalog-orb-drift 4.5s ease-in-out infinite;
+}
+
+@keyframes var-catalog-berry-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes var-catalog-orb-drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(4px, -5px) scale(1.05); }
+}
+
+.var-catalog-page__header::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--color-submenu-bg), var(--color-active-green));
+}
+
+.var-catalog-page__badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3125rem 0.625rem;
+  margin-bottom: 0.625rem;
+  border-radius: var(--radius-full);
+  background: rgba(31, 54, 104, 0.08);
+  color: var(--color-submenu-bg);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.var-catalog-page__title {
+  margin: 0;
+  font-size: 1.625rem;
+  font-weight: 700;
+  color: var(--color-title);
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.var-catalog-page__subtitle {
+  margin: 0.5rem 0 0;
+  max-width: 42rem;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--color-text-muted);
+}
+
+/* ── KPIs ── */
+.var-catalog-page__summary {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  max-width: none;
+  gap: 1rem;
+}
+
+.var-catalog-page__kpi-main--compact {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.125rem;
+}
+
+.var-catalog-page__kpi-top-name {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--kpi-accent-soft, #3d6a9e);
+  line-height: 1.25;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.var-catalog-page__kpi--organic {
+  --kpi-accent: #166534;
+  --kpi-accent-soft: #22c55e;
+  --kpi-bar-1: #14532d;
+  --kpi-bar-2: #1d9a4a;
+  --kpi-bar-3: #2fbf6a;
+  --kpi-bar-4: #6ee7a0;
+}
+
+/* ── Grid genéticas ── */
+.var-catalog-page__genetics-section {
+  padding: 1.125rem 1.25rem 1.25rem;
+  border-radius: 1rem;
+  border: 1px solid var(--color-border-soft);
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  box-shadow: 0 4px 18px rgba(14, 27, 64, 0.06);
+}
+
+.var-catalog-page__genetics-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.375rem 1rem;
+  margin-bottom: 0.875rem;
+}
+
+.var-catalog-page__genetics-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-title);
+  letter-spacing: -0.02em;
+}
+
+.var-catalog-page__genetics-meta {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.var-catalog-page__genetics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: 0.625rem;
+}
+
+.var-catalog-page__genetics-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.5625rem 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #334155;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform var(--transition-fast),
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    background-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.var-catalog-page__genetics-chip:hover {
+  transform: translateY(-1px);
+  border-color: rgba(31, 54, 104, 0.22);
+  box-shadow: 0 6px 16px rgba(14, 27, 64, 0.08);
+}
+
+.var-catalog-page__genetics-chip.is-active {
+  border-color: var(--color-submenu-bg);
+  background: linear-gradient(135deg, rgba(31, 54, 104, 0.1), rgba(125, 226, 255, 0.16));
+  color: var(--color-submenu-bg);
+  box-shadow: 0 4px 14px rgba(31, 54, 104, 0.12);
+}
+
+.var-catalog-page__genetics-chip-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.var-catalog-page__genetics-chip-count {
+  flex-shrink: 0;
+  min-width: 1.625rem;
+  padding: 0.125rem 0.4375rem;
+  border-radius: var(--radius-full);
+  background: rgba(31, 54, 104, 0.08);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--color-submenu-bg);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.var-catalog-page__genetics-chip.is-active .var-catalog-page__genetics-chip-count {
+  background: var(--color-submenu-bg);
+  color: #ffffff;
+}
+
+.var-catalog-page__genetics-chip--empty {
+  border-style: dashed;
+  color: var(--color-text-subtle);
+}
+
+.var-catalog-page__summary .inicio-varieties__kpi {
+  padding: 1.25rem 1.375rem;
+  min-height: 7.25rem;
+  border-radius: 1rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-soft);
+  box-shadow: 0 4px 18px rgba(14, 27, 64, 0.06);
+}
+
+.var-catalog-page__summary .inicio-varieties__kpi--varieties {
+  --kpi-accent: #14532d;
+  --kpi-accent-soft: #1d9a4a;
+  --kpi-bar-1: #14532d;
+  --kpi-bar-2: #1d9a4a;
+  --kpi-bar-3: #2fbf6a;
+  --kpi-bar-4: #6ee7a0;
+}
+
+.var-catalog-page__summary .inicio-varieties__kpi--fundos {
+  --kpi-accent: #1f3668;
+  --kpi-accent-soft: #3d6a9e;
+  --kpi-bar-1: #1f3668;
+  --kpi-bar-2: #3d6a9e;
+  --kpi-bar-3: #5b7eb5;
+  --kpi-bar-4: #8fa8cc;
+}
+
+.var-catalog-page__summary .inicio-varieties__kpi-label {
+  color: var(--color-text-muted);
+}
+
+.var-catalog-page__summary .inicio-varieties__kpi-value {
+  color: var(--kpi-accent, #1f3668);
+}
+
+.var-catalog-page__summary .inicio-varieties__kpi-meta {
+  color: var(--kpi-accent-soft, #3d6a9e);
+}
+
+/* ── Panel tabla ── */
+.var-catalog-page__panel {
+  border-radius: 1rem;
+  border: 1px solid var(--color-border-soft);
+  background: var(--color-surface);
+  box-shadow: 0 4px 18px rgba(14, 27, 64, 0.06);
+  overflow: hidden;
+}
+
+.var-catalog-page__panel-head {
+  padding: 1.125rem 1.375rem;
+  border-bottom: 1px solid #eef2f6;
+  background: linear-gradient(180deg, #ffffff 0%, #fafbfd 100%);
+}
+
+.var-catalog-page__toolbar {
+  flex-wrap: wrap;
+}
+
+.var-catalog-page__search {
+  flex: 1 1 14rem;
+  max-width: 20rem;
+  background: var(--color-surface-soft);
+  border-color: #e2e8f0;
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    background-color var(--transition-fast);
+}
+
+.var-catalog-page__search:focus-within {
+  border-color: rgba(94, 184, 217, 0.75);
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(94, 184, 217, 0.14);
+}
+
+.var-catalog-page__select {
+  min-width: 10rem;
+  background: var(--color-surface-soft);
+  font-weight: 600;
+  color: var(--color-submenu-bg);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.var-catalog-page__select:focus {
+  outline: none;
+  border-color: rgba(94, 184, 217, 0.75);
+  box-shadow: 0 0 0 3px rgba(94, 184, 217, 0.14);
+}
+
+.var-catalog-page__version {
+  flex-shrink: 0;
+  padding: 0.4375rem 0.75rem;
+  border-radius: var(--radius-full);
+  border: 1px solid rgba(31, 54, 104, 0.12);
+  background: linear-gradient(135deg, rgba(31, 54, 104, 0.06), rgba(125, 226, 255, 0.14));
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--color-submenu-bg);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.var-catalog-page .inicio-varieties__table-card-title {
+  color: var(--color-title);
+  font-size: 1.0625rem;
+}
+
+/* ── Tabla scrollable ── */
+.var-catalog-page__table-scroll {
+  max-height: min(62vh, 42rem);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.var-catalog-page__table thead {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  box-shadow: 0 1px 0 #e8ecf1;
+}
+
+.var-catalog-page__table thead th {
+  background: #f4f6f8;
+}
+
+.var-catalog-page__table .inicio-varieties__data-row:nth-child(even) td {
+  background: rgba(248, 250, 252, 0.65);
+}
+
+.var-catalog-page__table .inicio-varieties__data-row:hover td {
+  background: rgba(94, 184, 217, 0.08);
+}
+
+/* ── Código ── */
+.var-catalog-page__cell-code {
+  width: 6.5rem;
+  white-space: nowrap;
+}
+
+.var-catalog-page__code-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.5rem;
+  padding: 0.3125rem 0.625rem;
+  border-radius: 0.5rem;
+  background: linear-gradient(135deg, rgba(31, 54, 104, 0.1), rgba(125, 226, 255, 0.16));
+  border: 1px solid rgba(31, 54, 104, 0.12);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--color-submenu-bg);
+  letter-spacing: 0.05em;
+  font-variant-numeric: tabular-nums;
+}
+
+.var-catalog-page__cell-variedad {
+  font-weight: 500;
+  color: var(--color-text-dark);
+}
+
+/* ── Genética badge ── */
+.var-catalog-page__cell-licensor {
+  white-space: nowrap;
+}
+
+.var-catalog-page__genetics-badge,
+.var-catalog-page__licensor-badge {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 0.3125rem 0.625rem;
+  border-radius: var(--radius-full);
+  background: rgba(31, 54, 104, 0.07);
+  border: 1px solid rgba(31, 54, 104, 0.1);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #334155;
+  line-height: 1.3;
+}
+
+.var-catalog-page__genetics-badge--empty,
+.var-catalog-page__licensor-badge--empty {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+  color: var(--color-text-subtle);
+  font-weight: 500;
+  font-style: italic;
+}
+
+/* ── Fila total ── */
+.var-catalog-page .inicio-varieties__total-row td {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  background: linear-gradient(180deg, #f8fafc 0%, #eef2f8 100%);
+  font-weight: 700;
+  color: var(--color-submenu-bg);
+  border-top: 1px solid #dbe3ec;
+  box-shadow: 0 -4px 12px rgba(14, 27, 64, 0.04);
+}
+
+.var-catalog-page .inicio-varieties__total-row td:last-child {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 1100px) {
+  .var-catalog-page__summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .var-catalog-page__header-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .var-catalog-page__hero-visual {
+    min-height: 9rem;
+  }
+
+  .var-catalog-page__hero-berry {
+    width: min(100%, 14rem);
+  }
+}
+
+@media (max-width: 900px) {
+  .var-catalog-page__summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .var-catalog-page__genetics-grid {
+    grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .var-catalog-page__header {
+    padding: 1.125rem 1.125rem 1.25rem;
+  }
+
+  .var-catalog-page__header-grid {
+    gap: 0.75rem;
+  }
+
+  .var-catalog-page__hero-visual {
+    min-height: 7.5rem;
+  }
+
+  .var-catalog-page__title {
+    font-size: 1.375rem;
+  }
+
+  .var-catalog-page__summary {
+    grid-template-columns: 1fr;
+  }
+
+  .var-catalog-page__genetics-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .var-catalog-page .inicio-varieties__table-card-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .var-catalog-page__toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .var-catalog-page__search {
+    max-width: none;
+    flex: 1 1 100%;
+  }
+
+  .var-catalog-page__select {
+    width: 100%;
+  }
+
+  .var-catalog-page__version {
+    width: 100%;
+    text-align: center;
+  }
+
+  .var-catalog-page__table-scroll {
+    max-height: none;
+  }
+}

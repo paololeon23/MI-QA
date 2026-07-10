@@ -1,0 +1,14 @@
+/**
+ * Espárrago MP — offsets sticky Usuario / Lote (solo este módulo).
+ * Scope: #agvMpApp .agv-mp-table--esparrago
+ */
+
+#agvMpApp .agv-mp-table.agv-mp-table--esparrago .agv-mp-sticky-col-6 {
+  left: 231px;
+  min-width: 254px;
+}
+
+#agvMpApp .agv-mp-table.agv-mp-table--esparrago .agv-mp-sticky-col-9 {
+  left: 485px;
+  min-width: 90px;
+}

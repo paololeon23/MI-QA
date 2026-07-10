@@ -1,0 +1,595 @@
+{
+  "cartilla": "PTBPA",
+  "codigo-archivo-cabecera": "PTBPAR",
+  "total-columnas": 100,
+  "configuracion-lectura": {
+    "fila-encabezados": 6
+  },
+  "columnas": [
+    {
+      "numero": 1,
+      "nombre-de-la-columna": "Id"
+    },
+    {
+      "numero": 2,
+      "nombre-de-la-columna": "Inspección código"
+    },
+    {
+      "numero": 3,
+      "nombre-de-la-columna": "Inspección descripción"
+    },
+    {
+      "numero": 4,
+      "nombre-de-la-columna": "Fecha registro"
+    },
+    {
+      "numero": 5,
+      "nombre-de-la-columna": "Hora"
+    },
+    {
+      "numero": 6,
+      "nombre-de-la-columna": "Estado"
+    },
+    {
+      "numero": 7,
+      "nombre-de-la-columna": "Usuario"
+    },
+    {
+      "numero": 8,
+      "nombre-de-la-columna": "Tipo Calidad"
+    },
+    {
+      "numero": 9,
+      "nombre-de-la-columna": "Pallet"
+    },
+    {
+      "numero": 10,
+      "nombre-de-la-columna": "Lote",
+      "es-obligatorio": true,
+      "longitud-exacta": 12,
+      "no-puede-repetirse": true,
+      "agrupar-por-columna": 42,
+      "si-falla-mostrar": "Lote obligatorio, 12 dígitos, sin duplicar"
+    },
+    {
+      "numero": 11,
+      "nombre-de-la-columna": "Cant Muestra",
+      "es-obligatorio": true,
+      "minimo": 101,
+      "maximo": 530,
+      "si-falla-mostrar": "Cantidad muestra debe ser mayor a 100 y no superar 530"
+    },
+    {
+      "numero": 12,
+      "nombre-de-la-columna": "Med Muestra",
+      "es-obligatorio": true,
+      "valores-permitidos": [
+        "UNIDADES"
+      ],
+      "si-falla-mostrar": "Med. Muestra debe ser UNIDADES"
+    },
+    {
+      "numero": 13,
+      "nombre-de-la-columna": "Productor"
+    },
+    {
+      "numero": 14,
+      "nombre-de-la-columna": "Guía de Remisión"
+    },
+    {
+      "numero": 15,
+      "nombre-de-la-columna": "Etapa"
+    },
+    {
+      "numero": 16,
+      "nombre-de-la-columna": "Campo"
+    },
+    {
+      "numero": 17,
+      "nombre-de-la-columna": "Turno"
+    },
+    {
+      "numero": 18,
+      "nombre-de-la-columna": "Fundo"
+    },
+    {
+      "numero": 19,
+      "nombre-de-la-columna": "Variedad"
+    },
+    {
+      "numero": 20,
+      "nombre-de-la-columna": "Fecha Cosecha"
+    },
+    {
+      "numero": 21,
+      "nombre-de-la-columna": "Fecha de Producción"
+    },
+    {
+      "numero": 22,
+      "nombre-de-la-columna": "Tecnologia de Postcosecha PT"
+    },
+    {
+      "numero": 23,
+      "nombre-de-la-columna": "Calibre"
+    },
+    {
+      "numero": 24,
+      "nombre-de-la-columna": "Tipo de Embalado"
+    },
+    {
+      "numero": 25,
+      "nombre-de-la-columna": "Categoria"
+    },
+    {
+      "numero": 26,
+      "nombre-de-la-columna": "Turno Linea"
+    },
+    {
+      "numero": 27,
+      "nombre-de-la-columna": "Linea"
+    },
+    {
+      "numero": 28,
+      "nombre-de-la-columna": "Nota Condicion",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Nota Condición obligatoria"
+    },
+    {
+      "numero": 29,
+      "nombre-de-la-columna": "Tipo de formato"
+    },
+    {
+      "numero": 30,
+      "nombre-de-la-columna": "Etiqueta"
+    },
+    {
+      "numero": 31,
+      "nombre-de-la-columna": "Jaba"
+    },
+    {
+      "numero": 32,
+      "nombre-de-la-columna": "Viaje"
+    },
+    {
+      "numero": 33,
+      "nombre-de-la-columna": "Peso Bruto"
+    },
+    {
+      "numero": 34,
+      "nombre-de-la-columna": "Calibre Ar",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Calibre AR obligatorio"
+    },
+    {
+      "numero": 35,
+      "nombre-de-la-columna": "Cliente Ar",
+      "es-obligatorio": true,
+      "valores-prohibidos": [
+        "TF INTERNATIONAL"
+      ],
+      "si-falla-mostrar": "Cliente obligatorio; TF INTERNATIONAL no permitido"
+    },
+    {
+      "numero": 36,
+      "nombre-de-la-columna": "Deformes"
+    },
+    {
+      "numero": 37,
+      "nombre-de-la-columna": "Desgarro Pedicelar"
+    },
+    {
+      "numero": 38,
+      "nombre-de-la-columna": "Deshidratación"
+    },
+    {
+      "numero": 39,
+      "nombre-de-la-columna": "Destino",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Destino obligatorio"
+    },
+    {
+      "numero": 40,
+      "nombre-de-la-columna": "Polvo"
+    },
+    {
+      "numero": 41,
+      "nombre-de-la-columna": "Exudación Jugo"
+    },
+    {
+      "numero": 42,
+      "nombre-de-la-columna": "Fecha de inspección",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Fecha de inspección obligatoria"
+    },
+    {
+      "numero": 43,
+      "nombre-de-la-columna": "Fruto Mojada/ Condensada"
+    },
+    {
+      "numero": 44,
+      "nombre-de-la-columna": "Fruto Rojo"
+    },
+    {
+      "numero": 45,
+      "nombre-de-la-columna": "Fruto Verde"
+    },
+    {
+      "numero": 46,
+      "nombre-de-la-columna": "Herida Abierta"
+    },
+    {
+      "numero": 47,
+      "nombre-de-la-columna": "Hongo"
+    },
+    {
+      "numero": 48,
+      "nombre-de-la-columna": "Insecto"
+    },
+    {
+      "numero": 49,
+      "nombre-de-la-columna": "Fecha Actualización LMR",
+      "igual-a-contexto": "fecha-lmr-mayoritaria",
+      "si-falla-mostrar": "Fecha LMR debe ser la mayoritaria de la inspección"
+    },
+    {
+      "numero": 50,
+      "nombre-de-la-columna": "Observación"
+    },
+    {
+      "numero": 51,
+      "nombre-de-la-columna": "Pedúnculo"
+    },
+    {
+      "numero": 52,
+      "nombre-de-la-columna": "Pudrición"
+    },
+    {
+      "numero": 53,
+      "nombre-de-la-columna": "Pudrición con Larva"
+    },
+    {
+      "numero": 54,
+      "nombre-de-la-columna": "Restos Florales"
+    },
+    {
+      "numero": 55,
+      "nombre-de-la-columna": "Residuos"
+    },
+    {
+      "numero": 56,
+      "nombre-de-la-columna": "Russet"
+    },
+    {
+      "numero": 57,
+      "nombre-de-la-columna": "Sin Pruina"
+    },
+    {
+      "numero": 58,
+      "nombre-de-la-columna": "Subgrupo"
+    },
+    {
+      "numero": 59,
+      "nombre-de-la-columna": "T° PULPA",
+      "es-obligatorio": true,
+      "minimo": 1,
+      "maximo": 5,
+      "si-falla-mostrar": "T° PULPA debe estar entre 1 y 5"
+    },
+    {
+      "numero": 60,
+      "nombre-de-la-columna": "Trazabilidad",
+      "es-obligatorio": true,
+      "maximo-de-caracteres": 13,
+      "si-falla-mostrar": "Trazabilidad obligatoria, máximo 13 caracteres"
+    },
+    {
+      "numero": 61,
+      "nombre-de-la-columna": "Pudrición"
+    },
+    {
+      "numero": 62,
+      "nombre-de-la-columna": "Hongo"
+    },
+    {
+      "numero": 63,
+      "nombre-de-la-columna": "Fruta Mojada / Condensada"
+    },
+    {
+      "numero": 64,
+      "nombre-de-la-columna": "Exudación Jugo"
+    },
+    {
+      "numero": 65,
+      "nombre-de-la-columna": "Herida Abierta"
+    },
+    {
+      "numero": 66,
+      "nombre-de-la-columna": "Desgarro Pedicelar"
+    },
+    {
+      "numero": 67,
+      "nombre-de-la-columna": "Deshidratación"
+    },
+    {
+      "numero": 68,
+      "nombre-de-la-columna": "Presencia de insectos"
+    },
+    {
+      "numero": 69,
+      "nombre-de-la-columna": "Residuos"
+    },
+    {
+      "numero": 70,
+      "nombre-de-la-columna": "Polvo"
+    },
+    {
+      "numero": 71,
+      "nombre-de-la-columna": "Fruta verde"
+    },
+    {
+      "numero": 72,
+      "nombre-de-la-columna": "Fruta roja"
+    },
+    {
+      "numero": 73,
+      "nombre-de-la-columna": "Sin pruina"
+    },
+    {
+      "numero": 74,
+      "nombre-de-la-columna": "Heridas Cicatrizadas / Russet"
+    },
+    {
+      "numero": 75,
+      "nombre-de-la-columna": "Restos Florales"
+    },
+    {
+      "numero": 76,
+      "nombre-de-la-columna": "Presencia de Pedúnculo"
+    },
+    {
+      "numero": 77,
+      "nombre-de-la-columna": "Deformes"
+    },
+    {
+      "numero": 78,
+      "nombre-de-la-columna": "Sumatoria Defectos de Calidad"
+    },
+    {
+      "numero": 79,
+      "nombre-de-la-columna": "Pudrición con Larva"
+    },
+    {
+      "numero": 80,
+      "nombre-de-la-columna": "Sumatoria Defectos de Condición"
+    },
+    {
+      "numero": 81,
+      "nombre-de-la-columna": "Pudrición"
+    },
+    {
+      "numero": 82,
+      "nombre-de-la-columna": "Hongo"
+    },
+    {
+      "numero": 83,
+      "nombre-de-la-columna": "Fruta Mojada / Condensada"
+    },
+    {
+      "numero": 84,
+      "nombre-de-la-columna": "Exudación Jugo"
+    },
+    {
+      "numero": 85,
+      "nombre-de-la-columna": "Herida Abierta"
+    },
+    {
+      "numero": 86,
+      "nombre-de-la-columna": "Desgarro Pedicelar"
+    },
+    {
+      "numero": 87,
+      "nombre-de-la-columna": "Deshidratación"
+    },
+    {
+      "numero": 88,
+      "nombre-de-la-columna": "Presencia de insectos"
+    },
+    {
+      "numero": 89,
+      "nombre-de-la-columna": "Residuos"
+    },
+    {
+      "numero": 90,
+      "nombre-de-la-columna": "Polvo"
+    },
+    {
+      "numero": 91,
+      "nombre-de-la-columna": "Fruta verde"
+    },
+    {
+      "numero": 92,
+      "nombre-de-la-columna": "Fruta roja"
+    },
+    {
+      "numero": 93,
+      "nombre-de-la-columna": "Sin pruina"
+    },
+    {
+      "numero": 94,
+      "nombre-de-la-columna": "Heridas Cicatrizadas / Russet"
+    },
+    {
+      "numero": 95,
+      "nombre-de-la-columna": "Restos Florales"
+    },
+    {
+      "numero": 96,
+      "nombre-de-la-columna": "Presencia de Pedúnculo"
+    },
+    {
+      "numero": 97,
+      "nombre-de-la-columna": "Deformes"
+    },
+    {
+      "numero": 98,
+      "nombre-de-la-columna": "Sumatoria Defectos de Calidad"
+    },
+    {
+      "numero": 99,
+      "nombre-de-la-columna": "Pudrición con Larva"
+    },
+    {
+      "numero": 100,
+      "nombre-de-la-columna": "Sumatoria Defectos de Condición"
+    }
+  ],
+  "validaciones-compuestas": [
+    {
+      "tipo": "cliente-destino-pt",
+      "columna-cliente": 35,
+      "columna-destino": 39,
+      "catalogo": "pais-destino-arandano-pt",
+      "si-falla-mostrar": "Par cliente/destino no válido"
+    },
+    {
+      "tipo": "calibre-ar-pt",
+      "columna-calibre": 34,
+      "columna-subgrupo": 58,
+      "columna-cliente": 35,
+      "columna-destino": 39,
+      "catalogo-calibres": "calibres-arandano-pt",
+      "si-falla-mostrar": "Calibre AR o Subgrupo inválido"
+    },
+    {
+      "tipo": "trazabilidad-pt",
+      "columna-trazabilidad": 60,
+      "columna-fecha-inspeccion": 42,
+      "columna-cliente": 35,
+      "catalogo-variedades": "var-map-arandano",
+      "si-falla-mostrar": "Trazabilidad inválida"
+    }
+  ],
+  "validaciones-archivo": [
+    {
+      "tipo": "total-columnas",
+      "valor": 100,
+      "si-falla-mostrar": "El archivo debe tener 100 columnas"
+    },
+    {
+      "tipo": "celda-cabecera",
+      "fila": 4,
+      "columna": 9,
+      "valor-esperado": "PTBPAR",
+      "si-falla-mostrar": "Grupo debe ser PTBPAR (PTBPA)"
+    },
+    {
+      "tipo": "celda-cabecera",
+      "fila": 4,
+      "columna": 14,
+      "valor-esperado": "ENVIADA",
+      "si-falla-mostrar": "Estado debe ser ENVIADA"
+    },
+    {
+      "tipo": "max-archivos-cartilla",
+      "valor": 3,
+      "si-falla-mostrar": "Máximo 3 cartillas (PTHPA, PTLPA y PTBPA)"
+    },
+    {
+      "tipo": "sin-cartilla-duplicada",
+      "si-falla-mostrar": "No se permiten cartillas duplicadas"
+    }
+  ],
+  "configuracion-cartillas": {
+    "cartilla": "PTBPA",
+    "codigo-archivo": "PTBPAR",
+    "columna-cartilla": 2,
+    "columna-usuario": 7,
+    "columna-fecha-inspeccion": 42,
+    "columna-fecha-lmr": 49,
+    "columna-lote": 10,
+    "columna-calibre-ar": 34,
+    "columna-cliente": 35,
+    "columna-destino": 39,
+    "columna-subgrupo": 58,
+    "columna-t-pulpa": 59,
+    "columna-trazabilidad": 60
+  },
+  "configuracion-cabecera-excel": {
+    "titulo": {
+      "fila": 1,
+      "columna": 1
+    },
+    "campos": [
+      {
+        "clave": "empresa",
+        "fila": 3,
+        "columna": 2
+      },
+      {
+        "clave": "mandante",
+        "fila": 3,
+        "columna": 4
+      },
+      {
+        "clave": "cultivo",
+        "fila": 4,
+        "columna": 7
+      },
+      {
+        "clave": "grupo",
+        "fila": 4,
+        "columna": 9
+      },
+      {
+        "clave": "estado",
+        "fila": 4,
+        "columna": 14
+      }
+    ]
+  },
+  "configuracion-ui": {
+    "columnas-front": [
+      0,
+      1,
+      6,
+      9,
+      10,
+      27,
+      33,
+      "CALIBRE",
+      34,
+      38,
+      41,
+      57,
+      58,
+      59,
+      "E_C",
+      "VARIEDAD"
+    ],
+    "header-labels": {
+      "1": "Cartilla",
+      "10": "Cant. M.",
+      "27": "Nota C.",
+      "33": "Calibre",
+      "41": "Fecha Insp."
+    }
+  },
+  "reorden-ptpha-ptlpa": null,
+  "configuracion-exportacion": {
+    "columnas-texto": [
+      4,
+      5,
+      10,
+      19,
+      20,
+      42,
+      49,
+      60
+    ],
+    "columnas-fecha": [
+      42,
+      49
+    ],
+    "reordenar-columnas-excel": null
+  }
+}

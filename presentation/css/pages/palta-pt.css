@@ -1,0 +1,87 @@
+/**
+ * Palta PT — estilos aislados (tabla resultados).
+ * Scope: #agvPtApp .agv-pt-table--palta
+ */
+
+#agvPtApp .agv-pt-table--palta .agv-pt-sticky-col {
+  position: -webkit-sticky;
+  position: sticky;
+  background: #fff;
+}
+
+#agvPtApp .agv-pt-table--palta .agv-pt-sticky-col-0 {
+  left: 93px;
+  min-width: 90px;
+}
+
+#agvPtApp .agv-pt-table--palta .agv-pt-sticky-col-6 {
+  left: 183px;
+  min-width: 120px;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#agvPtApp .agv-pt-table--palta .agv-pt-sticky-col-9 {
+  left: 303px;
+  min-width: 130px;
+}
+
+#agvPtApp .agv-pt-table--palta tbody td.agv-pt-sticky-col-0 {
+  z-index: 4;
+}
+
+#agvPtApp .agv-pt-table--palta tbody td.agv-pt-sticky-col-6,
+#agvPtApp .agv-pt-table--palta tbody td.agv-pt-sticky-col-9 {
+  z-index: 3;
+}
+
+#agvPtApp .agv-pt-table--palta tbody tr:nth-child(even) td.agv-pt-sticky-col {
+  background: #f8fafc;
+}
+
+#agvPtApp .agv-pt-table--palta tbody tr:hover td.agv-pt-sticky-col {
+  background: #eef4fb;
+}
+
+#agvPtApp .agv-pt-table--palta tbody td.agv-pt-sticky-col.agv-pt-cell-error-empty {
+  background: var(--agv-pt-err) !important;
+}
+
+#agvPtApp .agv-pt-table--palta tbody td.agv-pt-sticky-col.agv-pt-cell-error-value {
+  background: #fee2e2 !important;
+}
+
+#agvPtApp .agv-pt-table--palta thead th {
+  position: -webkit-sticky;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: #f1f5f9;
+  box-shadow: 0 1px 0 #dbe3ef;
+}
+
+#agvPtApp .agv-pt-table--palta thead th.agv-pt-sticky-col {
+  background: #f1f5f9;
+  z-index: 8;
+}
+
+#agvPtApp .agv-pt-table--palta thead th.agv-pt-action-header {
+  left: 0;
+  z-index: 10;
+}
+
+#agvPtApp .agv-pt-table--palta .agv-pt-data-header {
+  cursor: pointer;
+}
+
+#agvPtApp .agv-pt-table--palta .agv-pt-data-header--filter {
+  min-width: 7.5rem;
+}
+
+#agvPtApp .agv-pt-input--readonly {
+  pointer-events: none;
+  background-color: #f5f5f5;
+  color: #555;
+}

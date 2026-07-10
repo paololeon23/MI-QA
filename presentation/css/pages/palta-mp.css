@@ -1,0 +1,41 @@
+/* Palta MP — offsets sticky para tabla de 157 columnas */
+
+#agvMpApp .agv-mp-table--palta .agv-mp-sticky-col-0 {
+  left: 0;
+  min-width: 90px;
+}
+
+#agvMpApp .agv-mp-table--palta .agv-mp-sticky-col-1 {
+  left: 90px;
+  min-width: 108px;
+}
+
+#agvMpApp .agv-mp-table--palta .agv-mp-sticky-col-6 {
+  left: 198px;
+  min-width: 246px;
+}
+
+#agvMpApp .agv-mp-table--palta .agv-mp-sticky-col-9 {
+  left: 435px;
+  min-width: 90px;
+}
+
+#agvMpApp .agv-mp-table--palta tbody td.agv-mp-sticky-col-0 {
+  z-index: 4;
+}
+
+#agvMpApp .agv-mp-table--palta tbody td.agv-mp-sticky-col-1,
+#agvMpApp .agv-mp-table--palta tbody td.agv-mp-sticky-col-6,
+#agvMpApp .agv-mp-table--palta tbody td.agv-mp-sticky-col-9 {
+  z-index: 3;
+}
+
+#agvMpApp .agv-mp-table--palta thead th.agv-mp-sticky-col-0 {
+  z-index: 6;
+}
+
+#agvMpApp .agv-mp-table--palta thead th.agv-mp-sticky-col-1,
+#agvMpApp .agv-mp-table--palta thead th.agv-mp-sticky-col-6,
+#agvMpApp .agv-mp-table--palta thead th.agv-mp-sticky-col-9 {
+  z-index: 5;
+}
