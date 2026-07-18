@@ -27,7 +27,7 @@ import {
 } from "./palta-plagas.validation.js";
 import { mountReviewAllDashboard } from "./palta-plagas-compare.js";
 import { writePlagasErrorsExport, writePlagasExportFile } from "./palta-plagas-export.js";
-import { renderPaltaPlagasTable } from "./palta-plagas-table.js";
+import { renderPaltaPlagasTable, refreshPaltaPlagasHeaderLabels } from "./palta-plagas-table.js";
 
 function t(key, vars = {}) {
   let text = i18nService.translate(key);
@@ -665,6 +665,15 @@ export class PaltaPlagasService {
       timer: 1000,
       showConfirmButton: false
     });
+  }
+
+  onLanguageChange() {
+    refreshPaltaPlagasHeaderLabels(
+      this.shell?.refs?.resultsHeader,
+      this.headers,
+      this.columnLabelsByIndex,
+      this.config
+    );
   }
 
   destroy() {

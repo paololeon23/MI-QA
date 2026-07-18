@@ -22,7 +22,8 @@ import {
   renderPaltaPtTable,
   bindTableSearch,
   bindPaltaPtColumnMenu,
-  buildWhatsappReport
+  buildWhatsappReport,
+  refreshPaltaPtHeaderLabels
 } from "./palta-pt-table.js";
 import { exportPaltaPtFiltered } from "./palta-pt-export.js";
 
@@ -507,6 +508,10 @@ export class PaltaPtService {
       timer: 1000,
       showConfirmButton: false
     });
+  }
+
+  onLanguageChange() {
+    refreshPaltaPtHeaderLabels(this.shell?.refs?.resultsHeader, this.headers);
   }
 
   destroy() {

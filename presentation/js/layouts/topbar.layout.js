@@ -67,7 +67,17 @@ export function buildTopbarMarkup(currentLanguageCode, routeHash = "#/inicio") {
             data-i18n-placeholder="labels.searchPlaceholder"
             placeholder="${i18nService.translate("labels.searchPlaceholder")}"
             autocomplete="off"
+            aria-autocomplete="list"
+            aria-controls="topbarSearchResults"
+            aria-expanded="false"
           />
+          <div
+            class="topbar__search-results"
+            id="topbarSearchResults"
+            role="listbox"
+            aria-label="${i18nService.translate("labels.searchResults")}"
+            hidden
+          ></div>
         </div>
       </div>
 

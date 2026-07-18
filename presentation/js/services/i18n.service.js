@@ -89,14 +89,24 @@ class InternationalizationService {
     this.activeLanguage = languageCode;
   }
 
-  translate(translationKey) {
+  translate(translationKey, vars = {}) {
+    const replacements = {
+      year: String(appConfig.appYear ?? new Date().getFullYear()),
+      ...vars
+    };
+
+    let translated;
     if (window.i18next?.isInitialized) {
-      const translated = window.i18next.t(translationKey);
-      if (translated !== translationKey) {
-        return translated;
-      }
+      const value = window.i18next.t(translationKey, replacements);
+      translated = value !== translationKey ? value : this.fallbackDictionary[translationKey] ?? translationKey;
+    } else {
+      translated = this.fallbackDictionary[translationKey] ?? translationKey;
     }
-    return this.fallbackDictionary[translationKey] ?? translationKey;
+
+    Object.entries(replacements).forEach(([name, value]) => {
+      translated = String(translated).split(`{{${name}}}`).join(String(value));
+    });
+    return translated;
   }
 
   getActiveLanguage() {

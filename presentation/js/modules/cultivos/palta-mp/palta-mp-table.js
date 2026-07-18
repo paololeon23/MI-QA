@@ -8,6 +8,8 @@ import {
 } from "./palta-mp.validation.js";
 import { hydrateLucideIcons } from "../../../utils/lucide-icon.util.js";
 import { DEFAULT_MP_CONTEXT_COLS_JS } from "../shared/mp-results-perf.util.js";
+import { translateExcelHeader } from "../../../utils/excel-header-i18n.util.js";
+import { refreshTranslatedHeaderRow } from "../../../utils/table-header-i18n.util.js";
 
 function isPinnedColumn(index) {
   return getStickyCols().includes(index);
@@ -80,7 +82,7 @@ export function renderPaltaMpResultsTable({
   }
 
   if (totalFilasDiv) {
-    totalFilasDiv.textContent = `Total registros inspección: ${allRows.length}`;
+    totalFilasDiv.textContent = t("paltaMp.totalInspectionRows", { count: allRows.length });
   }
 
   if (resultsTable) {
@@ -93,7 +95,7 @@ export function renderPaltaMpResultsTable({
     tr.className = "agv-mp-row-ok";
     const td = document.createElement("td");
     td.colSpan = Math.max(colIndexes.length || totalCols, 1);
-    td.textContent = "No se encontraron errores en esta inspección";
+    td.textContent = t("paltaMp.noInspectionErrors");
     tr.appendChild(td);
     resultsBody?.appendChild(tr);
     if (resultsIconEl) hydrateLucideIcons(resultsIconEl);
@@ -105,7 +107,8 @@ export function renderPaltaMpResultsTable({
     const th = document.createElement("th");
     th.className = "agv-mp-table__col-header";
     th.dataset.colIndex = String(i);
-    th.textContent = headers[i] || "";
+    th.dataset.excelHeader = String(headers[i] || "");
+    th.textContent = translateExcelHeader(headers[i] || "", i);
     applyStickyColumnClasses(th, i);
     headerFrag.appendChild(th);
   });
@@ -139,7 +142,7 @@ export function htmlTablaFilasConError(headers, filas, { htmlEscape, t, titled =
   const thead = colIndexes
     .map((i) => {
       const sticky = isPinnedColumn(i) ? ` agv-mp-sticky-col agv-mp-sticky-col-${i}` : "";
-      return `<th class="agv-mp-table__col-header${sticky}">${htmlEscape(headers[i] || "")}</th>`;
+      return `<th class="agv-mp-table__col-header${sticky}">${htmlEscape(translateExcelHeader(headers[i] || "", i))}</th>`;
     })
     .join("");
 
@@ -173,4 +176,8 @@ export function htmlTablaFilasConError(headers, filas, { htmlEscape, t, titled =
         </table>
       </div>
     </div>`;
+}
+
+export function refreshPaltaMpHeaderLabels(headerRow, headers) {
+  refreshTranslatedHeaderRow(headerRow, (idx) => headers[idx] || "");
 }

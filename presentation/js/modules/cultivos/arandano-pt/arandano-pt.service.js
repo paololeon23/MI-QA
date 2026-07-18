@@ -25,7 +25,8 @@ import {
   bindTableSearch,
   bindColumnContextMenu,
   buildWhatsappReport,
-  markDuplicateLoteRows
+  markDuplicateLoteRows,
+  refreshArandanoPtHeaderLabels
 } from "./arandano-pt-table.js";
 import {
   applyPtTableState,
@@ -249,6 +250,13 @@ export class ArandanoPtService {
     refs.inspectionSelect?.addEventListener("change", () => this.onInspectionDateChange(), { signal });
     refs.runReviewBtn?.addEventListener("click", () => this.onRunReview(), { signal });
     refs.exportBtn?.addEventListener("click", () => this.onExportFiltered(), { signal });
+  }
+
+  onLanguageChange() {
+    const refs = this.shell?.refs;
+    if (refs?.resultsHeader?.children?.length) {
+      refreshArandanoPtHeaderLabels(refs.resultsHeader, this.headers, this.profile || {});
+    }
   }
 
   destroy() {

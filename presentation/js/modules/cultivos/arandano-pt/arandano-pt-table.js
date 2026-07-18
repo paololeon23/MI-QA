@@ -2,6 +2,8 @@
 
 import { i18nService } from "../../../services/i18n.service.js";
 import { hydrateLucideIcons } from "../../../utils/lucide-icon.util.js";
+import { translateExcelHeader } from "../../../utils/excel-header-i18n.util.js";
+import { refreshTranslatedHeaderRow } from "../../../utils/table-header-i18n.util.js";
 import {
   CALIBRES_MAP,
   CATEGORIAS_FRUTIST,
@@ -252,8 +254,8 @@ const COLUMN_LABELS = {
 };
 
 function columnLabel(col, profile, headers) {
-  if (COLUMN_LABELS[col]) return COLUMN_LABELS[col];
-  return profile.headerLabels?.[col] || headers[col] || String(col);
+  const raw = COLUMN_LABELS[col] || profile.headerLabels?.[col] || headers[col] || String(col);
+  return translateExcelHeader(raw, typeof col === "number" ? col : -1);
 }
 
 function applyErrorMap(td, row, colKey, errorMap) {
@@ -338,11 +340,13 @@ export function renderPtTable({
   const thAction = document.createElement("th");
   thAction.textContent = "···";
   thAction.className = "agv-pt-action-header";
-  thAction.title = "Acciones";
+  thAction.title = i18nService.translate("arandanoPt.actionsHeader");
   resultsHeader.appendChild(thAction);
 
   profile.columnasFront.forEach((col, dataColIdx) => {
     const th = document.createElement("th");
+    const raw = COLUMN_LABELS[col] || profile.headerLabels?.[col] || headers[col] || String(col);
+    th.dataset.excelHeader = raw;
     th.textContent = columnLabel(col, profile, headers);
     th.className = "agv-pt-data-header";
     th.dataset.colIndex = String(dataColIdx);
@@ -358,7 +362,7 @@ export function renderPtTable({
     else if (row.__mark === "orange") tr.classList.add("agv-pt-row--mark-orange");
     if (row.__duplicado) {
       tr.classList.add("agv-pt-row--duplicate");
-      tr.title = "LOTE DUPLICADO EN SISTEMA";
+      tr.title = i18nService.translate("arandanoPt.duplicateLot");
     }
 
     tr.appendChild(buildActionsCell(row, tr, onCopyReport, onRowMark));
@@ -412,6 +416,10 @@ export function renderPtTable({
     initDefaultHiddenCols(tableEl);
     applyPtColumnVisibility(tableEl);
   }
+}
+
+export function refreshArandanoPtHeaderLabels(headerRow, headers, profile) {
+  refreshTranslatedHeaderRow(headerRow, (idx) => headers[idx] || profile.headerLabels?.[idx] || "");
 }
 
 function closePtColumnMenu(menuEl) {

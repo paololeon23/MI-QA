@@ -1,5 +1,6 @@
 import { GenericModuleController } from "../module-page.factory.js";
 import { applyTranslationsToContainer } from "../../utils/i18n-dom.util.js";
+import { refreshModuleLanguage } from "../../utils/module-i18n.util.js";
 import { hydrateLucideIcons } from "../../utils/lucide-icon.util.js";
 import { i18nService } from "../../services/i18n.service.js";
 import { PlagasArandanoService } from "./plagas-arandano/plagas-arandano.service.js";
@@ -33,6 +34,14 @@ export class ModuleController extends GenericModuleController {
 
     await this.service.init(pmparRoot);
     hydrateLucideIcons(root);
+  }
+
+
+  async onLanguageChange() {
+    refreshModuleLanguage({
+      appRootId: "pmparApp",
+      service: this.service
+    });
   }
 
   destroy() {

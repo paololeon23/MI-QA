@@ -17,6 +17,18 @@ const CRITICOS_VACIOS = [9, 10, 37, 49, 50, 53, 64];
 const MERCADOS_VALIDOS = ["USA", "EUROPA", "ASIA"];
 export const LINEA_JS = 26;
 export const LINEA_ASP_JS = 50;
+export const FECHA_LMR_JS = 51;
+
+/** Fecha LMR mayoritaria (ISO yyyy-mm-dd) de la inspección en revisión. */
+let _fechaLmrMayoritariaISO = "";
+
+export function setFechaLmrMayoritaria(iso) {
+  _fechaLmrMayoritariaISO = iso || "";
+}
+
+export function getFechaLmrMayoritaria() {
+  return _fechaLmrMayoritariaISO;
+}
 
 export function resolveLineaAspValue(row) {
   if (!row) return "";
@@ -34,9 +46,58 @@ export function serialExcelAFecha(serial) {
   return `${dia}/${mes}/${anio}`;
 }
 
+/** Normaliza valor Excel/texto a ISO yyyy-mm-dd. */
+export function parseFechaToISO(val) {
+  if (val === null || val === undefined || val === "") return "";
+  if (typeof val === "number" && Number.isFinite(val)) {
+    const dmy = serialExcelAFecha(val);
+    return dmyToISO(dmy);
+  }
+  const texto = String(val).trim();
+  if (!texto) return "";
+  if (/^\d{8}$/.test(texto)) {
+    return `${texto.slice(0, 4)}-${texto.slice(4, 6)}-${texto.slice(6, 8)}`;
+  }
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(texto)) {
+    const [d, m, y] = texto.split("/");
+    return `${y}-${m}-${d}`;
+  }
+  if (/^\d{2}-\d{2}-\d{4}$/.test(texto)) {
+    const [d, m, y] = texto.split("-");
+    return `${y}-${m}-${d}`;
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(texto)) return texto;
+  const fecha = Date.parse(texto);
+  return Number.isFinite(fecha) ? new Date(fecha).toISOString().slice(0, 10) : "";
+}
+
+function dmyToISO(dmy) {
+  const partes = String(dmy || "").trim().split("/");
+  if (partes.length !== 3) return "";
+  return `${partes[2]}-${partes[1]}-${partes[0]}`;
+}
+
+export function formatISOToDMY(iso) {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-");
+  return `${d}/${m}/${y}`;
+}
+
+export function computeFechaLmrMayoritaria(rows, colLmrJs = FECHA_LMR_JS) {
+  const fechas = (rows || []).map((r) => parseFechaToISO(r[colLmrJs])).filter(Boolean);
+  const conteo = {};
+  fechas.forEach((f) => {
+    conteo[f] = (conteo[f] || 0) + 1;
+  });
+  const sorted = Object.entries(conteo).sort((a, b) => b[1] - a[1]);
+  return sorted[0]?.[0] || "";
+}
+
 export function formatCellDisplay(val, colIdx, row = null) {
   if (colIdx === LINEA_ASP_JS && row) return resolveLineaAspValue(row);
-  if ((colIdx === 3 || colIdx === 46) && typeof val === "number") return serialExcelAFecha(val);
+  if ((colIdx === 3 || colIdx === 46 || colIdx === FECHA_LMR_JS) && typeof val === "number") {
+    return serialExcelAFecha(val);
+  }
   if (val === null || val === undefined) return "";
   return String(val);
 }
@@ -173,6 +234,32 @@ export function applyCellValidation(td, fila, colIdx, valor) {
   if (!hasEmptyError && CRITICOS_VACIOS.includes(colIdx) && !valUpper) {
     markEmpty(failMsg(colIdx, "Este campo es obligatorio y está vacío"));
     return;
+  }
+
+  if (colIdx === FECHA_LMR_JS) {
+    const mayISO = getFechaLmrMayoritaria();
+    const cellISO = parseFechaToISO(valorEfectivo);
+    if (!hasEmptyError && !cellISO) {
+      markEmpty(failMsg(colIdx, "Fecha Actualización LMR obligatoria"));
+      return;
+    }
+    if (!hasValueError && mayISO && cellISO && cellISO !== mayISO) {
+      const esperadoDMY = formatISOToDMY(mayISO);
+      const detectadoDMY = formatISOToDMY(cellISO) || valStr;
+      markValue(
+        failMsg(
+          colIdx,
+          `Fecha LMR debe ser la mayoritaria de la inspección (${esperadoDMY}). Detectado: ${detectadoDMY}`,
+          {
+            valor: detectadoDMY,
+            "valor-esperado": esperadoDMY,
+            detectado: detectadoDMY
+          },
+          "igualdad"
+        )
+      );
+      return;
+    }
   }
 
   if (!hasValueError && colIdx === 40 && valStr !== "" && Number.isFinite(valNum) && (valNum < 0 || valNum > 20)) {

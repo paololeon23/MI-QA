@@ -3,13 +3,15 @@
 import {
   getExportOrderJs,
   getExportTextColsJs,
-  getExportDateColsJs
+  getExportDateColsJs,
+  getColumnLabelsByIndex
 } from "./esparrago-pt.config.js";
 import { serialExcelAFecha, resolveLineaAspValue, LINEA_ASP_JS } from "./esparrago-pt.validation.js";
 import {
   cellDisplayValue,
   parseFlexibleNumber
 } from "../../../../../engine/cartilla-cell-validation.js";
+import { resolvePtEsparragoColumnLabel } from "./esparrago-pt-i18n-labels.js";
 
 function cellObject(val, jsIdx, textCols) {
   if (val === "") return { v: "", t: "s" };
@@ -39,7 +41,10 @@ export function exportEsparragoPtFiltered({ rows, headers, fechaLabel }) {
   const exportOrder = getExportOrderJs();
   const textCols = getExportTextColsJs();
   const dateCols = getExportDateColsJs();
-  const encabezados = exportOrder.map((idx) => headers[idx] || `Col ${idx + 1}`);
+  const columnLabelsByIndex = getColumnLabelsByIndex();
+  const encabezados = exportOrder.map(
+    (idx) => resolvePtEsparragoColumnLabel(idx, headers, columnLabelsByIndex) || `Col ${idx + 1}`
+  );
 
   const wsData = [
     encabezados.map((label) => ({

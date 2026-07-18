@@ -8,6 +8,7 @@ import {
   getCompareColumnLabel,
   getCompareColumnsForPane
 } from "./esparrago-plagas.validation.js";
+import { translateExcelHeader } from "../../../utils/excel-header-i18n.util.js";
 
 const LOTE_IDX = 9;
 
@@ -44,7 +45,10 @@ function renderCompareTable(headerRow, bodyRows, headers, rows, tipo, config, st
   visibleCols.forEach((idx) => {
     const th = document.createElement("th");
     th.className = "agv-mp-table__col-header";
-    th.textContent = getCompareColumnLabel(idx, headers, config, columnLabelsByIndex);
+    const rawLabel = getCompareColumnLabel(idx, headers, config, columnLabelsByIndex);
+    th.dataset.colIndex = String(idx);
+    th.dataset.excelHeader = rawLabel;
+    th.textContent = translateExcelHeader(rawLabel, idx);
     th.scope = "col";
     headerRow.appendChild(th);
   });

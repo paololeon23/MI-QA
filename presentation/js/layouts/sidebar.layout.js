@@ -125,12 +125,20 @@ export function buildSidebarMarkup() {
   return `
     <aside class="sidebar" id="sidebarNavigation">
       <div class="sidebar__brand">
-        <img
-          class="sidebar__logo"
-          id="imgApplicationLogo"
-          src="./${appConfig.brandLogoPath}${assetVersion}"
-          alt="AGROVISION"
-        />
+        <a
+          class="sidebar__brand-link"
+          id="lnkSidebarBrand"
+          href="${appConfig.defaultRoute}"
+          aria-label="AGROVISION"
+          title="AGROVISION"
+        >
+          <img
+            class="sidebar__logo"
+            id="imgApplicationLogo"
+            src="./${appConfig.brandLogoPath}${assetVersion}"
+            alt="AGROVISION"
+          />
+        </a>
       </div>
 
       <nav class="sidebar__nav" id="sidebarNavigationMenu">

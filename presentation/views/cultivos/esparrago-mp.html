@@ -74,15 +74,15 @@
               <div class="agv-mp-actions">
                 <button type="button" id="agv-mp-run-review" class="agv-mp-btn agv-mp-btn--primary" disabled>
                   <i data-lucide="play" aria-hidden="true"></i>
-                  <span>Revisar Excel</span>
+                  <span data-i18n="plagasArandano.runReview"></span>
                 </button>
                 <button type="button" id="agv-mp-export-filtered" class="agv-mp-btn agv-mp-btn--upload" disabled>
                   <i data-lucide="file-spreadsheet" aria-hidden="true"></i>
-                  <span>Excel filtrado</span>
+                  <span data-i18n="plagasArandano.exportFiltered"></span>
                 </button>
                 <button type="button" id="agv-mp-clear" class="agv-mp-btn agv-mp-btn--ghost">
                   <i data-lucide="rotate-ccw" aria-hidden="true"></i>
-                  <span>Limpiar</span>
+                  <span data-i18n="plagasArandano.clear"></span>
                 </button>
               </div>
             </div>
@@ -92,7 +92,7 @@
               <div class="agv-mp-quick">
                 <button type="button" id="agv-mp-review-all" class="agv-mp-btn agv-mp-btn--outline" disabled data-i18n-title="esparragoMp.reviewAllTitle" title="">
                   <i data-lucide="layout-grid" aria-hidden="true"></i>
-                  <span>Todo</span>
+                  <span data-i18n="plagasArandano.reviewAll"></span>
                 </button>
                 <button type="button" id="agv-mp-export-errors" class="agv-mp-btn agv-mp-btn--upload agv-mp-btn--square" disabled data-i18n-title="esparragoMp.exportErrorsTitle" data-i18n-aria-label="esparragoMp.exportErrorsTitle" title="" aria-label="">
                   <i data-lucide="file-down" aria-hidden="true"></i>
@@ -116,42 +116,42 @@
         <div class="agv-mp-excel-insight__body">
           <div class="agv-mp-excel-insight__placeholder">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="file-spreadsheet" class="lucide lucide-file-spreadsheet" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M8 13h2"></path><path d="M14 13h2"></path><path d="M8 17h2"></path><path d="M14 17h2"></path></svg>
-            <p>Cargue un archivo Excel para ver los datos principales del registro.</p>
+            <p data-i18n="plagasArandano.excelInsightEmpty"></p>
           </div>
         </div>
       </aside>
     </div>
 
-    <div class="agv-mp-guide" aria-label="Guía">
+    <div class="agv-mp-guide" data-i18n-aria-label="esparragoMp.infoLead" aria-label="">
       <ol class="agv-mp-guide__flow">
         <li class="agv-mp-guide__step">
           <span class="agv-mp-guide__step-index">01</span>
           <span class="agv-mp-guide__step-icon" aria-hidden="true"><i data-lucide="file-check-2"></i></span>
-          <p class="agv-mp-guide__step-text">01 Se ha cargado un archivo Excel válido (MPHA / MPBA / MPGA)</p>
+          <p class="agv-mp-guide__step-text" data-i18n="esparragoMp.infoItem1"></p>
         </li>
         <li class="agv-mp-guide__connector" aria-hidden="true"><i data-lucide="chevron-right"></i></li>
         <li class="agv-mp-guide__step">
           <span class="agv-mp-guide__step-index">02</span>
           <span class="agv-mp-guide__step-icon" aria-hidden="true"><i data-lucide="calendar-search"></i></span>
-          <p class="agv-mp-guide__step-text">02 Selecciona cartilla y fecha de inspección, luego pulsa Revisar Excel</p>
+          <p class="agv-mp-guide__step-text" data-i18n="esparragoMp.infoItem2"></p>
         </li>
         <li class="agv-mp-guide__connector" aria-hidden="true"><i data-lucide="chevron-right"></i></li>
         <li class="agv-mp-guide__step">
           <span class="agv-mp-guide__step-index">03</span>
           <span class="agv-mp-guide__step-icon" aria-hidden="true"><i data-lucide="layout-grid"></i></span>
-          <p class="agv-mp-guide__step-text">03 Todo: analiza todas las fechas de la cartilla seleccionada (sin elegir fecha)</p>
+          <p class="agv-mp-guide__step-text" data-i18n="esparragoMp.infoItem3"></p>
         </li>
         <li class="agv-mp-guide__connector" aria-hidden="true"><i data-lucide="chevron-right"></i></li>
         <li class="agv-mp-guide__step">
           <span class="agv-mp-guide__step-index">04</span>
           <span class="agv-mp-guide__step-icon" aria-hidden="true"><i data-lucide="file-down"></i></span>
-          <p class="agv-mp-guide__step-text">04 Icono Excel junto a Todo: descarga el archivo completo de la cartilla</p>
+          <p class="agv-mp-guide__step-text" data-i18n="esparragoMp.infoItem4"></p>
         </li>
         <li class="agv-mp-guide__connector" aria-hidden="true"><i data-lucide="chevron-right"></i></li>
         <li class="agv-mp-guide__step">
           <span class="agv-mp-guide__step-index">05</span>
           <span class="agv-mp-guide__step-icon" aria-hidden="true"><i data-lucide="refresh-cw"></i></span>
-          <p class="agv-mp-guide__step-text">05 La fecha LMR se actualiza automáticamente al elegir la fecha de inspección</p>
+          <p class="agv-mp-guide__step-text" data-i18n="esparragoMp.infoItem5"></p>
         </li>
       </ol>
     </div>

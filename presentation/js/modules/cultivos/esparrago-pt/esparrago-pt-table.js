@@ -10,17 +10,15 @@ import {
   getReglasOrigen
 } from "./esparrago-pt.config.js";
 import { isClientRegistered } from "./esparrago-pt-pesos.catalog.js";
-import { applyCellValidation, formatCellDisplay } from "./esparrago-pt.validation.js";
+import { applyCellValidation, formatCellDisplay, computeFechaLmrMayoritaria, setFechaLmrMayoritaria, FECHA_LMR_JS } from "./esparrago-pt.validation.js";
 import { hydrateLucideIcons } from "../../../utils/lucide-icon.util.js";
 import {
   applyPtColumnVisibility,
   bindColumnContextMenu,
   bindCopyableCells
 } from "../arandano-pt/arandano-pt-table.js";
-import {
-  getColumnHintFromReglas,
-  resolveColumnLabel
-} from "../../../../../engine/cartilla-rules.adapter.js";
+import { getColumnHintFromReglas } from "../../../../../engine/cartilla-rules.adapter.js";
+import { resolvePtEsparragoColumnLabel } from "./esparrago-pt-i18n-labels.js";
 
 /** Anchos fijos sticky — mismos valores que arándano MP (contiguos sin cols 2–5). */
 const ESPARRAGO_STICKY_COL_WIDTHS = {
@@ -73,7 +71,7 @@ function buildPlainHeader(th, excelCol, displayIdx, headers, columnLabelsByIndex
   th.className = "agv-pt-data-header";
   th.dataset.colIndex = String(displayIdx);
   th.dataset.excelCol = String(excelCol);
-  const label = resolveColumnLabel(excelCol, headers, columnLabelsByIndex);
+  const label = resolvePtEsparragoColumnLabel(excelCol, headers, columnLabelsByIndex);
   const hint = getColumnHintFromReglas(reglas, excelCol);
   th.textContent = label;
   th.title = hint
@@ -169,6 +167,31 @@ function openColMenuForHeader(tableEl, menuEl, th) {
   hydrateLucideIcons(menuEl);
 }
 
+/** Actualiza solo textos de cabecera (idioma); no toca filas ni filtros. */
+export function refreshEsparragoPtHeaderLabels(headerRow, headers) {
+  if (!headerRow) return;
+  const columnLabelsByIndex = getColumnLabelsByIndex();
+  const reglas = getReglasOrigen();
+
+  headerRow.querySelectorAll("th[data-excel-col]").forEach((th) => {
+    const excelCol = Number(th.dataset.excelCol);
+    if (!Number.isFinite(excelCol)) return;
+    const label = resolvePtEsparragoColumnLabel(excelCol, headers, columnLabelsByIndex);
+    const filterLabel = th.querySelector(".agv-pt-filter-head__label");
+    if (filterLabel) {
+      filterLabel.textContent = label;
+    } else {
+      const keep = [...th.children];
+      th.textContent = label;
+      keep.forEach((el) => th.appendChild(el));
+    }
+    const hint = getColumnHintFromReglas(reglas, excelCol);
+    th.title = hint
+      ? `${hint} — clic para ocultar/mostrar columnas`
+      : `${label} — clic para ocultar/mostrar columnas`;
+  });
+}
+
 export function bindEsparragoPtColumnMenu(tableEl, menuEl) {
   bindColumnContextMenu(tableEl, menuEl, { protectedColIndices: getProtectedColIndicesPt() });
   if (!tableEl || tableEl.dataset.colClickBound === "1") return;
@@ -194,6 +217,9 @@ export function renderEsparragoPtTable({
 }) {
   headerRow.innerHTML = "";
 
+  const lmrMayoritaria = computeFechaLmrMayoritaria(allRowsForDate || filteredRows, FECHA_LMR_JS);
+  setFechaLmrMayoritaria(lmrMayoritaria);
+
   const columnLabelsByIndex = getColumnLabelsByIndex();
   const reglas = getReglasOrigen();
 
@@ -206,7 +232,7 @@ export function renderEsparragoPtTable({
         th,
         excelCol,
         displayIdx,
-        resolveColumnLabel(excelCol, headers, columnLabelsByIndex) || "Cliente Esp.",
+        resolvePtEsparragoColumnLabel(excelCol, headers, columnLabelsByIndex) || "Cliente Esp.",
         "agv-pt-filter-cliente"
       );
     } else if (excelCol === filterFormatoCol) {
@@ -214,7 +240,7 @@ export function renderEsparragoPtTable({
         th,
         excelCol,
         displayIdx,
-        resolveColumnLabel(excelCol, headers, columnLabelsByIndex) || "Formato Asp",
+        resolvePtEsparragoColumnLabel(excelCol, headers, columnLabelsByIndex) || "Formato Asp",
         "agv-pt-filter-formato"
       );
     } else {

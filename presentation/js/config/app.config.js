@@ -1,11 +1,14 @@
+const currentYear = new Date().getFullYear();
+
 export const appConfig = {
-  appName: "AGV 2026 - MI",
+  appYear: currentYear,
+  appName: "AGV - MI",
   appVersion: "1.0.0",
   defaultLanguage: "es-PE",
   supportedLanguages: ["es-PE", "en-US", "fr-MA", "zh-CN"],
-  cacheBustingVersion: "2026071013",
+  cacheBustingVersion: "2026071471",
   defaultRoute: "#/inicio",
   brandLogoPath: "presentation/images/logo.png",
-  brandMarkPath: "presentation/images/icono.png",
+  brandMarkPath: "presentation/images/logo%20-%20copia.png",
   faviconPath: "presentation/images/icono.png"
 };

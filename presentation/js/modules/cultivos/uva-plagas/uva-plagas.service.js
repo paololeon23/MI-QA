@@ -30,7 +30,7 @@ import {
 } from "./uva-plagas.validation.js";
 import { mountReviewAllDashboard } from "./uva-plagas-compare.js";
 import { writePlagasErrorsExport, writePlagasExportFile } from "./uva-plagas-export.js";
-import { renderUvaPlagasTable } from "./uva-plagas-table.js";
+import { renderUvaPlagasTable, refreshUvaPlagasHeaderLabels } from "./uva-plagas-table.js";
 
 function t(key, vars = {}) {
   let text = i18nService.translate(key);
@@ -711,6 +711,15 @@ export class UvaPlagasService {
       timer: 1000,
       showConfirmButton: false
     });
+  }
+
+  onLanguageChange() {
+    refreshUvaPlagasHeaderLabels(
+      this.shell?.refs?.resultsHeader,
+      this.headers,
+      this.columnLabelsByIndex,
+      this.config
+    );
   }
 
   destroy() {

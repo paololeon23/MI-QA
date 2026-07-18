@@ -7,6 +7,8 @@ import {
   getCellValidationIssues,
   rowHasMarkedErrors
 } from "./palta-plagas.validation.js";
+import { translateExcelHeader } from "../../../utils/excel-header-i18n.util.js";
+import { refreshTranslatedHeaderRow } from "../../../utils/table-header-i18n.util.js";
 
 function applySticky(el, excelCol, stickyCols) {
   if (!stickyCols.includes(excelCol)) return;
@@ -39,7 +41,10 @@ export function renderPaltaPlagasTable({
   visibleCols.forEach((idx) => {
     const th = document.createElement("th");
     th.className = "agv-mp-table__col-header";
-    th.textContent = resolveColumnLabel(idx, headers, columnLabelsByIndex, config);
+    const rawLabel = resolveColumnLabel(idx, headers, columnLabelsByIndex, config);
+    th.dataset.colIndex = String(idx);
+    th.dataset.excelHeader = rawLabel;
+    th.textContent = translateExcelHeader(rawLabel, idx);
     th.title = th.textContent;
     applySticky(th, idx, stickyCols);
     if (idx >= 99 && idx <= 131) th.classList.add("agv-mp-col-texto-wrap");
@@ -90,7 +95,7 @@ export function renderNestedErrorTableHtml(filas, headers, config, columnLabelsB
 
   const thead = visibleCols
     .map((idx) => {
-      const label = resolveColumnLabel(idx, headers, columnLabelsByIndex, config);
+      const label = translateExcelHeader(resolveColumnLabel(idx, headers, columnLabelsByIndex, config), idx);
       const wrapCls = idx >= 99 && idx <= 131 ? ' class="agv-mp-col-texto-wrap"' : "";
       return `<th${wrapCls} scope="col">${htmlEscape(label)}</th>`;
     })
@@ -124,4 +129,10 @@ export function renderNestedErrorTableHtml(filas, headers, config, columnLabelsB
         </table>
       </div>
     </div>`;
+}
+
+export function refreshPaltaPlagasHeaderLabels(headerRow, headers, columnLabelsByIndex, config) {
+  refreshTranslatedHeaderRow(headerRow, (idx) =>
+    resolveColumnLabel(idx, headers, columnLabelsByIndex, config)
+  );
 }

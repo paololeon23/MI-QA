@@ -26,7 +26,8 @@ import {
 } from "./palta-mp.validation.js";
 import {
   renderPaltaMpResultsTable,
-  htmlTablaFilasConError
+  htmlTablaFilasConError,
+  refreshPaltaMpHeaderLabels
 } from "./palta-mp-table.js";
 import {
   buildFilteredSheetData,
@@ -589,7 +590,7 @@ export class PaltaMpService {
       showMpDialog({
         icon: "success",
         title: t("plagasArandano.allCorrect"),
-        text: "No se encontraron errores en la inspección."
+        text: t("paltaMp.noInspectionErrors")
       });
     }
   }
@@ -828,6 +829,19 @@ export class PaltaMpService {
       text: `${CARTILLA_CODE}: ${rows.length} inspecciones exportadas.`,
       timer: 2200,
       showConfirmButton: false
+    });
+  }
+
+  onLanguageChange() {
+    const refs = this.shell?.refs;
+    if (!refs) return;
+    refreshPaltaMpHeaderLabels(refs.resultsHeader, this.headers);
+    const count = this.processedRows?.length;
+    if (refs.totalFilasDiv && count != null) {
+      refs.totalFilasDiv.textContent = t("paltaMp.totalInspectionRows", { count });
+    }
+    refs.resultsBody?.querySelectorAll("tr.agv-mp-row-ok td").forEach((td) => {
+      td.textContent = t("paltaMp.noInspectionErrors");
     });
   }
 

@@ -7,6 +7,8 @@ import {
   getCellValidationIssues,
   rowHasMarkedErrors
 } from "./uva-plagas.validation.js";
+import { translateExcelHeader } from "../../../utils/excel-header-i18n.util.js";
+import { refreshTranslatedHeaderRow } from "../../../utils/table-header-i18n.util.js";
 
 const SUMMARY_COL_MIN = 79;
 const SUMMARY_COL_MAX = 104;
@@ -46,7 +48,10 @@ export function renderUvaPlagasTable({
   visibleCols.forEach((idx) => {
     const th = document.createElement("th");
     th.className = "agv-mp-table__col-header";
-    th.textContent = resolveColumnLabel(idx, headers, columnLabelsByIndex, config);
+    const rawLabel = resolveColumnLabel(idx, headers, columnLabelsByIndex, config);
+    th.dataset.colIndex = String(idx);
+    th.dataset.excelHeader = rawLabel;
+    th.textContent = translateExcelHeader(rawLabel, idx);
     th.title = th.textContent;
     applySticky(th, idx, stickyCols);
     if (isSummaryCol(idx)) th.classList.add("agv-mp-col-texto-wrap");
@@ -98,7 +103,7 @@ export function renderNestedErrorTableHtml(filas, headers, config, columnLabelsB
 
   const thead = visibleCols
     .map((idx) => {
-      const label = resolveColumnLabel(idx, headers, columnLabelsByIndex, config);
+      const label = translateExcelHeader(resolveColumnLabel(idx, headers, columnLabelsByIndex, config), idx);
       const classes = ["agv-mp-table__col-header"];
       if (stickyCols.includes(idx)) {
         classes.push("agv-mp-sticky-col", `agv-mp-sticky-col-${idx}`);
@@ -141,4 +146,10 @@ export function renderNestedErrorTableHtml(filas, headers, config, columnLabelsB
         </table>
       </div>
     </div>`;
+}
+
+export function refreshUvaPlagasHeaderLabels(headerRow, headers, columnLabelsByIndex, config) {
+  refreshTranslatedHeaderRow(headerRow, (idx) =>
+    resolveColumnLabel(idx, headers, columnLabelsByIndex, config)
+  );
 }

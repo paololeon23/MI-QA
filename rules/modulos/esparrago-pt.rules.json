@@ -222,7 +222,10 @@
     },
     {
       "numero": 52,
-      "nombre-de-la-columna": "Fecha Actualización LMR"
+      "nombre-de-la-columna": "Fecha Actualización LMR",
+      "es-obligatorio": true,
+      "igual-a-contexto": "fecha-lmr-mayoritaria",
+      "si-falla-mostrar": "Fecha LMR debe ser la mayoritaria de la inspección ({{valor-esperado}}). Detectado: {{valor}}"
     },
     {
       "numero": 53,

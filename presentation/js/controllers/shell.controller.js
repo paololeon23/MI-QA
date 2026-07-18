@@ -3,6 +3,7 @@ import { stateStore } from "../core/state-store.js";
 import { buildSidebarMarkup } from "../layouts/sidebar.layout.js";
 import { buildTopbarMarkup } from "../layouts/topbar.layout.js";
 import { sidebarController } from "./sidebar.controller.js";
+import { globalSearchController } from "./global-search.controller.js";
 
 class ShellController {
   constructor() {
@@ -13,6 +14,7 @@ class ShellController {
   initialize(onLanguageChangeCallback) {
     this.onLanguageChange = onLanguageChangeCallback;
     sidebarController.initialize();
+    globalSearchController.initialize();
     this.bindLanguageSelector();
     this.bindGlobalClickOutside();
   }
@@ -63,6 +65,10 @@ class ShellController {
     }
 
     const clickTarget = event?.target;
+    if (!(clickTarget instanceof Element && clickTarget.closest(".topbar__search"))) {
+      globalSearchController.hideResults();
+    }
+
     if (clickTarget instanceof Element && clickTarget.closest("[data-sidebar-flyout], [data-sidebar-group-toggle]")) {
       return;
     }
@@ -74,6 +80,7 @@ class ShellController {
 
   destroy() {
     document.removeEventListener("click", this.boundCloseDropdowns);
+    globalSearchController.destroy();
     sidebarController.destroy();
   }
 }

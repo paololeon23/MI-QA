@@ -8,6 +8,8 @@ import {
   buildFilteredSheetData,
   buildFullSheetDataWithErrors
 } from "./esparrago-mp-export.js";
+import { translateExcelHeader } from "../../../utils/excel-header-i18n.util.js";
+import { refreshTranslatedHeaderRow } from "../../../utils/table-header-i18n.util.js";
 
 const STICKY_COLUMNS = [0, 1, 6, 9]; // Id, Inspección código, Usuario, Lote
 /** Columnas de contexto siempre visibles en la tabla de errores (JS 0-based). */
@@ -111,7 +113,8 @@ function appendSumVerificationHeaders(headerRow) {
   ESP_MP_SUM_VERIFICATIONS.forEach((def) => {
     const th = document.createElement("th");
     th.className = "agv-mp-table__col-header agv-mp-sum-col-header";
-    th.textContent = def.header;
+    th.dataset.excelHeader = def.header;
+    th.textContent = translateExcelHeader(def.header);
     th.title = def.mismatchHint;
     headerRow.appendChild(th);
   });
@@ -1694,7 +1697,7 @@ export class EsparragoMpService {
       showMpDialog({
         icon: "success",
         title: t("plagasArandano.allCorrect"),
-        text: "No se encontraron errores en la inspección."
+        text: t("esparragoMp.noInspectionErrors")
       });
     }
   }
@@ -1743,7 +1746,8 @@ export class EsparragoMpService {
     }
 
     if (refs.totalFilasDiv) {
-      refs.totalFilasDiv.textContent = `Total registros inspección: ${allRows.length}`;
+      this._lastInspectionRowCount = allRows.length;
+      refs.totalFilasDiv.textContent = t("esparragoMp.totalInspectionRows", { count: allRows.length });
     }
 
     if (!hasErrors) {
@@ -1751,7 +1755,7 @@ export class EsparragoMpService {
       tr.className = "agv-mp-row-ok";
       const td = document.createElement("td");
       td.colSpan = Math.max(columns.length || headers.length, 1);
-      td.textContent = "No se encontraron errores en esta inspección";
+      td.textContent = t("esparragoMp.noInspectionErrors");
       tr.appendChild(td);
       refs.resultsBody?.appendChild(tr);
     } else {
@@ -1760,7 +1764,8 @@ export class EsparragoMpService {
         const th = document.createElement("th");
         th.className = "agv-mp-table__col-header";
         th.dataset.colIndex = String(col.originalIndex);
-        th.textContent = col.header;
+        th.dataset.excelHeader = String(col.header ?? "");
+        th.textContent = translateExcelHeader(col.header, col.originalIndex);
         applyStickyColumnClasses(th, col.originalIndex);
         headerFrag.appendChild(th);
       });
@@ -1788,6 +1793,23 @@ export class EsparragoMpService {
 
     if (refs.resultsTable) refs.resultsTable.hidden = false;
     if (refs.resultsIconEl) hydrateLucideIcons(refs.resultsIconEl);
+  }
+
+  onLanguageChange() {
+    const refs = this.shell?.refs;
+    if (!refs) return;
+    if (refs.totalFilasDiv && this._lastInspectionRowCount != null) {
+      refs.totalFilasDiv.textContent = t("esparragoMp.totalInspectionRows", {
+        count: this._lastInspectionRowCount
+      });
+    }
+    refreshTranslatedHeaderRow(refs.resultsHeader, (idx) => {
+      const cartilla = refs.inspectionTypeSelect?.value;
+      return (this.columnsByCartilla?.[cartilla] || []).find((col) => col.originalIndex === idx)?.header || "";
+    });
+    refs.resultsBody?.querySelectorAll("tr.agv-mp-row-ok td").forEach((td) => {
+      td.textContent = t("esparragoMp.noInspectionErrors");
+    });
   }
 
   destroy() {

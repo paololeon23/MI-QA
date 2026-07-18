@@ -11,6 +11,8 @@ import {
   EXTRA_COL_SUMA_CALIBRES
 } from "./uva-mp.validation.js";
 import { hydrateLucideIcons } from "../../../utils/lucide-icon.util.js";
+import { translateExcelHeader } from "../../../utils/excel-header-i18n.util.js";
+import { refreshTranslatedHeaderRow } from "../../../utils/table-header-i18n.util.js";
 
 const DATE_COLS = new Set([19, 50, 69]);
 
@@ -28,12 +30,14 @@ function buildDisplayColumns(headers) {
   return [
     ...indices.map((colJs) => ({
       key: colJs,
-      label: headers[colJs] || `Col ${colJs + 1}`,
+      rawLabel: headers[colJs] || `Col ${colJs + 1}`,
+      label: translateExcelHeader(headers[colJs] || `Col ${colJs + 1}`, colJs),
       sticky: colJs
     })),
     ...extra.map((label) => ({
       key: resolveExtraColumnKey(label),
-      label,
+      rawLabel: label,
+      label: translateExcelHeader(label),
       sticky: null
     }))
   ];
@@ -103,7 +107,7 @@ export function renderUvaMpResultsTable({
   }
 
   if (totalFilasDiv) {
-    totalFilasDiv.textContent = t("plagasArandano.totalRecords", { count: allRows.length });
+    totalFilasDiv.textContent = t("uvaMp.totalInspectionRows", { count: allRows.length });
   }
 
   if (resultsTable) {
@@ -116,7 +120,7 @@ export function renderUvaMpResultsTable({
     tr.className = "agv-mp-row-ok";
     const td = document.createElement("td");
     td.colSpan = Math.max(displayCols.length, 1);
-    td.textContent = "No se encontraron errores en esta inspección";
+    td.textContent = t("uvaMp.noInspectionErrors");
     tr.appendChild(td);
     resultsBody?.appendChild(tr);
     return;
@@ -126,6 +130,7 @@ export function renderUvaMpResultsTable({
     const th = document.createElement("th");
     th.className = "agv-mp-table__col-header";
     th.dataset.colIndex = String(col.key);
+    th.dataset.excelHeader = col.rawLabel;
     th.textContent = col.label;
     if (col.sticky != null) applyStickyColumnClasses(th, col.sticky);
     resultsHeader?.appendChild(th);
@@ -146,6 +151,13 @@ export function renderUvaMpResultsTable({
       tr.appendChild(td);
     });
     resultsBody?.appendChild(tr);
+  });
+}
+
+export function refreshUvaMpHeaderLabels(headerRow, headers) {
+  refreshTranslatedHeaderRow(headerRow, (idx) => {
+    if (typeof idx === "number" && Number.isFinite(idx)) return headers[idx] || "";
+    return "";
   });
 }
 

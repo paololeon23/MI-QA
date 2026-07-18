@@ -17,7 +17,7 @@ export const languagesConfig = [
   },
   {
     code: "fr-MA",
-    label: "Marruecos",
+    label: "Français (Maroc)",
     shortCode: "MA",
     flagClass: "fi-ma",
     locale: "fr-MA",
@@ -26,7 +26,7 @@ export const languagesConfig = [
   {
     code: "zh-CN",
     label: "中文（简体）",
-    shortCode: "CN",
+    shortCode: "ZH",
     flagClass: "fi-cn",
     locale: "zh-CN",
     isDefault: false

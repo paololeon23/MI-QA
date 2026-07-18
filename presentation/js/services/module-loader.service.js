@@ -76,6 +76,14 @@ class ModuleLoaderService {
     this.currentModuleInstance = new dynamicModule.ModuleController(moduleContext);
     await this.currentModuleInstance.mount();
   }
+
+  /** Traducir UI dinámica del módulo activo sin remount (conserva tabla/datos). */
+  async applyLanguageChange(languageCode) {
+    const instance = this.currentModuleInstance;
+    if (instance && typeof instance.onLanguageChange === "function") {
+      await instance.onLanguageChange(languageCode);
+    }
+  }
 }
 
 export const moduleLoaderService = new ModuleLoaderService();

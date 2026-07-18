@@ -22,7 +22,8 @@ import {
   renderUvaPtTable,
   bindTableSearch,
   bindUvaPtColumnMenu,
-  buildWhatsappReport
+  buildWhatsappReport,
+  refreshUvaPtHeaderLabels
 } from "./uva-pt-table.js";
 import { exportUvaPtFiltered } from "./uva-pt-export.js";
 
@@ -572,6 +573,10 @@ export class UvaPtService {
       timer: 1000,
       showConfirmButton: false
     });
+  }
+
+  onLanguageChange() {
+    refreshUvaPtHeaderLabels(this.shell?.refs?.resultsHeader, this.headers);
   }
 
   destroy() {

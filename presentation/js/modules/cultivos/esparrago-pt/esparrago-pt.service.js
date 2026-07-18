@@ -16,8 +16,13 @@ import {
   getColLmrJs,
   getExcelCabecera
 } from "./esparrago-pt.config.js";
-import { scanGlobalWarnings, serialExcelAFecha } from "./esparrago-pt.validation.js";
-import { renderEsparragoPtTable, bindTableSearch, bindEsparragoPtColumnMenu } from "./esparrago-pt-table.js";
+import { scanGlobalWarnings, serialExcelAFecha, computeFechaLmrMayoritaria, formatISOToDMY, parseFechaToISO } from "./esparrago-pt.validation.js";
+import {
+  renderEsparragoPtTable,
+  bindTableSearch,
+  bindEsparragoPtColumnMenu,
+  refreshEsparragoPtHeaderLabels
+} from "./esparrago-pt-table.js";
 import { exportEsparragoPtFiltered } from "./esparrago-pt-export.js";
 
 function t(key, vars = {}) {
@@ -276,9 +281,41 @@ export class EsparragoPtService {
       this.syncButtons();
       return;
     }
-    const row = this.dataRows.find((r) => rowMatchesInspectionDate(r, fecha));
-    const lmr = row?.[getColLmrJs()] ?? "PENDIENTE";
-    lmrSel.innerHTML = `<option value="${lmr}" selected>${lmr}</option>`;
+    const rows = this.dataRows.filter((r) => rowMatchesInspectionDate(r, fecha));
+    const colLmr = getColLmrJs();
+    const mayoritariaISO = computeFechaLmrMayoritaria(rows, colLmr);
+    const lmrDates = [...new Set(rows.map((r) => parseFechaToISO(r[colLmr])).filter(Boolean))];
+    const lmrDisplay = formatISOToDMY(mayoritariaISO) || "PENDIENTE";
+
+    lmrSel.innerHTML = `<option value="${htmlEscape(mayoritariaISO || lmrDisplay)}" selected>${htmlEscape(lmrDisplay)}</option>`;
+    lmrSel.disabled = true;
+
+    if (lmrDates.length > 1) {
+      lmrSel.classList.add(`${this.shell.cls("input")}--warning`);
+      const conteo = {};
+      rows.forEach((r) => {
+        const iso = parseFechaToISO(r[colLmr]);
+        if (!iso) return;
+        conteo[iso] = (conteo[iso] || 0) + 1;
+      });
+      const detalles = Object.entries(conteo)
+        .sort((a, b) => b[1] - a[1])
+        .map(([iso, n]) => `• ${htmlEscape(formatISOToDMY(iso))}: <b>${n}</b> fila(s)`)
+        .join("<br>");
+      showPtDialog({
+        icon: "warning",
+        title: "Múltiples fechas LMR detectadas",
+        html: `<div class="agv-pt-dialog__html--body">
+          Se detectaron <b>${lmrDates.length}</b> fechas LMR diferentes:<br><br>
+          ${detalles}<br><br>
+          Se usará la fecha mayoritaria <b>${htmlEscape(lmrDisplay)}</b>. Las filas con fechas minoritarias se marcarán como error.
+        </div>`,
+        wide: true
+      });
+    } else {
+      lmrSel.classList.remove(`${this.shell.cls("input")}--warning`);
+    }
+
     this.resetResultsUi();
     this.syncButtons();
   }
@@ -357,6 +394,32 @@ export class EsparragoPtService {
     this.syncButtons();
     hydrateLucideIcons(this.shell.root);
     refs.resultsSection?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  /** Tras cambiar idioma: conservar datos y solo refrescar textos/cabeceras. */
+  onLanguageChange() {
+    if (!this.shell?.refs) return;
+    this.renderExcelInsight();
+    this.shell.setLiveStatus(this.dataRows.length > 0);
+
+    const refs = this.shell.refs;
+    if (refs.resultsHeader?.children?.length) {
+      refreshEsparragoPtHeaderLabels(refs.resultsHeader, this.headers);
+    }
+    if (refs.totalFilasDiv && this.filteredTableRows.length) {
+      refs.totalFilasDiv.textContent = t("ptEsparrago.totalRowsShown", {
+        count: this.filteredTableRows.length
+      });
+    }
+
+    const insp = refs.inspectionSelect;
+    if (insp?.disabled && insp.options.length === 1 && !insp.value) {
+      insp.options[0].textContent = t("ptEsparrago.selectDate");
+    }
+    const lmr = refs.lmrSelect;
+    if (lmr?.disabled && lmr.options.length === 1 && !this.dataRows.length) {
+      lmr.options[0].textContent = t("ptEsparrago.lmrAutoDate");
+    }
   }
 
   onExportFiltered() {

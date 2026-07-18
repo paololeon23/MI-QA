@@ -27,7 +27,8 @@ import {
 import {
   renderUvaMpResultsTable,
   htmlTablaFilasConError,
-  hydrateLucideIcons as hydrateTableIcons
+  hydrateLucideIcons as hydrateTableIcons,
+  refreshUvaMpHeaderLabels
 } from "./uva-mp-table.js";
 import {
   buildFilteredSheetData,
@@ -572,7 +573,7 @@ export class UvaMpService {
       showMpDialog({
         icon: "success",
         title: t("plagasArandano.allCorrect"),
-        text: "No se encontraron errores en la inspección."
+        text: t("uvaMp.noInspectionErrors")
       });
     }
   }
@@ -812,6 +813,19 @@ export class UvaMpService {
       text: `${CARTILLA_CODE}: ${rows.length} inspecciones exportadas.`,
       timer: 2200,
       showConfirmButton: false
+    });
+  }
+
+  onLanguageChange() {
+    const refs = this.shell?.refs;
+    if (!refs) return;
+    refreshUvaMpHeaderLabels(refs.resultsHeader, this.headers);
+    const count = this.processedRows?.length;
+    if (refs.totalFilasDiv && count != null) {
+      refs.totalFilasDiv.textContent = t("uvaMp.totalInspectionRows", { count });
+    }
+    refs.resultsBody?.querySelectorAll("tr.agv-mp-row-ok td").forEach((td) => {
+      td.textContent = t("uvaMp.noInspectionErrors");
     });
   }
 

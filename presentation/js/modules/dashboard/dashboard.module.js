@@ -176,6 +176,11 @@ export class ModuleController {
     hydrateLucideIcons(document.getElementById("moduleRoot"));
   }
 
+  async onLanguageChange() {
+    this.renderAll();
+    hydrateLucideIcons(document.getElementById("moduleRoot"));
+  }
+
   async loadCatalog() {
     const response = await fetch(`${VAR_MAP_PATH}?v=${appConfig.cacheBustingVersion}`);
     if (!response.ok) {
@@ -330,9 +335,12 @@ export class ModuleController {
       </article>
       <article class="inicio-varieties__kpi inicio-varieties__kpi--area">
         <span class="inicio-varieties__kpi-label">${htmlEscape(t("dashboard.statTopGenetics"))}</span>
-        <div class="inicio-varieties__kpi-main var-catalog-page__kpi-main--compact">
-          <span class="var-catalog-page__kpi-top-name">${htmlEscape(topName)}</span>
-          <span class="inicio-varieties__kpi-value">${topCount}</span>
+        <div class="inicio-varieties__kpi-main">
+          <div class="var-catalog-page__kpi-main--compact">
+            <span class="var-catalog-page__kpi-top-name">${htmlEscape(topName)}</span>
+            <span class="inicio-varieties__kpi-value">${topCount}</span>
+          </div>
+          ${buildMiniBarsSvg(barValues.slice(0, 4))}
         </div>
         <span class="inicio-varieties__kpi-meta">${htmlEscape(t("dashboard.statTopGeneticsMeta", { name: topName, count: topCount }))}</span>
       </article>
@@ -444,7 +452,7 @@ export class ModuleController {
     if (!preparedRows.length) {
       rowsMarkup = `
         <tr class="inicio-varieties__empty-row">
-          <td colspan="3">${htmlEscape(t("dashboard.emptyResults"))}</td>
+          <td colspan="4">${htmlEscape(t("dashboard.emptyResults"))}</td>
         </tr>
       `;
     } else {
@@ -457,6 +465,9 @@ export class ModuleController {
           </td>
           <td class="inicio-varieties__cell-variedad var-catalog-page__cell-variedad">${htmlEscape(row.variety)}</td>
           <td class="var-catalog-page__cell-licensor">${licensorBadgeMarkup(row.licensor)}</td>
+          <td class="var-catalog-page__cell-estado">
+            <span class="var-catalog-page__status var-catalog-page__status--ok">${htmlEscape(t("dashboard.statusActive"))}</span>
+          </td>
         </tr>
       `
         )
@@ -469,7 +480,7 @@ export class ModuleController {
 
     rowsMarkup += `
       <tr class="inicio-varieties__total-row">
-        <td colspan="2">${htmlEscape(totalLabel)}</td>
+        <td colspan="3">${htmlEscape(totalLabel)}</td>
         <td>${preparedRows.length}</td>
       </tr>
     `;

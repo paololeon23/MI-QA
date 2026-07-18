@@ -11,6 +11,8 @@ import {
   applySumaTonalidadesCell
 } from "./uva-pt.validation.js";
 import { hydrateLucideIcons } from "../../../utils/lucide-icon.util.js";
+import { translateExcelHeader } from "../../../utils/excel-header-i18n.util.js";
+import { refreshTranslatedHeaderRow } from "../../../utils/table-header-i18n.util.js";
 import {
   applyPtColumnVisibility,
   bindColumnContextMenu,
@@ -97,18 +99,24 @@ function buildActionsCell(row, tr, onRowMark, onCopyReport) {
 }
 
 function columnLabel(col, headers) {
-  if (col === "Suma Tonalidades") return "Suma Tonalidades";
-  return headers[col] || `Col ${Number(col) + 1}`;
+  const raw = col === "Suma Tonalidades" ? col : headers[col] || `Col ${Number(col) + 1}`;
+  return translateExcelHeader(raw, typeof col === "number" ? col : -1);
 }
 
 function buildPlainHeader(th, excelCol, displayIdx, headers) {
   th.className = "agv-pt-data-header";
   th.dataset.colIndex = String(displayIdx);
   if (typeof excelCol === "number") th.dataset.excelCol = String(excelCol);
+  th.dataset.excelHeader =
+    excelCol === "Suma Tonalidades" ? excelCol : headers[excelCol] || `Col ${Number(excelCol) + 1}`;
   const label = columnLabel(excelCol, headers);
   th.textContent = label;
   th.title = `${label} — clic para ocultar/mostrar columnas`;
   if (typeof excelCol === "number") applySticky(th, excelCol);
+}
+
+export function refreshUvaPtHeaderLabels(headerRow, headers) {
+  refreshTranslatedHeaderRow(headerRow, (idx) => headers[idx] || "");
 }
 
 function ensureProtectedColsVisible(tableEl) {

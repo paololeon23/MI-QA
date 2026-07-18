@@ -15,6 +15,8 @@ import {
   collectRowIncidencias
 } from "./palta-pt.validation.js";
 import { hydrateLucideIcons } from "../../../utils/lucide-icon.util.js";
+import { translateExcelHeader } from "../../../utils/excel-header-i18n.util.js";
+import { refreshTranslatedHeaderRow } from "../../../utils/table-header-i18n.util.js";
 import {
   applyPtColumnVisibility,
   bindColumnContextMenu,
@@ -102,7 +104,7 @@ function buildActionsCell(row, tr, fechaEmbalaje, onRowMark, onCopyReport) {
 
 function columnLabel(col, headers) {
   if (col === "E_C") return "E_C";
-  return headers[col] || `Col ${Number(col) + 1}`;
+  return translateExcelHeader(headers[col] || `Col ${Number(col) + 1}`, typeof col === "number" ? col : -1);
 }
 
 function buildFilterHeader(th, excelCol, displayIdx, label, selectId) {
@@ -123,10 +125,16 @@ function buildPlainHeader(th, excelCol, displayIdx, headers) {
   th.className = "agv-pt-data-header";
   th.dataset.colIndex = String(displayIdx);
   th.dataset.excelCol = String(excelCol);
+  const rawLabel = headers[excelCol] || `Col ${Number(excelCol) + 1}`;
+  th.dataset.excelHeader = rawLabel;
   const label = columnLabel(excelCol, headers);
   th.textContent = label;
   th.title = `${label} — clic para ocultar/mostrar columnas`;
   applySticky(th, excelCol);
+}
+
+export function refreshPaltaPtHeaderLabels(headerRow, headers) {
+  refreshTranslatedHeaderRow(headerRow, (idx) => headers[idx] || "");
 }
 
 function populateFilterSelect(selectEl, valores, valorActual) {

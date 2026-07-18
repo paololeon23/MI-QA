@@ -15,7 +15,16 @@ export function applyTranslationsToContainer(containerElement, options = {}) {
   const translatableElements = containerElement.querySelectorAll("[data-i18n]");
   translatableElements.forEach((element) => {
     const translationKey = element.getAttribute("data-i18n");
-    element.textContent = i18nService.translate(translationKey);
+    let vars = {};
+    const varsAttr = element.getAttribute("data-i18n-vars");
+    if (varsAttr) {
+      try {
+        vars = JSON.parse(varsAttr);
+      } catch {
+        vars = {};
+      }
+    }
+    element.textContent = i18nService.translate(translationKey, vars);
   });
 
   const placeholderElements = containerElement.querySelectorAll("[data-i18n-placeholder]");

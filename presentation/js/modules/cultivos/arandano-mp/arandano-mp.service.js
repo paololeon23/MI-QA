@@ -13,14 +13,16 @@ import {
   buildLazyDateDetailPlaceholders,
   bindLazyDateDetailTables
 } from "../shared/mp-results-perf.util.js";
+import { translateExcelHeader } from "../../../utils/excel-header-i18n.util.js";
 
 const STICKY_COLUMNS = [0, 1, 6, 9]; // Id, Inspección código, Usuario, Lote
 const FILAS_SKIP = 5;
-const CARTILLA_ORDER = ["MPHA", "MPBA", "MPGA"];
-const REGLAS_POR_CARTILLA = {
-  MPHA: "rules/modulos/arandano-mp-mpha.rules.json",
-  MPBA: "rules/modulos/arandano-mp-mpbar.rules.json",
-  MPGA: "rules/modulos/arandano-mp-mpgar.rules.json"
+/** Anchos fijos sticky Arándano MP (orden acumulado → left). */
+const STICKY_COL_WIDTHS = {
+  0: 95,
+  1: 95,
+  6: 181,
+  9: 126
 };
 
 function isPinnedColumn(index) {
@@ -31,6 +33,30 @@ function applyStickyColumnClasses(el, index) {
   if (!isPinnedColumn(index)) return;
   el.classList.add("agv-mp-sticky-col", `agv-mp-sticky-col-${index}`);
 }
+
+/** Recalcula left/width según columnas sticky realmente pintadas (evita huecos). */
+function syncArandanoMpStickyOffsets(tableEl) {
+  if (!tableEl) return;
+  let left = 0;
+  STICKY_COLUMNS.forEach((idx) => {
+    const cells = tableEl.querySelectorAll(`.agv-mp-sticky-col-${idx}`);
+    if (!cells.length) return;
+    const width = STICKY_COL_WIDTHS[idx] ?? 90;
+    cells.forEach((el) => {
+      el.style.left = `${left}px`;
+      el.style.width = `${width}px`;
+      el.style.minWidth = `${width}px`;
+      el.style.maxWidth = `${width}px`;
+    });
+    left += width;
+  });
+}
+const CARTILLA_ORDER = ["MPHA", "MPBA", "MPGA"];
+const REGLAS_POR_CARTILLA = {
+  MPHA: "rules/modulos/arandano-mp-mpha.rules.json",
+  MPBA: "rules/modulos/arandano-mp-mpbar.rules.json",
+  MPGA: "rules/modulos/arandano-mp-mpgar.rules.json"
+};
 
 function t(key, vars = {}) {
   let text = i18nService.translate(key);
@@ -1267,7 +1293,7 @@ export class ArandanoMpService {
         const sticky = isPinnedColumn(col.originalIndex)
           ? ` agv-mp-sticky-col agv-mp-sticky-col-${col.originalIndex}`
           : "";
-        return `<th class="agv-mp-table__col-header${sticky}">${htmlEscape(col.header)}</th>`;
+        return `<th class="agv-mp-table__col-header${sticky}">${htmlEscape(translateExcelHeader(col.header, col.originalIndex))}</th>`;
       })
       .join("");
 
@@ -1582,7 +1608,7 @@ export class ArandanoMpService {
       showMpDialog({
         icon: "success",
         title: t("plagasArandano.allCorrect"),
-        text: "No se encontraron errores en la inspección."
+        text: t("arandanoMp.noInspectionErrors")
       });
     }
   }
@@ -1631,7 +1657,10 @@ export class ArandanoMpService {
     }
 
     if (refs.totalFilasDiv) {
-      refs.totalFilasDiv.textContent = `Total registros inspección: ${allRows.length}`;
+      this._lastInspectionRowCount = allRows.length;
+      refs.totalFilasDiv.textContent = t("arandanoMp.totalInspectionRows", {
+        count: allRows.length
+      });
     }
 
     if (!hasErrors) {
@@ -1639,7 +1668,7 @@ export class ArandanoMpService {
       tr.className = "agv-mp-row-ok";
       const td = document.createElement("td");
       td.colSpan = Math.max(columns.length || headers.length, 1);
-      td.textContent = "No se encontraron errores en esta inspección";
+      td.textContent = t("arandanoMp.noInspectionErrors");
       tr.appendChild(td);
       refs.resultsBody?.appendChild(tr);
     } else {
@@ -1648,7 +1677,8 @@ export class ArandanoMpService {
         const th = document.createElement("th");
         th.className = "agv-mp-table__col-header";
         th.dataset.colIndex = String(col.originalIndex);
-        th.textContent = col.header;
+        th.dataset.excelHeader = String(col.header ?? "");
+        th.textContent = translateExcelHeader(col.header, col.originalIndex);
         applyStickyColumnClasses(th, col.originalIndex);
         headerFrag.appendChild(th);
       });
@@ -1673,6 +1703,7 @@ export class ArandanoMpService {
     }
 
     if (refs.resultsTable) refs.resultsTable.hidden = false;
+    syncArandanoMpStickyOffsets(refs.resultsTable);
     if (refs.resultsIconEl) hydrateLucideIcons(refs.resultsIconEl);
   }
 
@@ -1681,5 +1712,32 @@ export class ArandanoMpService {
     this.abortController = null;
     this.root = null;
     this.shell = null;
+  }
+
+  /** Solo UI: conserva datos/tabla al cambiar idioma. */
+  onLanguageChange() {
+    const refs = this.shell?.refs;
+    if (!refs) return;
+    if (refs.totalFilasDiv && this._lastInspectionRowCount != null) {
+      refs.totalFilasDiv.textContent = t("arandanoMp.totalInspectionRows", {
+        count: this._lastInspectionRowCount
+      });
+    }
+    refs.resultsHeader?.querySelectorAll("th[data-excel-header], th[data-col-index]").forEach((th) => {
+      const raw = th.dataset.excelHeader;
+      const idx = Number(th.dataset.colIndex);
+      if (raw != null && raw !== "") {
+        th.textContent = translateExcelHeader(raw, idx);
+        return;
+      }
+      if (Number.isFinite(idx)) {
+        const cartilla = this.shell?.refs?.inspectionTypeSelect?.value;
+        const col = (this.columnsByCartilla?.[cartilla] || []).find((c) => c.originalIndex === idx);
+        if (col) th.textContent = translateExcelHeader(col.header, idx);
+      }
+    });
+    const okCell = refs.resultsBody?.querySelector("tr.agv-mp-row-ok td");
+    if (okCell) okCell.textContent = t("arandanoMp.noInspectionErrors");
+    syncArandanoMpStickyOffsets(refs.resultsTable);
   }
 }

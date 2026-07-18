@@ -150,9 +150,11 @@
 }
 
 .var-catalog-page__kpi-main--compact {
+  display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 0.125rem;
+  min-width: 0;
 }
 
 .var-catalog-page__kpi-top-name {
@@ -321,134 +323,288 @@
   color: var(--kpi-accent-soft, #3d6a9e);
 }
 
-/* ── Panel tabla ── */
+/* ── Panel tabla (estilo formal cartillas) ── */
 .var-catalog-page__panel {
-  border-radius: 1rem;
-  border: 1px solid var(--color-border-soft);
-  background: var(--color-surface);
-  box-shadow: 0 4px 18px rgba(14, 27, 64, 0.06);
+  border-radius: 0.25rem;
+  border: 1px solid #d4dce8;
+  background: #ffffff;
+  box-shadow: none;
   overflow: hidden;
 }
 
+.var-catalog-page__panel-head.inicio-varieties__table-card-head,
 .var-catalog-page__panel-head {
-  padding: 1.125rem 1.375rem;
-  border-bottom: 1px solid #eef2f6;
-  background: linear-gradient(180deg, #ffffff 0%, #fafbfd 100%);
-}
-
-.var-catalog-page__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem 1.25rem;
   flex-wrap: wrap;
+  padding: 0.95rem 1.1rem;
+  border-bottom: 1px solid #d4dce8;
+  background: #ffffff;
 }
 
+.var-catalog-page__panel-head .inicio-varieties__scorecard-intro {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.var-catalog-page__panel-head .inicio-varieties__table-card-title,
+.var-catalog-page .inicio-varieties__table-card-title {
+  margin: 0;
+  color: #1f3668;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1.3;
+}
+
+.var-catalog-page__panel-head .inicio-varieties__table-card-meta {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: #5b6b82;
+  letter-spacing: 0.01em;
+}
+
+.var-catalog-page__toolbar.inicio-varieties__scorecard-actions,
+.var-catalog-page__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.var-catalog-page__search.inicio-varieties__table-search,
 .var-catalog-page__search {
-  flex: 1 1 14rem;
-  max-width: 20rem;
-  background: var(--color-surface-soft);
-  border-color: #e2e8f0;
-  transition:
-    border-color var(--transition-fast),
-    box-shadow var(--transition-fast),
-    background-color var(--transition-fast);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1 1 12rem;
+  max-width: 22rem;
+  min-width: 10rem;
+  height: auto;
+  min-height: 2.35rem;
+  padding: 0.4rem 0.75rem;
+  background: #ffffff;
+  border: 1px solid #d4dce8;
+  border-radius: 0.2rem;
+  color: #5b6b82;
+  transition: border-color 0.12s ease;
 }
 
 .var-catalog-page__search:focus-within {
-  border-color: rgba(94, 184, 217, 0.75);
+  border-color: #1f3668;
   background: #ffffff;
-  box-shadow: 0 0 0 3px rgba(94, 184, 217, 0.14);
+  box-shadow: none;
+  outline: 1px solid rgba(31, 54, 104, 0.18);
 }
 
+.var-catalog-page__search i,
+.var-catalog-page__search svg.lucide {
+  width: 0.8rem !important;
+  height: 0.8rem !important;
+  color: #5b6b82;
+  flex-shrink: 0;
+}
+
+.var-catalog-page__search .inicio-varieties__table-search-input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  outline: none;
+  font-size: 0.74rem;
+  font-weight: 400;
+  color: #1f3668;
+}
+
+.var-catalog-page__search .inicio-varieties__table-search-input::placeholder {
+  color: #94a3b8;
+  font-weight: 400;
+}
+
+.var-catalog-page__panel-head .inicio-varieties__table-select-wrap {
+  flex-shrink: 0;
+}
+
+.var-catalog-page__select.inicio-varieties__table-select,
 .var-catalog-page__select {
-  min-width: 10rem;
-  background: var(--color-surface-soft);
-  font-weight: 600;
-  color: var(--color-submenu-bg);
-  transition:
-    border-color var(--transition-fast),
-    box-shadow var(--transition-fast);
+  min-width: 9.5rem;
+  height: auto;
+  min-height: 2.35rem;
+  padding: 0.4rem 0.75rem;
+  background: #ffffff;
+  border: 1px solid #d4dce8;
+  border-radius: 0.2rem;
+  font-size: 0.74rem;
+  font-weight: 500;
+  color: #1f3668;
+  cursor: pointer;
+  transition: border-color 0.12s ease;
 }
 
 .var-catalog-page__select:focus {
   outline: none;
-  border-color: rgba(94, 184, 217, 0.75);
-  box-shadow: 0 0 0 3px rgba(94, 184, 217, 0.14);
+  border-color: #1f3668;
+  box-shadow: none;
 }
 
 .var-catalog-page__version {
   flex-shrink: 0;
-  padding: 0.4375rem 0.75rem;
-  border-radius: var(--radius-full);
-  border: 1px solid rgba(31, 54, 104, 0.12);
-  background: linear-gradient(135deg, rgba(31, 54, 104, 0.06), rgba(125, 226, 255, 0.14));
-  font-size: 0.6875rem;
-  font-weight: 700;
-  color: var(--color-submenu-bg);
+  padding: 0.28rem 0.55rem;
+  border-radius: 0.2rem;
+  border: 1px solid #d4dce8;
+  background: #f3f5f8;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #1f3668;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   white-space: nowrap;
 }
 
-.var-catalog-page .inicio-varieties__table-card-title {
-  color: var(--color-title);
-  font-size: 1.0625rem;
-}
-
-/* ── Tabla scrollable ── */
+/* ── Tabla scrollable (mismo lenguaje visual que cartillas) ── */
 .var-catalog-page__table-scroll {
   max-height: min(62vh, 42rem);
   overflow: auto;
   overscroll-behavior: contain;
+  background: #ffffff;
+}
+
+.var-catalog-page__table.inicio-varieties__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.76rem;
+  border: 0;
+  background: #ffffff;
 }
 
 .var-catalog-page__table thead {
   position: sticky;
   top: 0;
   z-index: 2;
-  box-shadow: 0 1px 0 #e8ecf1;
+  box-shadow: none;
+  background: #1a2f5a;
 }
 
-.var-catalog-page__table thead th {
-  background: #f4f6f8;
+.var-catalog-page__table thead th,
+.var-catalog-page__table.inicio-varieties__table th {
+  padding: 0.7rem 1rem;
+  text-align: left;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #ffffff;
+  background: #1a2f5a;
+  border: 0;
+  border-bottom: none;
+  border-right: 1px solid rgba(255, 255, 255, 0.12);
+  white-space: nowrap;
+}
+
+.var-catalog-page__table.inicio-varieties__table th:last-child {
+  border-right: 0;
+}
+
+.var-catalog-page__table .inicio-varieties__th-sort {
+  color: #ffffff;
+}
+
+.var-catalog-page__table .inicio-varieties__th-sort:hover,
+.var-catalog-page__table .inicio-varieties__th-sort.is-active {
+  color: #ffffff;
+}
+
+.var-catalog-page__table .inicio-varieties__sort-icon {
+  width: 0.7rem;
+  height: 0.7rem;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.var-catalog-page__table .inicio-varieties__sort-icon.is-active {
+  color: #ffffff;
+}
+
+.var-catalog-page__table.inicio-varieties__table td {
+  padding: 0.65rem 1rem;
+  color: #243552;
+  border: 0;
+  border-bottom: 1px solid #e8edf4;
+  vertical-align: middle;
+  line-height: 1.4;
+  background: #ffffff;
+  font-size: 0.76rem;
 }
 
 .var-catalog-page__table .inicio-varieties__data-row:nth-child(even) td {
-  background: rgba(248, 250, 252, 0.65);
+  background: #fafbfd;
 }
 
 .var-catalog-page__table .inicio-varieties__data-row:hover td {
-  background: rgba(94, 184, 217, 0.08);
+  background: #f1f5fa;
 }
 
-/* ── Código ── */
+/* ── Código (mono como cartillas) ── */
 .var-catalog-page__cell-code {
-  width: 6.5rem;
+  width: 5.5rem;
   white-space: nowrap;
 }
 
 .var-catalog-page__code-pill {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  min-width: 2.5rem;
-  padding: 0.3125rem 0.625rem;
-  border-radius: 0.5rem;
-  background: linear-gradient(135deg, rgba(31, 54, 104, 0.1), rgba(125, 226, 255, 0.16));
-  border: 1px solid rgba(31, 54, 104, 0.12);
-  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-  font-size: 0.8125rem;
-  font-weight: 700;
-  color: var(--color-submenu-bg);
-  letter-spacing: 0.05em;
+  justify-content: flex-start;
+  min-width: 0;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  border: none;
+  font-family: "IBM Plex Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #1f3668;
+  letter-spacing: 0.02em;
   font-variant-numeric: tabular-nums;
 }
 
-.var-catalog-page__cell-variedad {
+.var-catalog-page__cell-variedad,
+.var-catalog-page .inicio-varieties__cell-variedad {
   font-weight: 500;
-  color: var(--color-text-dark);
+  color: #243552;
 }
 
-/* ── Genética badge ── */
+/* ── Genética badge (formal, sin pills redondos) ── */
 .var-catalog-page__cell-licensor {
   white-space: nowrap;
+}
+
+.var-catalog-page__cell-estado {
+  white-space: nowrap;
+  width: 6.5rem;
+}
+
+.var-catalog-page__status {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.12rem 0.45rem;
+  border-radius: 0.15rem;
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.var-catalog-page__status--ok {
+  color: #166534;
+  background: #ecfdf3;
+  border: 1px solid #bbf7d0;
 }
 
 .var-catalog-page__genetics-badge,
@@ -456,23 +612,24 @@
   display: inline-flex;
   align-items: center;
   max-width: 100%;
-  padding: 0.3125rem 0.625rem;
-  border-radius: var(--radius-full);
-  background: rgba(31, 54, 104, 0.07);
-  border: 1px solid rgba(31, 54, 104, 0.1);
-  font-size: 0.75rem;
+  padding: 0.12rem 0.4rem;
+  border-radius: 0.15rem;
+  background: #f3f5f8;
+  border: 1px solid #d4dce8;
+  font-size: 0.65rem;
   font-weight: 600;
   color: #334155;
   line-height: 1.3;
+  letter-spacing: 0.02em;
 }
 
 .var-catalog-page__genetics-badge--empty,
 .var-catalog-page__licensor-badge--empty {
-  background: #f1f5f9;
+  background: #f8fafc;
   border-color: #e2e8f0;
-  color: var(--color-text-subtle);
+  color: #94a3b8;
   font-weight: 500;
-  font-style: italic;
+  font-style: normal;
 }
 
 /* ── Fila total ── */
@@ -480,16 +637,19 @@
   position: sticky;
   bottom: 0;
   z-index: 1;
-  background: linear-gradient(180deg, #f8fafc 0%, #eef2f8 100%);
-  font-weight: 700;
-  color: var(--color-submenu-bg);
-  border-top: 1px solid #dbe3ec;
-  box-shadow: 0 -4px 12px rgba(14, 27, 64, 0.04);
+  background: #f7f9fc;
+  font-weight: 600;
+  font-size: 0.76rem;
+  color: #1f3668;
+  border-top: 1px solid #d4dce8;
+  border-bottom: 0;
+  box-shadow: none;
 }
 
 .var-catalog-page .inicio-varieties__total-row td:last-child {
   text-align: right;
   font-variant-numeric: tabular-nums;
+  font-family: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
 }
 
 @media (max-width: 1100px) {

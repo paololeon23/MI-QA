@@ -16,13 +16,13 @@ export const routesConfig = {
   },
   "#/trazabilidad/peru": {
     titleKey: "routes.trazabilidadPeru",
-    viewPath: "presentation/views/trazabilidad/trazabilidad.html",
-    modulePath: "presentation/js/modules/trazabilidad/trazabilidad.module.js"
+    viewPath: "presentation/views/trazabilidad/trazabilidad-peru.html",
+    modulePath: "presentation/js/modules/trazabilidad/trazabilidad-peru.module.js"
   },
   "#/trazabilidad/chile": {
     titleKey: "routes.trazabilidadChile",
-    viewPath: "presentation/views/trazabilidad/trazabilidad.html",
-    modulePath: "presentation/js/modules/trazabilidad/trazabilidad.module.js"
+    viewPath: "presentation/views/trazabilidad/trazabilidad-chile.html",
+    modulePath: "presentation/js/modules/trazabilidad/trazabilidad-chile.module.js"
   },
   "#/cartillas": {
     titleKey: "routes.cartillas",

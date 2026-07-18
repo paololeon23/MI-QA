@@ -2,6 +2,8 @@
 
 import { applyPlagasCellValidation, cellDisplayValue } from "./esparrago-plagas.validation.js";
 import { resolveColumnLabel } from "./esparrago-plagas-rules.helper.js";
+import { translateExcelHeader } from "../../../utils/excel-header-i18n.util.js";
+import { refreshTranslatedHeaderRow } from "../../../utils/table-header-i18n.util.js";
 
 function applySticky(el, excelCol, stickyCols) {
   if (!stickyCols.includes(excelCol)) return;
@@ -26,7 +28,10 @@ export function renderPlagasEsparragoTable({
   visibleCols.forEach((idx) => {
     const th = document.createElement("th");
     th.className = "agv-mp-table__col-header";
-    th.textContent = resolveColumnLabel(idx, headers, columnLabelsByIndex, config);
+    const rawLabel = resolveColumnLabel(idx, headers, columnLabelsByIndex, config);
+    th.dataset.colIndex = String(idx);
+    th.dataset.excelHeader = rawLabel;
+    th.textContent = translateExcelHeader(rawLabel, idx);
     applySticky(th, idx, stickyCols);
     headerRow.appendChild(th);
   });
@@ -56,6 +61,12 @@ export function renderPlagasEsparragoTable({
   });
 
   return rows.length;
+}
+
+export function refreshPlagasEsparragoHeaderLabels(headerRow, headers, columnLabelsByIndex, config) {
+  refreshTranslatedHeaderRow(headerRow, (idx) =>
+    resolveColumnLabel(idx, headers, columnLabelsByIndex, config)
+  );
 }
 
 export function formatInspectionDateOption(val) {

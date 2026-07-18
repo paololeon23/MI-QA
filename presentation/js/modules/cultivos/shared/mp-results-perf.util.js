@@ -1,3 +1,5 @@
+import { i18nService } from "../../../services/i18n.service.js";
+
 /**
  * Helpers de rendimiento para tablas de resultados MP.
  * Evita pintar cientos de columnas: solo sticky/contexto + columnas con error.
@@ -84,7 +86,7 @@ export function buildLazyDateDetailPlaceholders(items, htmlEscape, metaLabel) {
             <span class="agv-mp-date-detail__meta">${htmlEscape(metaLabel(item))} · clic para ver</span>
           </summary>
           <div class="agv-mp-date-detail__body" data-todo-body="${idx}">
-            <p class="agv-mp-date-detail__loading">Cargando tabla…</p>
+            <p class="agv-mp-date-detail__loading">${htmlEscape(i18nService.translate("common.loadingTable"))}</p>
           </div>
         </details>`
     )

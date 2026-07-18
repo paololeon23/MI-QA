@@ -20,6 +20,7 @@ import { writePlagasExportFile, writePlagasErrorsExport } from "./esparrago-plag
 import { buildColumnLabelsByIndex, REGLAS_PATH } from "./esparrago-plagas-rules.helper.js";
 import { cargarReglasDesdeRuta } from "../../../../../engine/rule-engine.js";
 import { mergeValidacionesDesdeReglas } from "../../../../../engine/cartilla-rules.adapter.js";
+import { refreshTranslatedHeaderRow } from "../../../utils/table-header-i18n.util.js";
 
 const CONFIG_PATH = "presentation/data/plagas-esparrago-validaciones.json";
 const CARTILLA_ORDER = ["IPP", "ISP"];
@@ -286,6 +287,7 @@ export class EsparragoPlagasService {
   }
 
   renderCompareView(stats) {
+    this._lastCompareStats = stats;
     const root = this.shell.root;
     const summaryEl = root.querySelector("#agv-mp-compare-summary");
     const refs = this.shell.refs;
@@ -632,6 +634,17 @@ export class EsparragoPlagasService {
       timer: 1000,
       showConfirmButton: false
     });
+  }
+
+  onLanguageChange() {
+    const root = this.shell?.root;
+    if (!root) return;
+    refreshTranslatedHeaderRow(root.querySelector("#agv-mp-compare-header-ipp"), (idx) =>
+      this.headersByCartilla.IPP?.[idx] || this.columnLabelsByIndex?.[idx] || ""
+    );
+    refreshTranslatedHeaderRow(root.querySelector("#agv-mp-compare-header-isp"), (idx) =>
+      this.headersByCartilla.ISP?.[idx] || this.columnLabelsByIndex?.[idx] || ""
+    );
   }
 
   destroy() {

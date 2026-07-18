@@ -5,6 +5,8 @@ import { showPlagasDialog } from "./plagas-arandano-dialog.js";
 import { cargarReglasDesdeRuta } from "../../../../../engine/rule-engine.js";
 import { mergeValidacionesDesdeReglas } from "../../../../../engine/cartilla-rules.adapter.js";
 import { ejecutarValidacionPlagasArandano } from "./plagas-arandano.validation.js";
+import { translateExcelHeader } from "../../../utils/excel-header-i18n.util.js";
+import { refreshTranslatedHeaderRow } from "../../../utils/table-header-i18n.util.js";
 
 const VALIDACIONES_PATH = "presentation/data/plagas-arandano-validaciones.json";
 const REGLAS_PATH = "rules/modulos/arandano-plagas.rules.json";
@@ -409,6 +411,10 @@ export class PlagasArandanoService {
     this.colMenuEl = null;
     this.abortController?.abort();
     this.abortController = null;
+  }
+
+  onLanguageChange() {
+    refreshTranslatedHeaderRow(this.resultsHeader, (idx) => this.columns[idx]?.header || "");
   }
 
   setPlagasAuxButtonsDisabled(disabled) {
@@ -826,9 +832,10 @@ export class PlagasArandanoService {
   }
 
   buildColumnHeaderHtml(colIndex) {
-    const label = htmlEscape(this.columns[colIndex]?.header || "");
+    const rawHeader = this.columns[colIndex]?.header || "";
+    const label = htmlEscape(translateExcelHeader(rawHeader, colIndex));
     const hint = htmlEscape(t("plagasArandano.hideColumnHint"));
-    return `<th class="pmpar-table__col-header" data-col-index="${colIndex}" title="${hint}">${label}</th>`;
+    return `<th class="pmpar-table__col-header" data-col-index="${colIndex}" data-excel-header="${htmlEscape(rawHeader)}" title="${hint}">${label}</th>`;
   }
 
   buildColumnCellHtml(row, colIndex) {
@@ -842,7 +849,8 @@ export class PlagasArandanoService {
     const th = document.createElement("th");
     th.className = "pmpar-table__col-header";
     th.dataset.colIndex = String(colIndex);
-    th.textContent = this.columns[colIndex]?.header || "";
+    th.dataset.excelHeader = this.columns[colIndex]?.header || "";
+    th.textContent = translateExcelHeader(th.dataset.excelHeader, colIndex);
     th.title = t("plagasArandano.hideColumnHint");
     return th;
   }

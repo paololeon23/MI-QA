@@ -21,7 +21,21 @@ class SidebarController {
     this.bindSidebarSearch();
     this.bindGroupToggles();
     this.bindPrimaryLinkClicks();
+    this.bindBrandHomeLink();
     this.bindActivityPanel();
+  }
+
+  bindBrandHomeLink() {
+    const brandLink = document.getElementById("lnkSidebarBrand");
+    if (!brandLink) {
+      return;
+    }
+
+    brandLink.addEventListener("click", () => {
+      closePrimaryPanelModules();
+      setPinnedPrimaryModule(null);
+      updateActiveSidebarLink(appConfig.defaultRoute, "primary");
+    });
   }
 
   bindPrimaryLinkClicks() {

@@ -267,7 +267,7 @@ export function renderInicioFundoAreaChart(filters = {}) {
           borderColor: "#ffffff",
           borderWidth: 3,
           hoverBorderWidth: 0,
-          hoverOffset: 6,
+          hoverOffset: 0,
           spacing: 3
         }
       ]
@@ -285,9 +285,9 @@ export function renderInicioFundoAreaChart(filters = {}) {
           left: 56
         }
       },
-      animation: {
-        duration: 600,
-        easing: "easeOutQuart"
+      animation: false,
+      transitions: {
+        active: { animation: { duration: 0 } }
       },
       plugins: {
         legend: { display: false },
@@ -340,9 +340,9 @@ export function renderInicioTopVarietiesChart(filters = {}) {
       layout: {
         padding: { top: 8, right: 56, bottom: 8, left: 4 }
       },
-      animation: {
-        duration: 600,
-        easing: "easeOutQuart"
+      animation: false,
+      transitions: {
+        active: { animation: { duration: 0 } }
       },
       plugins: {
         legend: { display: false },
@@ -422,9 +422,9 @@ export function renderInicioEtapaAreaChart(filters = {}) {
       layout: {
         padding: { top: 22, right: 12, bottom: 6, left: 4 }
       },
-      animation: {
-        duration: 600,
-        easing: "easeOutQuart"
+      animation: false,
+      transitions: {
+        active: { animation: { duration: 0 } }
       },
       plugins: {
         legend: { display: false },

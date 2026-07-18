@@ -1,6 +1,7 @@
 import { GenericModuleController } from "../module-page.factory.js";
 
 import { applyTranslationsToContainer } from "../../utils/i18n-dom.util.js";
+import { refreshModuleLanguage } from "../../utils/module-i18n.util.js";
 
 import { hydrateLucideIcons } from "../../utils/lucide-icon.util.js";
 
@@ -71,6 +72,14 @@ export class ModuleController extends GenericModuleController {
   }
 
 
+
+
+  async onLanguageChange() {
+    refreshModuleLanguage({
+      appRootId: "agvMpApp",
+      service: this.service
+    });
+  }
 
   destroy() {
 

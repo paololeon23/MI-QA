@@ -23,6 +23,7 @@ import {
   destroyInicioVarietyCharts,
   resizeInicioVarietyCharts
 } from "./inicio-varieties-charts.service.js";
+import { consumeGlobalSearchJump } from "../../utils/global-search-jump.util.js";
 
 const FUNDO_THEMES = {
   A9: { label: "Fundo A9", accent: "#0E1B40", soft: "rgba(125, 226, 255, 0.18)", border: "rgba(31, 54, 104, 0.28)" },
@@ -219,9 +220,7 @@ function renderCoverPanel() {
   const stats = getGlobalStats();
   const ringRadius = 42;
   const ringCircumference = 2 * Math.PI * ringRadius;
-  const varietiesLine = i18nService
-    .translate("inicio.coverVarietiesLine")
-    .replace("{{count}}", String(stats.varietyCount));
+  const varietiesVars = JSON.stringify({ count: String(stats.varietyCount) });
 
   insightRoot.innerHTML = `
     <div class="inicio-cover__insight-head">
@@ -261,7 +260,7 @@ function renderCoverPanel() {
         <span data-i18n="inicio.kpiFundos"></span>
       </div>
       <div class="inicio-cover__insight-stat inicio-cover__insight-stat--text">
-        <span>${varietiesLine}</span>
+        <span data-i18n="inicio.coverVarietiesLine" data-i18n-vars='${varietiesVars}'></span>
       </div>
     </div>
     <p class="inicio-cover__insight-note">
@@ -570,6 +569,47 @@ function closeCropSelectMenu() {
   const trigger = document.getElementById("btnCropSelect");
   root?.classList.remove("is-open");
   trigger?.setAttribute("aria-expanded", "false");
+}
+
+function applyGlobalSearchJumpIfAny() {
+  const jump = consumeGlobalSearchJump();
+  if (!jump || (jump.route && jump.route !== "#/inicio")) {
+    return;
+  }
+
+  if (jump.cropId && jump.cropId !== getActiveCropId()) {
+    setActiveCropId(jump.cropId);
+    resetChartFilters();
+    resetTableState();
+    syncActiveFundoId();
+    renderCropSelect();
+    renderKpiStrip();
+    renderTablesSection();
+    renderChartFilterControls();
+    scheduleChartRender();
+  }
+
+  if (jump.fundo) {
+    const fundos = getFundosList();
+    if (fundos.includes(jump.fundo)) {
+      document.querySelectorAll("[data-fundo-tab]").forEach((button) => {
+        const isActive = button.getAttribute("data-fundo-tab") === jump.fundo;
+        button.classList.toggle("is-active", isActive);
+        button.setAttribute("aria-selected", isActive ? "true" : "false");
+      });
+      if (jump.mode === "parcel" && jump.filterText) {
+        tableState.filterText = String(jump.filterText);
+      } else {
+        tableState.filterText = "";
+      }
+      tableState.filterEtapa = "all";
+      renderActiveFundoTable(jump.fundo);
+    }
+  }
+
+  requestAnimationFrame(() => {
+    document.getElementById("fundoTablePanel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
 }
 
 function applyCropChange(cropId) {
@@ -1001,6 +1041,8 @@ export class ModuleController extends GenericModuleController {
     scheduleChartRender();
     this.bindChartResizeObserver();
     window.addEventListener("resize", this.onResize);
+    window.addEventListener("agv:global-search-jump", this.onGlobalSearchJump);
+    applyGlobalSearchJumpIfAny();
   }
 
   bindChartResizeObserver() {
@@ -1019,8 +1061,26 @@ export class ModuleController extends GenericModuleController {
     resizeInicioVarietyCharts();
   }
 
+  onGlobalSearchJump = () => {
+    applyGlobalSearchJumpIfAny();
+  };
+
+  async onLanguageChange() {
+    applyTranslationsToContainer(document.getElementById("moduleRoot"), { hydrateIcons: false });
+    applyTranslationsToContainer(document.querySelector(".inicio-cover"));
+    renderCoverPanel();
+    updateActiveCropTitle();
+    renderCropSelect();
+    renderKpiStrip();
+    renderTablesSection();
+    renderChartFilterControls();
+    scheduleChartRender();
+    hydrateLucideIcons(document.getElementById("moduleRoot"));
+  }
+
   destroy() {
     window.removeEventListener("resize", this.onResize);
+    window.removeEventListener("agv:global-search-jump", this.onGlobalSearchJump);
     this.resizeObserver?.disconnect();
     this.resizeObserver = null;
     destroyInicioVarietyCharts();
