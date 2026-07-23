@@ -1,7 +1,10 @@
 /**
  * Gemini (Google AI Studio) — config pública.
- * - Local: opcional gemini.config.local.js (gitignore) con tu apiKey.
- * - Netlify: build inyecta GEMINI_API_KEY en este archivo (ver scripts/inject-gemini-config.mjs).
+ * - Local: gemini.config.local.js (gitignore) con tu apiKey.
+ * - Netlify: variable de entorno GEMINI_API_KEY (Site settings → Environment variables).
+ *   El build la inyecta con scripts/inject-gemini-config.mjs.
+ *
+ * GitHub bloquea subir la key al repo (push protection).
  */
 export const geminiConfig = {
   apiKey: "",
