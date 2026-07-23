@@ -15,8 +15,12 @@ import { stateStore } from "./core/state-store.js";
 import { moduleLoaderService } from "./services/module-loader.service.js";
 import { hydrateLucideIcons } from "./utils/lucide-icon.util.js";
 import { applyTranslationsToContainer } from "./utils/i18n-dom.util.js";
+import { showConfidentialityGate } from "./components/confidentiality-gate.js";
+import { getAppDocumentTitle, applyBrandPixelAssets } from "./utils/brand-pixel.util.js";
+import { ensureStylesheets } from "./utils/ensure-stylesheet.util.js";
+import { prefetchXlsxJs } from "./utils/ensure-xlsx.util.js";
 
-document.title = appConfig.appName;
+document.title = getAppDocumentTitle();
 
 function renderBootstrapError(errorMessage) {
   const applicationRoot = document.getElementById("applicationRoot");
@@ -28,6 +32,24 @@ function renderBootstrapError(errorMessage) {
       <p class="bootstrap-error__hint">Abre el proyecto con Live Server o cualquier servidor estático local.</p>
     </div>
   `;
+}
+
+function waitForGlobals(timeoutMs = 8000) {
+  const start = Date.now();
+  return new Promise((resolve, reject) => {
+    const tick = () => {
+      if (window.luxon && window.lucide && window.i18next) {
+        resolve();
+        return;
+      }
+      if (Date.now() - start > timeoutMs) {
+        reject(new Error("Luxon / Lucide / i18next no cargaron a tiempo."));
+        return;
+      }
+      requestAnimationFrame(tick);
+    };
+    tick();
+  });
 }
 
 /**
@@ -54,7 +76,6 @@ async function handleLanguageChange(selectedLanguage) {
   }
 
   shellController.initialize(handleLanguageChange);
-  // Solo hidratar chrome nuevo — no tocar el módulo (conserva tabla/Excel).
   hydrateLucideIcons(document.getElementById("sidebarNavigation"));
   hydrateLucideIcons(document.getElementById("applicationTopbar"));
   hydrateLucideIcons(document.getElementById("applicationFooter"));
@@ -66,7 +87,7 @@ async function handleLanguageChange(selectedLanguage) {
   updateTopbarTitle(routeDefinition.titleKey);
   updateActiveSidebarLink(currentHash);
   updateBreadcrumbModule(currentHash);
-  document.title = appConfig.appName;
+  applyBrandPixelAssets();
 
   const activeModule = document.getElementById("dynamicModuleInner");
   applyTranslationsToContainer(activeModule, { hydrateIcons: false });
@@ -82,23 +103,33 @@ async function renderApplicationShellAndBind(languageCode) {
 }
 
 async function bootstrapApplication() {
-  if (!window.luxon) {
-    throw new Error("Luxon no cargó. Verifica tu conexión o el CDN.");
-  }
+  await waitForGlobals();
 
-  if (!window.lucide) {
-    throw new Error("Lucide no cargó. Verifica tu conexión o el CDN.");
-  }
+  // Flags + i18n en paralelo; hectáreas NO bloquean el primer paint.
+  const hectaresPromise = initCropHectaresData().catch((err) => {
+    console.warn("[AGV-MI] Hectáreas diferidas:", err);
+  });
 
-  await i18nService.initialize(appConfig.defaultLanguage);
-  await initCropHectaresData();
+  await Promise.all([
+    i18nService.initialize(appConfig.defaultLanguage),
+    ensureStylesheets([
+      "https://cdn.jsdelivr.net/npm/flag-icons@7.2.3/css/flag-icons.min.css"
+    ])
+  ]);
+
   stateStore.set({ currentLanguage: appConfig.defaultLanguage });
   document.documentElement.lang = appConfig.defaultLanguage.split("-")[0];
 
   await renderApplicationShellAndBind(appConfig.defaultLanguage);
   updateTopbarDatetime(appConfig.defaultLanguage);
-  document.title = appConfig.appName;
-  router.start();
+  applyBrandPixelAssets();
+
+  // Pintar Inicio de inmediato; hectáreas terminan en segundo plano.
+  const routerPromise = router.start();
+  // SheetJS en paralelo (listo antes de entrar a MP/PT/Plagas).
+  prefetchXlsxJs();
+  await Promise.all([routerPromise, hectaresPromise]);
+  await showConfidentialityGate();
 }
 
 bootstrapApplication().catch((bootstrapError) => {

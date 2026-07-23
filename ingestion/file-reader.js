@@ -2,7 +2,7 @@
  * Capa 2 — Ingestión: lectura de archivos del navegador a workbook SheetJS.
  */
 import { IngestionError } from "./ingestion-error.js";
-import { assertXlsxAvailable } from "./xlsx-runtime.js";
+import { ensureXlsxReady } from "./xlsx-runtime.js";
 
 const SUPPORTED_EXTENSIONS = new Set(["xlsx", "xls", "csv"]);
 
@@ -24,7 +24,7 @@ export function detectFileFormat(fileName = "") {
 }
 
 export async function readFileAsWorkbook(file) {
-  const XLSX = assertXlsxAvailable();
+  const XLSX = await ensureXlsxReady();
   const format = detectFileFormat(file?.name);
 
   const buffer = await file.arrayBuffer();

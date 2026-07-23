@@ -9,7 +9,8 @@ function range(from, to) {
 }
 
 function commonExportPrefix() {
-  return [10, 11, 12, 13, 14, 15, 16, 18, 19, 20, VACIO, 29, 30, 31, 32, 33, VACIO, VACIO];
+  // Lote…Campo, Turno, Fundo…Fecha Cosecha + huecos + Tipo formato…Peso Bruto
+  return [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, VACIO, 29, 30, 31, 32, 33, VACIO, VACIO];
 }
 
 /** MPBAR: prefijo + col 34 hasta el final en orden original. */

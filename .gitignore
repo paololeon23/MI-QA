@@ -1,0 +1,4 @@
+# Local / secrets — no subir a repositorio público
+presentation/js/config/gemini.config.js
+.env
+.env.*

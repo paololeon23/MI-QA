@@ -3,7 +3,7 @@
  * Lectura y normalización de reportes Excel/CSV hacia filas estructuradas.
  */
 export { IngestionError } from "./ingestion-error.js";
-export { isXlsxAvailable, assertXlsxAvailable } from "./xlsx-runtime.js";
+export { isXlsxAvailable, assertXlsxAvailable, ensureXlsxReady } from "./xlsx-runtime.js";
 export { detectFileFormat, readFileAsWorkbook } from "./file-reader.js";
 export { sheetToMatrix } from "./sheet-matrix.js";
 export { parseCabeceraFromMatrix } from "./cabecera-parser.js";

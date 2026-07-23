@@ -1,4 +1,6 @@
 import { appConfig } from "../config/app.config.js";
+import { ensureStylesheets } from "../utils/ensure-stylesheet.util.js";
+import { ensureXlsxJs } from "../utils/ensure-xlsx.util.js";
 
 class ModuleLoaderService {
   constructor() {
@@ -46,22 +48,27 @@ class ModuleLoaderService {
   }
 
   /**
-   * Prefetch en paralelo: HTML de vista + módulo JS.
+   * Prefetch en paralelo: CSS + HTML + módulo (+ XLSX si aplica).
    */
-  async preloadRoute(viewPath, modulePath, abortSignal) {
-    const [viewContent, dynamicModule] = await Promise.all([
+  async preloadRoute(viewPath, modulePath, abortSignal, routeMeta = {}) {
+    const tasks = [
       this.loadView(viewPath, abortSignal),
-      this.loadModule(modulePath)
-    ]);
+      this.loadModule(modulePath),
+      ensureStylesheets(routeMeta.stylesheets || [])
+    ];
+    if (routeMeta.needsXlsx) {
+      tasks.push(ensureXlsxJs());
+    }
+    const [viewContent, dynamicModule] = await Promise.all(tasks);
     return { viewContent, dynamicModule };
   }
 
   /**
    * Prefetch en segundo plano (hover / idle). Ignora abortos.
    */
-  prefetchRoute(viewPath, modulePath) {
+  prefetchRoute(viewPath, modulePath, routeMeta = {}) {
     if (this.isRouteCached(viewPath, modulePath)) return;
-    this.preloadRoute(viewPath, modulePath).catch(() => {});
+    this.preloadRoute(viewPath, modulePath, undefined, routeMeta).catch(() => {});
   }
 
   async mountModule(modulePath, moduleContext, preloadedModule = null) {

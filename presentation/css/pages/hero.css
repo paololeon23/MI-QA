@@ -1080,7 +1080,7 @@
 .inicio-varieties__charts-stack > .inicio-varieties__chart-card {
   position: relative;
   min-height: 0;
-  height: 100%;
+  height: auto;
   padding: 1.75rem 2rem;
   border-radius: 0.875rem;
   box-shadow: 0 4px 18px rgba(14, 27, 64, 0.05);
@@ -1091,10 +1091,15 @@
   flex-direction: column;
   gap: 1.5rem;
   min-height: 0;
+  align-self: stretch;
+  height: 100%;
 }
 
 .inicio-varieties__chart-card--donut {
+  display: flex;
+  flex-direction: column;
   max-width: 100%;
+  height: 100%;
   overflow: visible;
 }
 
@@ -1109,11 +1114,11 @@
 }
 
 .inicio-varieties__chart-wrap--donut {
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   width: 100%;
   height: 19.5rem;
   min-height: 19.5rem;
-  max-height: 21rem;
+  max-height: 19.5rem;
   max-width: 100%;
   margin-inline: auto;
   overflow: visible;
@@ -1129,22 +1134,25 @@
 .inicio-varieties__chart-card--etapas {
   display: flex;
   flex-direction: column;
-  flex: 1 1 auto;
+  flex: 0 0 auto;
+  height: auto;
   min-height: 0;
 }
 
 .inicio-varieties__chart-wrap--varieties {
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   min-height: 15.5rem;
   height: 15.5rem;
+  max-height: 15.5rem;
   border-radius: 0.625rem;
   background: linear-gradient(180deg, rgba(248, 250, 252, 0.95) 0%, rgba(255, 255, 255, 0) 100%);
 }
 
 .inicio-varieties__chart-wrap--etapas {
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   min-height: 13rem;
   height: 13rem;
+  max-height: 13rem;
   border-radius: 0.625rem;
   background: linear-gradient(180deg, rgba(248, 250, 252, 0.95) 0%, rgba(255, 255, 255, 0) 100%);
 }
@@ -1445,6 +1453,12 @@
   position: relative;
   flex: 1;
   min-height: 10rem;
+}
+
+.inicio-varieties__charts .inicio-varieties__chart-wrap--donut,
+.inicio-varieties__charts .inicio-varieties__chart-wrap--varieties,
+.inicio-varieties__charts .inicio-varieties__chart-wrap--etapas {
+  flex: 0 0 auto;
 }
 
 .inicio-varieties__chart-wrap--compact {
@@ -2554,7 +2568,7 @@
     width: 100%;
     height: 21rem;
     min-height: 21rem;
-    max-height: 22rem;
+    max-height: 21rem;
   }
 
   .inicio-varieties__charts-stack {
@@ -2564,11 +2578,13 @@
   .inicio-varieties__chart-wrap--varieties {
     min-height: 17rem;
     height: 17rem;
+    max-height: 17rem;
   }
 
   .inicio-varieties__chart-wrap--etapas {
     min-height: 14.5rem;
     height: 14.5rem;
+    max-height: 14.5rem;
   }
 
   .inicio-varieties__tables {

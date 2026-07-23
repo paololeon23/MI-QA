@@ -4,7 +4,8 @@ import {
   getEtapaAreaSummary,
   getFundoAreaSummary,
   getGlobalStats,
-  getTopVarietiesByArea
+  getTopVarietiesByArea,
+  maskIncognitoJsonText
 } from "../../config/crop-hectares.registry.js?v=20260800";
 
 const FONT = "Inter, sans-serif";
@@ -259,7 +260,7 @@ export function renderInicioFundoAreaChart(filters = {}) {
   return chartService.render("chartInicioFundoArea", {
     type: "doughnut",
     data: {
-      labels: fundoSummary.map((item) => `Fundo ${item.fundo}`),
+      labels: fundoSummary.map((item) => maskIncognitoJsonText(`Fundo ${item.fundo}`)),
       datasets: [
         {
           data: fundoSummary.map((item) => item.totalAreaHa),
@@ -327,6 +328,7 @@ export function renderInicioTopVarietiesChart(filters = {}) {
           backgroundColor: resolveBarGradient,
           borderRadius: 8,
           borderSkipped: false,
+          maxBarThickness: 28,
           categoryPercentage: 0.72,
           barPercentage: 0.68
         }
@@ -410,6 +412,7 @@ export function renderInicioEtapaAreaChart(filters = {}) {
           backgroundColor: resolveVerticalBarGradient,
           borderRadius: 8,
           borderSkipped: false,
+          maxBarThickness: 36,
           categoryPercentage: 0.68,
           barPercentage: 0.62
         }
@@ -482,7 +485,7 @@ export function renderInicioFundoChartLegend(filters = {}) {
         <li class="inicio-varieties__legend-item" data-fundo="${item.fundo}">
           <span class="inicio-varieties__legend-swatch" aria-hidden="true"></span>
           <span class="inicio-varieties__legend-copy">
-            <strong>Fundo ${item.fundo}</strong>
+            <strong>${maskIncognitoJsonText(`Fundo ${item.fundo}`)}</strong>
             <span>${formatAreaHa(item.totalAreaHa)} ha · ${percent}%</span>
           </span>
         </li>

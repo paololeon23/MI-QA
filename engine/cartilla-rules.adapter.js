@@ -233,6 +233,13 @@ export function reglaColumnaAValidaciones(col, options = {}) {
     });
   }
 
+  if (col["debe-estar-vacio"]) {
+    reglas.push({
+      tipo: "debe_estar_vacio",
+      mensaje: mensajeColumna(col, "Debe estar vacío")
+    });
+  }
+
   if (!reglas.length) return null;
 
   return {

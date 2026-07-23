@@ -70,63 +70,93 @@
     },
     {
       "numero": 13,
-      "nombre-de-la-columna": "Productor"
+      "nombre-de-la-columna": "Productor",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Productor es obligatorio"
     },
     {
       "numero": 14,
-      "nombre-de-la-columna": "Guía de Remisión"
+      "nombre-de-la-columna": "Guía de Remisión",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Guía de Remisión es obligatorio"
     },
     {
       "numero": 15,
-      "nombre-de-la-columna": "Etapa"
+      "nombre-de-la-columna": "Etapa",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Etapa es obligatorio"
     },
     {
       "numero": 16,
-      "nombre-de-la-columna": "Campo"
+      "nombre-de-la-columna": "Campo",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Campo es obligatorio"
     },
     {
       "numero": 17,
-      "nombre-de-la-columna": "Turno"
+      "nombre-de-la-columna": "Turno",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Turno es obligatorio"
     },
     {
       "numero": 18,
-      "nombre-de-la-columna": "Fundo"
+      "nombre-de-la-columna": "Fundo",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Fundo es obligatorio"
     },
     {
       "numero": 19,
-      "nombre-de-la-columna": "Variedad"
+      "nombre-de-la-columna": "Variedad",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Variedad es obligatorio"
     },
     {
       "numero": 20,
-      "nombre-de-la-columna": "Fecha Cosecha"
+      "nombre-de-la-columna": "Fecha Cosecha",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Fecha Cosecha es obligatorio"
     },
     {
       "numero": 21,
-      "nombre-de-la-columna": "Fecha de Producción"
+      "nombre-de-la-columna": "Fecha de Producción",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Fecha de Producción es obligatorio"
     },
     {
       "numero": 22,
-      "nombre-de-la-columna": "Tecnologia de Postcosecha PT"
+      "nombre-de-la-columna": "Tecnologia de Postcosecha PT",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Tecnologia de Postcosecha PT es obligatorio"
     },
     {
       "numero": 23,
-      "nombre-de-la-columna": "Calibre"
+      "nombre-de-la-columna": "Calibre",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Calibre es obligatorio"
     },
     {
       "numero": 24,
-      "nombre-de-la-columna": "Tipo de Embalado"
+      "nombre-de-la-columna": "Tipo de Embalado",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Tipo de Embalado es obligatorio"
     },
     {
       "numero": 25,
-      "nombre-de-la-columna": "Categoria"
+      "nombre-de-la-columna": "Categoria",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Categoria es obligatorio"
     },
     {
       "numero": 26,
-      "nombre-de-la-columna": "Turno Linea"
+      "nombre-de-la-columna": "Turno Linea",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Turno Linea es obligatorio"
     },
     {
       "numero": 27,
-      "nombre-de-la-columna": "Linea"
+      "nombre-de-la-columna": "Linea",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Linea es obligatorio"
     },
     {
       "numero": 28,
@@ -136,23 +166,33 @@
     },
     {
       "numero": 29,
-      "nombre-de-la-columna": "Tipo de formato"
+      "nombre-de-la-columna": "Tipo de formato",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Tipo de formato es obligatorio"
     },
     {
       "numero": 30,
-      "nombre-de-la-columna": "Etiqueta"
+      "nombre-de-la-columna": "Etiqueta",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Etiqueta es obligatorio"
     },
     {
       "numero": 31,
-      "nombre-de-la-columna": "Jaba"
+      "nombre-de-la-columna": "Jaba",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Jaba es obligatorio"
     },
     {
       "numero": 32,
-      "nombre-de-la-columna": "Viaje"
+      "nombre-de-la-columna": "Viaje",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Viaje es obligatorio"
     },
     {
       "numero": 33,
-      "nombre-de-la-columna": "Peso Bruto"
+      "nombre-de-la-columna": "Peso Bruto",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Peso Bruto es obligatorio"
     },
     {
       "numero": 34,
@@ -284,163 +324,243 @@
     },
     {
       "numero": 61,
-      "nombre-de-la-columna": "Pudrición"
+      "nombre-de-la-columna": "Pudrición",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Pudrición es obligatorio"
     },
     {
       "numero": 62,
-      "nombre-de-la-columna": "Hongo"
+      "nombre-de-la-columna": "Hongo",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Hongo es obligatorio"
     },
     {
       "numero": 63,
-      "nombre-de-la-columna": "Fruta Mojada / Condensada"
+      "nombre-de-la-columna": "Fruta Mojada / Condensada",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Fruta Mojada / Condensada es obligatorio"
     },
     {
       "numero": 64,
-      "nombre-de-la-columna": "Exudación Jugo"
+      "nombre-de-la-columna": "Exudación Jugo",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Exudación Jugo es obligatorio"
     },
     {
       "numero": 65,
-      "nombre-de-la-columna": "Herida Abierta"
+      "nombre-de-la-columna": "Herida Abierta",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Herida Abierta es obligatorio"
     },
     {
       "numero": 66,
-      "nombre-de-la-columna": "Desgarro Pedicelar"
+      "nombre-de-la-columna": "Desgarro Pedicelar",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Desgarro Pedicelar es obligatorio"
     },
     {
       "numero": 67,
-      "nombre-de-la-columna": "Deshidratación"
+      "nombre-de-la-columna": "Deshidratación",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Deshidratación es obligatorio"
     },
     {
       "numero": 68,
-      "nombre-de-la-columna": "Presencia de insectos"
+      "nombre-de-la-columna": "Presencia de insectos",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Presencia de insectos es obligatorio"
     },
     {
       "numero": 69,
-      "nombre-de-la-columna": "Residuos"
+      "nombre-de-la-columna": "Residuos",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Residuos es obligatorio"
     },
     {
       "numero": 70,
-      "nombre-de-la-columna": "Polvo"
+      "nombre-de-la-columna": "Polvo",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Polvo es obligatorio"
     },
     {
       "numero": 71,
-      "nombre-de-la-columna": "Fruta verde"
+      "nombre-de-la-columna": "Fruta verde",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Fruta verde es obligatorio"
     },
     {
       "numero": 72,
-      "nombre-de-la-columna": "Fruta roja"
+      "nombre-de-la-columna": "Fruta roja",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Fruta roja es obligatorio"
     },
     {
       "numero": 73,
-      "nombre-de-la-columna": "Sin pruina"
+      "nombre-de-la-columna": "Sin pruina",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Sin pruina es obligatorio"
     },
     {
       "numero": 74,
-      "nombre-de-la-columna": "Heridas Cicatrizadas / Russet"
+      "nombre-de-la-columna": "Heridas Cicatrizadas / Russet",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Heridas Cicatrizadas / Russet es obligatorio"
     },
     {
       "numero": 75,
-      "nombre-de-la-columna": "Restos Florales"
+      "nombre-de-la-columna": "Restos Florales",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Restos Florales es obligatorio"
     },
     {
       "numero": 76,
-      "nombre-de-la-columna": "Presencia de Pedúnculo"
+      "nombre-de-la-columna": "Presencia de Pedúnculo",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Presencia de Pedúnculo es obligatorio"
     },
     {
       "numero": 77,
-      "nombre-de-la-columna": "Deformes"
+      "nombre-de-la-columna": "Deformes",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Deformes es obligatorio"
     },
     {
       "numero": 78,
-      "nombre-de-la-columna": "Sumatoria Defectos de Calidad"
+      "nombre-de-la-columna": "Sumatoria Defectos de Calidad",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Sumatoria Defectos de Calidad es obligatorio"
     },
     {
       "numero": 79,
-      "nombre-de-la-columna": "Pudrición con Larva"
+      "nombre-de-la-columna": "Pudrición con Larva",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Pudrición con Larva es obligatorio"
     },
     {
       "numero": 80,
-      "nombre-de-la-columna": "Sumatoria Defectos de Condición"
+      "nombre-de-la-columna": "Sumatoria Defectos de Condición",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Sumatoria Defectos de Condición es obligatorio"
     },
     {
       "numero": 81,
-      "nombre-de-la-columna": "Pudrición"
+      "nombre-de-la-columna": "Pudrición",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Pudrición es obligatorio"
     },
     {
       "numero": 82,
-      "nombre-de-la-columna": "Hongo"
+      "nombre-de-la-columna": "Hongo",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Hongo es obligatorio"
     },
     {
       "numero": 83,
-      "nombre-de-la-columna": "Fruta Mojada / Condensada"
+      "nombre-de-la-columna": "Fruta Mojada / Condensada",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Fruta Mojada / Condensada es obligatorio"
     },
     {
       "numero": 84,
-      "nombre-de-la-columna": "Exudación Jugo"
+      "nombre-de-la-columna": "Exudación Jugo",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Exudación Jugo es obligatorio"
     },
     {
       "numero": 85,
-      "nombre-de-la-columna": "Herida Abierta"
+      "nombre-de-la-columna": "Herida Abierta",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Herida Abierta es obligatorio"
     },
     {
       "numero": 86,
-      "nombre-de-la-columna": "Desgarro Pedicelar"
+      "nombre-de-la-columna": "Desgarro Pedicelar",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Desgarro Pedicelar es obligatorio"
     },
     {
       "numero": 87,
-      "nombre-de-la-columna": "Deshidratación"
+      "nombre-de-la-columna": "Deshidratación",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Deshidratación es obligatorio"
     },
     {
       "numero": 88,
-      "nombre-de-la-columna": "Presencia de insectos"
+      "nombre-de-la-columna": "Presencia de insectos",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Presencia de insectos es obligatorio"
     },
     {
       "numero": 89,
-      "nombre-de-la-columna": "Residuos"
+      "nombre-de-la-columna": "Residuos",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Residuos es obligatorio"
     },
     {
       "numero": 90,
-      "nombre-de-la-columna": "Polvo"
+      "nombre-de-la-columna": "Polvo",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Polvo es obligatorio"
     },
     {
       "numero": 91,
-      "nombre-de-la-columna": "Fruta verde"
+      "nombre-de-la-columna": "Fruta verde",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Fruta verde es obligatorio"
     },
     {
       "numero": 92,
-      "nombre-de-la-columna": "Fruta roja"
+      "nombre-de-la-columna": "Fruta roja",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Fruta roja es obligatorio"
     },
     {
       "numero": 93,
-      "nombre-de-la-columna": "Sin pruina"
+      "nombre-de-la-columna": "Sin pruina",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Sin pruina es obligatorio"
     },
     {
       "numero": 94,
-      "nombre-de-la-columna": "Heridas Cicatrizadas / Russet"
+      "nombre-de-la-columna": "Heridas Cicatrizadas / Russet",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Heridas Cicatrizadas / Russet es obligatorio"
     },
     {
       "numero": 95,
-      "nombre-de-la-columna": "Restos Florales"
+      "nombre-de-la-columna": "Restos Florales",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Restos Florales es obligatorio"
     },
     {
       "numero": 96,
-      "nombre-de-la-columna": "Presencia de Pedúnculo"
+      "nombre-de-la-columna": "Presencia de Pedúnculo",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Presencia de Pedúnculo es obligatorio"
     },
     {
       "numero": 97,
-      "nombre-de-la-columna": "Deformes"
+      "nombre-de-la-columna": "Deformes",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Deformes es obligatorio"
     },
     {
       "numero": 98,
-      "nombre-de-la-columna": "Sumatoria Defectos de Calidad"
+      "nombre-de-la-columna": "Sumatoria Defectos de Calidad",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Sumatoria Defectos de Calidad es obligatorio"
     },
     {
       "numero": 99,
-      "nombre-de-la-columna": "Pudrición con Larva"
+      "nombre-de-la-columna": "Pudrición con Larva",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Pudrición con Larva es obligatorio"
     },
     {
       "numero": 100,
-      "nombre-de-la-columna": "Sumatoria Defectos de Condición"
+      "nombre-de-la-columna": "Sumatoria Defectos de Condición",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Sumatoria Defectos de Condición es obligatorio"
     }
   ],
   "validaciones-compuestas": [
@@ -554,7 +674,27 @@
       6,
       9,
       10,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
       27,
+      28,
+      29,
+      30,
+      31,
+      32,
       33,
       "CALIBRE",
       34,

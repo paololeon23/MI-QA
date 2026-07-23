@@ -167,6 +167,102 @@
   box-shadow: none;
 }
 
+/* Asistente IA — solo en panel primario del sidebar */
+.sidebar-ai-trigger {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  margin-top: 0.35rem;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid transparent;
+  border-radius: 0.65rem;
+  background: transparent;
+  color: #1f3668;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.sidebar-ai-trigger:hover,
+.sidebar-ai-trigger.is-open {
+  background: rgba(31, 54, 104, 0.06);
+  border-color: #d7e0ec;
+}
+
+.sidebar-ai-trigger__icon {
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  display: grid;
+  place-items: center;
+}
+
+.sidebar-ai-trigger__img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.sidebar-ai-trigger__text {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #1f3668;
+}
+
+.sidebar-ai-trigger__cloud {
+  position: absolute;
+  left: calc(100% + 0.45rem);
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 0.28rem 0.55rem;
+  border-radius: 999px;
+  background: #e8eef6;
+  color: #1f3668;
+  font-size: 0.625rem;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+  pointer-events: none;
+  z-index: 5;
+}
+
+.sidebar-ai-trigger__cloud::after {
+  content: "";
+  position: absolute;
+  left: -5px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-width: 5px 5px 5px 0;
+  border-style: solid;
+  border-color: transparent #e8eef6 transparent transparent;
+}
+
+.sidebar-ai-trigger__cloud[hidden] {
+  display: none !important;
+}
+
+.application-shell.is-sidebar-collapsed .sidebar-ai-trigger {
+  justify-content: center;
+  padding: 0.4rem;
+}
+
+.application-shell.is-sidebar-collapsed .sidebar-ai-trigger__text,
+.application-shell.is-sidebar-collapsed .sidebar-ai-trigger__cloud {
+  display: none !important;
+}
+
+body:has(.agv-pt-dialog-overlay) .sidebar-ai-trigger__cloud,
+body:has(.agv-mp-dialog-overlay) .sidebar-ai-trigger__cloud,
+body:has(.pmpar-dialog-overlay) .sidebar-ai-trigger__cloud {
+  display: none !important;
+}
+
 .sidebar__section-label {
   display: block;
   padding: var(--spacing-3) var(--spacing-2) var(--spacing-1);

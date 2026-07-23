@@ -157,10 +157,11 @@ export function computeFechaLmrMayoritaria(rows, colLmrJs) {
   return sorted[0]?.[0] || "";
 }
 
-export async function loadReglasPt() {
+export async function loadReglasPt(version = "") {
+  const qs = version ? `?v=${version}` : "";
   const entradas = await Promise.all(
     CARTILLA_ORDER.map(async (cartilla) => {
-      const reglas = await cargarReglasDesdeRuta(REGLAS_POR_CARTILLA[cartilla]);
+      const reglas = await cargarReglasDesdeRuta(`${REGLAS_POR_CARTILLA[cartilla]}${qs}`);
       return [cartilla, reglas];
     })
   );

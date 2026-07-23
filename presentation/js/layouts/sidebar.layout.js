@@ -1,6 +1,7 @@
 import { i18nService } from "../services/i18n.service.js";
 // v20260827 — sidebar primary-panel module exclusivity
 import { appConfig } from "../config/app.config.js";
+import { getBrandLogoPath } from "../utils/brand-pixel.util.js";
 import {
   primaryNavigationItems,
   moduleNavigationGroups,
@@ -135,7 +136,7 @@ export function buildSidebarMarkup() {
           <img
             class="sidebar__logo"
             id="imgApplicationLogo"
-            src="./${appConfig.brandLogoPath}${assetVersion}"
+            src="./${getBrandLogoPath()}${assetVersion}"
             alt="AGROVISION"
           />
         </a>

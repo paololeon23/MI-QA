@@ -39,8 +39,12 @@
     "9": "Lote"
   },
   "columnas_visibles_frontend": {
-    "indices_js": [0, 1, 6, 9, 3, 10, 11, 27, 36, 37, 45, 46, 49, 50, 51, 53, 55, 58, 59, 60, 61, 62, 64, 71],
-    "descripcion": "Sticky contiguas al inicio: Id(0), Inspección código(1), Usuario(6), Lote(9); luego Fecha registro(3) y resto"
+    "indices_js": [
+      0, 1, 6, 9, 3, 10, 11,
+      12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
+      36, 37, 45, 46, 49, 50, 51, 53, 55, 58, 59, 60, 61, 62, 64, 71
+    ],
+    "descripcion": "Sticky + zona SAP (Productor…Peso Bruto) + Nota Condición (WULUT, no SAP) + resto operativo"
   },
   "filtros_tabla": {
     "cliente_indice_js": 37,

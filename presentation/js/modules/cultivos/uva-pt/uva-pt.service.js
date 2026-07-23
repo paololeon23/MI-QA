@@ -26,6 +26,11 @@ import {
   refreshUvaPtHeaderLabels
 } from "./uva-pt-table.js";
 import { exportUvaPtFiltered } from "./uva-pt-export.js";
+import {
+  createCartillaAnalysisController,
+  deriveFilasConErrorFromDom,
+  headersToAnalysisColumns
+} from "../shared/cartilla-analysis.js";
 
 function t(key, vars = {}) {
   let text = i18nService.translate(key);
@@ -116,6 +121,13 @@ export class UvaPtService {
       i18nPrefix: "ptUva"
     });
     this.shell.cacheDom();
+    this.cartillaAnalysis = createCartillaAnalysisController({
+      getRoot: () => this.shell?.root,
+      hostSelector: "#agv-pt-cartilla-analysis",
+      showDialog: (opts) => showPtDialog(opts),
+      t,
+      htmlEscape
+    });
     this.bindEvents();
     this.shell.resetDashboard();
     this.shell.renderExcelInsightEmpty();
@@ -505,6 +517,18 @@ export class UvaPtService {
     this.syncButtons();
     hydrateLucideIcons(this.shell.root);
     refs.resultsSection?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+
+    const filasConError = deriveFilasConErrorFromDom(refs.resultsBody, filtradas);
+    this.cartillaAnalysis?.present({
+      rows: filtradas,
+      filasConError,
+      errorMap: null,
+      duplicateLotes: new Set(),
+      colLoteJs: 9,
+      columns: headersToAnalysisColumns(this.headers),
+      cartilla: CARTILLA_CODE,
+      fechaLabel: fechaIns || "—"
+    });
   }
 
   onExportFiltered() {
@@ -550,6 +574,7 @@ export class UvaPtService {
     if (refs.tableSearch) refs.tableSearch.value = "";
     if (refs.totalFilasDiv) refs.totalFilasDiv.textContent = "";
     this.filteredTableRows = [];
+    this.cartillaAnalysis?.clear();
   }
 
   onClear() {

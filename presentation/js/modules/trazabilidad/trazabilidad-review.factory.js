@@ -5,6 +5,9 @@ import { i18nService } from "../../services/i18n.service.js";
 import { hydrateLucideIcons } from "../../utils/lucide-icon.util.js";
 import { appConfig } from "../../config/app.config.js";
 import {
+  maskIncognitoJsonText
+} from "../../utils/brand-pixel.util.js";
+import {
   EXPECTED_TRACE_LEN,
   TRACE_SEGMENTS,
   normalizeTraceCode,
@@ -75,6 +78,7 @@ export function createTraceReviewController(options) {
       this.bindEvents();
       hydrateLucideIcons(root);
       this.renderEmpty();
+      window.addEventListener("agv:brand-pixel-changed", this.onBrandPixelChanged);
 
       try {
         this.catalog = await this.loadCatalog();
@@ -82,6 +86,10 @@ export function createTraceReviewController(options) {
         this.showError(t("trazabilidadReview.catalogError"));
       }
     }
+
+    onBrandPixelChanged = () => {
+      this.renderLive(this.input?.value || "");
+    };
 
     async loadCatalog() {
       const response = await fetch(CATALOG_URL);
@@ -216,10 +224,10 @@ export function createTraceReviewController(options) {
         })
         .join("");
       const valRow = cells
-        .map(
-          (c) =>
-            `<td class="trz-review__val${empty || c.code === "—" ? " is-empty" : ""}">${escapeHtml(c.code)}</td>`
-        )
+        .map((c) => {
+          const shown = c.code === "—" ? "—" : maskIncognitoJsonText(c.code);
+          return `<td class="trz-review__val${empty || c.code === "—" ? " is-empty" : ""}">${escapeHtml(shown)}</td>`;
+        })
         .join("");
 
       this.matrix.innerHTML = `
@@ -239,9 +247,17 @@ export function createTraceReviewController(options) {
         .map((item) => {
           const hasValue = Boolean(item.value);
           const warn = item.warnKey ? escapeHtml(t(item.warnKey)) : "";
+          const noteVars = item.noteVars
+            ? Object.fromEntries(
+                Object.entries(item.noteVars).map(([k, v]) => [
+                  k,
+                  typeof v === "string" && v !== "—" ? maskIncognitoJsonText(v) : v
+                ])
+              )
+            : null;
           const note =
-            item.noteKey && item.noteVars
-              ? `<p class="trz-review__card-meta">${escapeHtml(t(item.noteKey, item.noteVars))}</p>`
+            item.noteKey && noteVars
+              ? `<p class="trz-review__card-meta">${escapeHtml(t(item.noteKey, noteVars))}</p>`
               : warn
                 ? `<p class="trz-review__card-meta">${warn}</p>`
                 : "";
@@ -249,10 +265,12 @@ export function createTraceReviewController(options) {
             <article class="trz-review__card${item.warnKey ? " is-warn" : ""}">
               <div class="trz-review__card-top">
                 <span class="trz-review__card-label">${escapeHtml(t(item.labelKey))}</span>
-                <code class="trz-review__card-code">${escapeHtml(item.code)}</code>
+                <code class="trz-review__card-code">${escapeHtml(
+                  item.code === "—" ? "—" : maskIncognitoJsonText(item.code)
+                )}</code>
               </div>
               <p class="trz-review__card-value${hasValue ? "" : " is-empty"}">
-                ${hasValue ? escapeHtml(item.value) : "—"}
+                ${hasValue ? escapeHtml(maskIncognitoJsonText(item.value)) : "—"}
               </p>
               ${note}
             </article>
@@ -273,6 +291,7 @@ export function createTraceReviewController(options) {
     }
 
     destroy() {
+      window.removeEventListener("agv:brand-pixel-changed", this.onBrandPixelChanged);
       this.splitBtn?.removeEventListener("click", this.onSplit);
       this.clearBtn?.removeEventListener("click", this.onClear);
       this.input?.removeEventListener("keydown", this.onKey);

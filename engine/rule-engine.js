@@ -522,7 +522,7 @@ function evaluarValidacionCompuesta(filas, regla, contexto = {}) {
 
   return {
     nombreColumna: nombre,
-    numeroColumna: regla["columna-resultado"] ?? null,
+    numeroColumna: regla["columna-resultado"] ?? regla["columna-lmr"] ?? null,
     estado: totalFallidas > 0 ? "observado" : "ok",
     totalRevisadas: filas.length,
     totalFallidas,

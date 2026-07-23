@@ -11,6 +11,7 @@ import { stateStore } from "./state-store.js";
 import { renderModuleSkeleton } from "../utils/loading-skeleton.util.js";
 import { applyTranslationsToContainer } from "../utils/i18n-dom.util.js";
 import { pushSidebarActivity } from "../services/sidebar-activity.service.js";
+import { applyBrandPixelAssets, isBrandPixelMode } from "../utils/brand-pixel.util.js";
 
 class Router {
   constructor() {
@@ -65,7 +66,8 @@ class Router {
       const { viewContent, dynamicModule } = await moduleLoaderService.preloadRoute(
         routeDefinition.viewPath,
         routeDefinition.modulePath,
-        signal
+        signal,
+        routeDefinition
       );
 
       if (signal.aborted) return;
@@ -81,6 +83,8 @@ class Router {
         },
         dynamicModule
       );
+
+      if (isBrandPixelMode()) applyBrandPixelAssets();
 
       this.scheduleIdlePrefetch();
     } catch (navigationError) {
@@ -104,7 +108,7 @@ class Router {
       const href = link.getAttribute("href");
       if (!href || !routesConfig[href]) return;
       const route = routesConfig[href];
-      moduleLoaderService.prefetchRoute(route.viewPath, route.modulePath);
+      moduleLoaderService.prefetchRoute(route.viewPath, route.modulePath, route);
     };
 
     document.addEventListener(
@@ -133,7 +137,10 @@ class Router {
 
     const run = () => {
       Object.values(routesConfig).forEach((route) => {
-        moduleLoaderService.prefetchRoute(route.viewPath, route.modulePath);
+        moduleLoaderService.prefetchRoute(route.viewPath, route.modulePath, {
+          stylesheets: route.stylesheets,
+          needsXlsx: false
+        });
       });
     };
 
@@ -150,7 +157,7 @@ class Router {
       this.isStarted = true;
     }
     this.bindSidebarPrefetch();
-    this.navigate();
+    return this.navigate();
   }
 
   async refreshCurrentRoute() {

@@ -2,6 +2,7 @@ import { AGV_PT_SHELL_IDS } from "../shared/cartilla-shell.ids.js";
 import { CartillaShellUi } from "../shared/cartilla-shell.ui.js";
 import { hydrateLucideIcons } from "../../../utils/lucide-icon.util.js";
 import { i18nService } from "../../../services/i18n.service.js";
+import { appConfig } from "../../../config/app.config.js";
 import { showPtDialog, showPtConfirmDialog, showPtExportChoiceDialog } from "./arandano-pt-dialog.js";
 import {
   CARTILLA_RAW_MAP,
@@ -35,6 +36,12 @@ import {
 } from "./arandano-pt-state.js";
 import { buildPtExportSheetData, exportPtFiltered, exportPtWorkbook } from "./arandano-pt-export.js";
 import { collectWhatsappIncidents } from "./arandano-pt.validation.js";
+import {
+  createCartillaAnalysisController,
+  headersToAnalysisColumns
+} from "../shared/cartilla-analysis.js";
+import { expandMissingSapLayout, stripInsertedSapObligatorioErrors } from "../shared/mp-sap-layout.util.js";
+import { loadSapColumnasCatalog, getSapPerfil } from "../../../config/sap-columnas.registry.js";
 
 function t(key, vars = {}) {
   let text = i18nService.translate(key);
@@ -108,10 +115,20 @@ export class ArandanoPtService {
       i18nPrefix: "plagasArandano"
     });
     this.shell.cacheDom();
+    this.cartillaAnalysis = createCartillaAnalysisController({
+      getRoot: () => this.shell?.root,
+      hostSelector: "#agv-pt-cartilla-analysis",
+      showDialog: (opts) => showPtDialog(opts),
+      t,
+      htmlEscape
+    });
     this.bindEvents();
     this.shell.resetDashboard();
     this.shell.renderExcelInsightEmpty();
-    const loaded = await loadReglasPt();
+    const [loaded] = await Promise.all([
+      loadReglasPt(appConfig.cacheBustingVersion),
+      loadSapColumnasCatalog(appConfig.cacheBustingVersion)
+    ]);
     this.reglasByCartilla = loaded.reglasByCartilla;
     this.catalogos = loaded.catalogos;
     hydrateLucideIcons(appRoot);
@@ -288,6 +305,7 @@ export class ArandanoPtService {
     if (refs.resultsBody) refs.resultsBody.innerHTML = "";
     if (refs.totalFilasDiv) refs.totalFilasDiv.textContent = "";
     this.currentFilteredRows = [];
+    this.cartillaAnalysis?.clear();
     this.syncButtons();
   }
 
@@ -353,8 +371,20 @@ export class ArandanoPtService {
         if (!sheetData.length) continue;
 
         let headerRow = sheetData[0];
+        let bodyRows = sheetData.slice(1).filter((r) => r.some((c) => c !== ""));
+
+        // SAP PT: 15 cols + Nota Condición (28) + 5 cols → alinea plantilla 100.
+        const {
+          headers: sapHeaders,
+          rows: sapRows,
+          expanded: sapExpanded,
+          insertedSap15,
+          insertedSap5,
+          insertedJsIndexes
+        } = expandMissingSapLayout(headerRow, bodyRows, getSapPerfil("pt"));
+        headerRow = sapHeaders;
+        bodyRows = sapRows;
         const headerOriginal = [...headerRow];
-        let bodyRows = sheetData.slice(1);
 
         if (!this.applyPlantilla(headerRow, cartilla)) {
           showPtDialog({
@@ -374,7 +404,11 @@ export class ArandanoPtService {
         const loadReorderRegla = this.getReglas(cartilla)?.["reorden-ptpha-ptlpa"];
         this.exportMetaByCartilla[cartilla] = {
           headerOriginal,
-          loadReorder: loadReorderRegla ? loadReorderRegla.map((n) => n - 1) : null
+          loadReorder: loadReorderRegla ? loadReorderRegla.map((n) => n - 1) : null,
+          sapExpanded,
+          insertedSap15,
+          insertedSap5,
+          insertedJsIndexes: insertedJsIndexes || []
         };
 
         if (!this.headers.length) {
@@ -439,11 +473,18 @@ export class ArandanoPtService {
 
     if (this.dataRows.length) {
       const cartillasLabel = Array.from(cartillasCargadas).join(", ");
+      const sapNotes = CARTILLA_ORDER
+        .map((c) => this.exportMetaByCartilla[c])
+        .filter((m) => m?.sapExpanded)
+        .map((m) => `+${m.insertedSap15 || 0}/+${m.insertedSap5 || 0}`);
+      const sapNote = sapNotes.length
+        ? `<br><small>Huecos SAP completados (${sapNotes.join(" · ")}) — Nota Condición col 28 / bloque col 34.</small>`
+        : "";
       showPtDialog({
         icon: "success",
         title: "Excel cargado",
-        html: `Cartilla(s) <b>${htmlEscape(cartillasLabel)}</b> · <b>${this.dataRows.length}</b> registros · <b>${this.profile.totalColumnas}</b> columnas`,
-        timer: 1800,
+        html: `Cartilla(s) <b>${htmlEscape(cartillasLabel)}</b> · <b>${this.dataRows.length}</b> registros · <b>${this.profile.totalColumnas}</b> columnas${sapNote}`,
+        timer: sapNote ? 3200 : 1800,
         showConfirmButton: false
       });
     }
@@ -753,7 +794,10 @@ export class ArandanoPtService {
       fechaLmrMayoritaria
     );
 
-    this.errorMap = errorMap;
+    this.errorMap = stripInsertedSapObligatorioErrors(
+      errorMap,
+      this.exportMetaByCartilla?.[cartilla]?.insertedJsIndexes || []
+    );
     rows.forEach((r) => {
       const loteCol = this.profile.cols.lote + 1;
       const err = errorMap.get(r._filaNum)?.get(loteCol);
@@ -781,6 +825,24 @@ export class ArandanoPtService {
     if (refs.resultsTable) refs.resultsTable.hidden = false;
     refs.totalFilasDiv.textContent = `${rows.length} inspecciones`;
     this.syncButtons();
+
+    const filasConError = rows.filter((r) => {
+      const filaMap = this.errorMap?.get?.(r._filaNum);
+      return Boolean((filaMap && filaMap.size > 0) || r.__duplicado);
+    });
+    const duplicateLotes = new Set(
+      rows.filter((r) => r.__duplicado).map((r) => String(r[this.profile.cols.lote] ?? "").trim()).filter(Boolean)
+    );
+    this.cartillaAnalysis?.present({
+      rows,
+      filasConError,
+      errorMap: this.errorMap || null,
+      duplicateLotes,
+      colLoteJs: this.profile?.cols?.lote ?? 9,
+      columns: headersToAnalysisColumns(this.headers),
+      cartilla: cartilla || "—",
+      fechaLabel: formatISOToDMY(fecha)
+    });
   }
 
   persistTableState() {

@@ -3,10 +3,8 @@
 import {
   applyPlagasCellValidation,
   buildCompareRowGroups,
-  cellDisplayValue,
-  cellHasCompareError,
   getCompareColumnLabel,
-  getCompareColumnsForPane
+  resolvePlagasVisibleColumnIndexes
 } from "./esparrago-plagas.validation.js";
 import { translateExcelHeader } from "../../../utils/excel-header-i18n.util.js";
 
@@ -36,10 +34,9 @@ function renderCompareTable(headerRow, bodyRows, headers, rows, tipo, config, st
 
   const ctx = buildPaneContext(stats, tipo);
   const fixed = config.columnas_compare?.fijas_js ?? [0, 6, 9];
-  const errorRows = rows;
-  const visibleCols = errorRows.length
-    ? getCompareColumnsForPane(errorRows, tipo, config, ctx, headers)
-    : fixed;
+  // Siempre todas las columnas validadas (SAP + muestra + plagas), no solo las con error.
+  const visibleCols = resolvePlagasVisibleColumnIndexes(config);
+  const tableRows = rows || [];
 
   headerRow.replaceChildren();
   visibleCols.forEach((idx) => {
@@ -54,7 +51,7 @@ function renderCompareTable(headerRow, bodyRows, headers, rows, tipo, config, st
   });
 
   bodyRows.replaceChildren();
-  if (!errorRows.length) {
+  if (!tableRows.length) {
     const tr = document.createElement("tr");
     const td = document.createElement("td");
     td.colSpan = Math.max(visibleCols.length, fixed.length);
@@ -65,7 +62,7 @@ function renderCompareTable(headerRow, bodyRows, headers, rows, tipo, config, st
     return;
   }
 
-  renderCompareTableRows(bodyRows, errorRows, visibleCols, tipo, config, ctx, LOTE_IDX);
+  renderCompareTableRows(bodyRows, tableRows, visibleCols, tipo, config, ctx, LOTE_IDX);
 }
 
 function appendCompareRow(tr, row, visibleCols, tipo, config, ctx, options = {}) {
@@ -79,19 +76,13 @@ function appendCompareRow(tr, row, visibleCols, tipo, config, ctx, options = {})
   visibleCols.forEach((idx) => {
     const td = document.createElement("td");
     td.dataset.excelCol = String(idx);
-    const val = cellDisplayValue(row[idx]);
-    td.textContent = val;
-
-    if (cellHasCompareError(row, idx, tipo, config, ctx)) {
-      applyPlagasCellValidation(td, idx, row[idx], ctx, config);
-    }
-
+    applyPlagasCellValidation(td, idx, row[idx], ctx, config);
     tr.appendChild(td);
   });
 }
 
-function renderCompareTableRows(bodyRows, errorRows, visibleCols, tipo, config, ctx, loteIdx) {
-  const groups = buildCompareRowGroups(errorRows, ctx.duplicadosCartilla || [], loteIdx);
+function renderCompareTableRows(bodyRows, tableRows, visibleCols, tipo, config, ctx, loteIdx) {
+  const groups = buildCompareRowGroups(tableRows, ctx.duplicadosCartilla || [], loteIdx);
 
   groups.forEach((group) => {
     const isDuplicateGroup = group.kind === "duplicate" && group.rows.length > 1;
@@ -226,7 +217,7 @@ export function mountCompareDateSection(parent, stats, headersByCartilla, config
     headerRow: grid.querySelector(".agv-mp-compare-header-ipp"),
     bodyRows: grid.querySelector(".agv-mp-compare-body-ipp"),
     headers: headersByCartilla.IPP || headersByCartilla.ISP || [],
-    rows: stats.errorRowsIPP,
+    rows: stats.rowsIPP,
     tipo: "IPP",
     config,
     stats,
@@ -238,7 +229,7 @@ export function mountCompareDateSection(parent, stats, headersByCartilla, config
     headerRow: grid.querySelector(".agv-mp-compare-header-isp"),
     bodyRows: grid.querySelector(".agv-mp-compare-body-isp"),
     headers: headersByCartilla.ISP || headersByCartilla.IPP || [],
-    rows: stats.errorRowsISP,
+    rows: stats.rowsISP,
     tipo: "ISP",
     config,
     stats,

@@ -1966,7 +1966,7 @@
 }
 
 .agv-pt-dialog--wide {
-  width: min(100%, 26rem);
+  width: min(100%, 32rem);
 }
 
 .agv-pt-dialog__icon {

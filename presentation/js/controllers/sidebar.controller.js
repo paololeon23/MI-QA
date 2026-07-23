@@ -1,4 +1,5 @@
 import { appConfig } from "../config/app.config.js";
+import { getBrandLogoPath, getBrandMarkPath } from "../utils/brand-pixel.util.js";
 import { i18nService } from "../services/i18n.service.js";
 import { readLocalStorage, writeLocalStorage } from "../utils/safe-storage.util.js";
 import { updateActiveSidebarLink, setPinnedPrimaryModule, closePrimaryPanelModules } from "../layouts/sidebar.layout.js";
@@ -8,6 +9,7 @@ import {
 } from "../services/sidebar-activity.service.js";
 import { renderSidebarActivityList } from "../layouts/sidebar-activity.layout.js";
 import { hydrateLucideIcons } from "../utils/lucide-icon.util.js";
+import { mountSidebarAiAssistant } from "../modules/cultivos/esparrago-pt/esparrago-pt-ai-assistant.js";
 
 const SIDEBAR_STORAGE_KEY = "agv-sidebar-collapsed";
 const SIDEBAR_ACTIVITY_EXPANDED_KEY = "agv-sidebar-activity-expanded";
@@ -23,6 +25,7 @@ class SidebarController {
     this.bindPrimaryLinkClicks();
     this.bindBrandHomeLink();
     this.bindActivityPanel();
+    this.aiAssistant = mountSidebarAiAssistant();
   }
 
   bindBrandHomeLink() {
@@ -105,8 +108,8 @@ class SidebarController {
 
     const version = `?v=${appConfig.cacheBustingVersion}`;
     logoImage.src = isCollapsed
-      ? `./${appConfig.brandMarkPath}${version}`
-      : `./${appConfig.brandLogoPath}${version}`;
+      ? `./${getBrandMarkPath()}${version}`
+      : `./${getBrandLogoPath()}${version}`;
 
     if (isCollapsed) {
       logoImage.alt = "";

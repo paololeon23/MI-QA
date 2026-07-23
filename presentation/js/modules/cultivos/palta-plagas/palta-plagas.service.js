@@ -17,17 +17,21 @@ import {
 } from "./palta-plagas.config.js";
 import {
   analyzeInspectionDate,
-  buildDuplicateAlertHtml,
   cellDisplayValue,
   ejecutarValidacion,
   formatRowDates,
   isHarvestAfterInspection,
   limpiarMarcasValidacion,
-  ordenarFechasDDMMYYYY
+  ordenarFechasDDMMYYYY,
+  rowHasMarkedErrors
 } from "./palta-plagas.validation.js";
 import { mountReviewAllDashboard } from "./palta-plagas-compare.js";
 import { writePlagasErrorsExport, writePlagasExportFile } from "./palta-plagas-export.js";
 import { renderPaltaPlagasTable, refreshPaltaPlagasHeaderLabels } from "./palta-plagas-table.js";
+import {
+  createCartillaAnalysisController,
+  headersToAnalysisColumns
+} from "../shared/cartilla-analysis.js";
 
 function t(key, vars = {}) {
   let text = i18nService.translate(key);
@@ -95,6 +99,13 @@ export class PaltaPlagasService {
       i18nPrefix: "plagasPalta"
     });
     this.shell.cacheDom();
+    this.cartillaAnalysis = createCartillaAnalysisController({
+      getRoot: () => this.shell?.root,
+      hostSelector: "#agv-mp-cartilla-analysis",
+      showDialog: (opts) => showMpDialog(opts),
+      t,
+      htmlEscape
+    });
     this.bindEvents();
     this.shell.resetDashboard();
     this.shell.renderExcelInsightEmpty();
@@ -356,14 +367,6 @@ export class PaltaPlagasService {
     const { lotesDuplicados } = ejecutarValidacion(rows, this.config);
     this.processedData = rows;
 
-    if (lotesDuplicados.length) {
-      await showMpDialog({
-        icon: "warning",
-        title: t("plagasArandano.duplicateLotsTitle"),
-        html: `<div class="agv-mp-dialog__html--stacked">${buildDuplicateAlertHtml(lotesDuplicados)}</div>`
-      });
-    }
-
     const syncContext = { duplicadosLote: lotesDuplicados };
     const { errorCount, totalRows } = renderPaltaPlagasTable({
       headerRow: this.shell.refs.resultsHeader,
@@ -384,15 +387,17 @@ export class PaltaPlagasService {
       this.shell.refs.resultsSection.classList.add("is-visible");
     }
 
-    if (errorCount === 0) {
-      showMpDialog({
-        icon: "success",
-        title: t("plagasArandano.allCorrect"),
-        text: t("plagasArandano.noErrorsOnInspection"),
-        timer: 2000,
-        showConfirmButton: false
-      });
-    }
+    const filasConError = rows.filter((row) => rowHasMarkedErrors(row));
+    this.cartillaAnalysis?.present({
+      rows,
+      filasConError,
+      errorMap: null,
+      duplicateLotes: new Set(lotesDuplicados || []),
+      colLoteJs: 9,
+      columns: headersToAnalysisColumns(this.headers),
+      cartilla: CARTILLA,
+      fechaLabel: fecha || "—"
+    });
 
     this.syncButtons();
     hydrateLucideIcons(this.shell.root);
@@ -647,6 +652,7 @@ export class PaltaPlagasService {
     }
     if (refs.totalFilasDiv) refs.totalFilasDiv.textContent = "";
     this.processedData = [];
+    this.cartillaAnalysis?.clear();
   }
 
   onClear() {

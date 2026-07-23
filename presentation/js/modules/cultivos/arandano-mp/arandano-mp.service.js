@@ -3,30 +3,74 @@ import { CartillaShellUi } from "../shared/cartilla-shell.ui.js";
 import { cargarReglasDesdeRuta, analizarReporte } from "../../../../../engine/rule-engine.js";
 import { hydrateLucideIcons } from "../../../utils/lucide-icon.util.js";
 import { i18nService } from "../../../services/i18n.service.js";
+import { appConfig } from "../../../config/app.config.js";
 import { showMpDialog, showMpConfirmDialog, showMpExportChoiceDialog } from "./arandano-mp-dialog.js";
 import {
   buildFilteredSheetData,
   buildFullSheetDataWithErrors
 } from "./arandano-mp-export.js";
 import {
-  pickResultColumns,
   buildLazyDateDetailPlaceholders,
-  bindLazyDateDetailTables
-} from "../shared/mp-results-perf.util.js";
+  bindLazyDateDetailTables,
+  collectValidatedColumnIndexesJs,
+  DEFAULT_MP_CONTEXT_COLS_JS,
+  SAP_ZONE_FRONTEND_COLS_JS,
+  resolveSapZoneHeader,
+  SAP_ZONE_HEADER_LABELS_BY_JS
+} from "../shared/mp-results-perf.util.js?v=2026072219";
+import { expandMissingSapLayout, stripInsertedSapObligatorioErrors } from "../shared/mp-sap-layout.util.js";
+import { loadSapColumnasCatalog, getSapPerfil } from "../../../config/sap-columnas.registry.js";
 import { translateExcelHeader } from "../../../utils/excel-header-i18n.util.js";
+import { createCartillaAnalysisController } from "../shared/cartilla-analysis.js";
 
 const STICKY_COLUMNS = [0, 1, 6, 9]; // Id, Inspección código, Usuario, Lote
+/** Encabezados cortos sticky (la columna es angosta). */
+const STICKY_HEADER_SHORT_BY_JS = {
+  0: "Id",
+  1: "IC",
+  6: "Usuario",
+  9: "Lote",
+  10: "CM"
+};
+const STICKY_HEADER_TITLE_BY_JS = {
+  0: "Id",
+  1: "Inspección código",
+  6: "Usuario",
+  9: "Lote",
+  10: "Cant Muestra"
+};
+/** Productor…Peso Bruto (Excel 13–33), incluye Nota Condición para UI. */
+const SAP_ZONE_COLS_JS = SAP_ZONE_FRONTEND_COLS_JS || [
+  12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32
+];
 const FILAS_SKIP = 5;
 /** Anchos fijos sticky Arándano MP (orden acumulado → left). */
 const STICKY_COL_WIDTHS = {
   0: 95,
   1: 95,
-  6: 181,
+  6: 230,
   9: 126
 };
 
 function isPinnedColumn(index) {
   return STICKY_COLUMNS.includes(index);
+}
+
+function formatResultColumnHeader(col) {
+  const idx = Number(col?.originalIndex);
+  if (STICKY_HEADER_SHORT_BY_JS[idx] != null) return STICKY_HEADER_SHORT_BY_JS[idx];
+  if (col?.isSapZone && col.header) return col.header;
+  if (SAP_ZONE_HEADER_LABELS_BY_JS[idx] != null) {
+    return resolveSapZoneHeader(idx, col.header).label;
+  }
+  return translateExcelHeader(col?.header, idx);
+}
+
+function resultColumnHeaderTitle(col) {
+  const idx = Number(col?.originalIndex);
+  if (STICKY_HEADER_TITLE_BY_JS[idx]) return STICKY_HEADER_TITLE_BY_JS[idx];
+  if (col?.headerTitle) return col.headerTitle;
+  return formatResultColumnHeader(col);
 }
 
 function applyStickyColumnClasses(el, index) {
@@ -80,18 +124,23 @@ function parseExcelDateISO(valor) {
   if (/^\d{8}$/.test(texto)) {
     return `${texto.slice(0, 4)}-${texto.slice(4, 6)}-${texto.slice(6, 8)}`;
   }
-  if (/^\d{2}\/\d{2}\/\d{4}$/.test(texto)) {
-    const [d, m, y] = texto.split("/");
+  if (/^\d{2}[/-]\d{2}[/-]\d{4}$/.test(texto)) {
+    const [d, m, y] = texto.split(/[/-]/);
     return `${y}-${m}-${d}`;
   }
   const fecha = Date.parse(texto);
   return Number.isFinite(fecha) ? new Date(fecha).toISOString().slice(0, 10) : "";
 }
 
+/** Fecha visible/export: 21/06/2026 (con /). */
 function formatISOToDMY(iso) {
   if (!iso) return "";
   const [y, m, d] = iso.split("-");
-  return `${d}-${m}-${y}`;
+  return `${d}/${m}/${y}`;
+}
+
+function fechaLabelParaArchivo(iso) {
+  return formatISOToDMY(iso).replaceAll("/", "");
 }
 
 function valorCeldaParaMostrar(val) {
@@ -146,6 +195,9 @@ function buildCompuestaColumnMap(reglas) {
     if (regla.tipo === "diferencia-maxima-columnas") {
       map.set(msg, [regla["columna-a"], regla["columna-b"]].filter(Boolean));
     }
+    if (regla.tipo === "fecha-lmr-mayoritaria") {
+      map.set(msg, [regla["columna-lmr"]].filter(Boolean));
+    }
   });
   return map;
 }
@@ -159,6 +211,8 @@ function buildErrorMap(resultado, compuestaColumnMap) {
     const filaMap = map.get(fila);
     const existing = filaMap.get(colNum);
     if (!existing || tipo === "obligatorio") {
+      // No pisar un error de valor (igualdad/rango/…) con «obligatorio».
+      if (existing && existing.tipo !== "obligatorio" && tipo === "obligatorio") return;
       filaMap.set(colNum, { tipo, problema });
     }
   };
@@ -226,16 +280,22 @@ export class ArandanoMpService {
     this.abortController = null;
     this.root = null;
     this.compuestaColumnMapByCartilla = {};
+    this.cartillaAnalysis = null;
   }
 
   async init(appRoot) {
     this.root = appRoot;
-    const entradas = await Promise.all(
-      CARTILLA_ORDER.map(async (cartilla) => {
-        const reglas = await cargarReglasDesdeRuta(REGLAS_POR_CARTILLA[cartilla]);
-        return [cartilla, reglas];
-      })
-    );
+    const [entradas] = await Promise.all([
+      Promise.all(
+        CARTILLA_ORDER.map(async (cartilla) => {
+          const reglas = await cargarReglasDesdeRuta(
+            `${REGLAS_POR_CARTILLA[cartilla]}?v=${appConfig.cacheBustingVersion}`
+          );
+          return [cartilla, reglas];
+        })
+      ),
+      loadSapColumnasCatalog(appConfig.cacheBustingVersion)
+    ]);
     this.reglasByCartilla = Object.fromEntries(entradas);
     this.reglas = this.reglasByCartilla.MPBA;
     this.cfgCartillas = this.reglas?.["configuracion-cartillas"] || {};
@@ -252,6 +312,13 @@ export class ArandanoMpService {
       i18nPrefix: "plagasArandano"
     });
     this.shell.cacheDom();
+    this.cartillaAnalysis = createCartillaAnalysisController({
+      getRoot: () => this.root,
+      hostSelector: "#agv-mp-cartilla-analysis",
+      showDialog: (opts) => showMpDialog(opts),
+      t,
+      htmlEscape
+    });
     this.bindEvents();
     this.shell.resetDashboard();
     hydrateLucideIcons(appRoot);
@@ -299,6 +366,60 @@ export class ArandanoMpService {
 
   totalColumnasFor(cartilla) {
     return this.getReglas(cartilla)?.["total-columnas"] || 104;
+  }
+
+  /**
+   * Contexto + zona SAP (se valida) + columnas con reglas + columnas con error.
+   */
+  getValidatedColumnIndexesJs(cartilla) {
+    return collectValidatedColumnIndexesJs(this.getReglas(cartilla), {
+      contextColsJs: DEFAULT_MP_CONTEXT_COLS_JS,
+      stickyColsJs: STICKY_COLUMNS,
+      includeSapZone: true
+    });
+  }
+
+  pickColumnsForResults(cartilla, allColumns, errorMap, filas) {
+    const needed = new Set([
+      ...DEFAULT_MP_CONTEXT_COLS_JS,
+      ...STICKY_COLUMNS,
+      ...SAP_ZONE_COLS_JS,
+      ...this.getValidatedColumnIndexesJs(cartilla)
+    ]);
+    errorMap?.forEach((filaMap) => {
+      filaMap?.forEach((_err, colNum) => {
+        const js = Number(colNum) - 1;
+        if (Number.isFinite(js) && js >= 0) needed.add(js);
+      });
+    });
+
+    const headers = this.headersByCartilla[cartilla] || [];
+    const byIndex = new Map();
+    (allColumns || []).forEach((col) => {
+      if (!col || col.originalIndex == null) return;
+      const idx = Number(col.originalIndex);
+      if (!Number.isFinite(idx)) return;
+      byIndex.set(idx, col);
+    });
+    needed.forEach((idx) => {
+      const excelHeader = headers[idx] || byIndex.get(idx)?.header || "";
+      const sapMeta = SAP_ZONE_HEADER_LABELS_BY_JS[idx]
+        ? resolveSapZoneHeader(idx, excelHeader)
+        : null;
+      const header = sapMeta?.label || String(excelHeader || "").trim() || `Col ${idx + 1}`;
+      const existing = byIndex.get(idx);
+      byIndex.set(idx, {
+        id: existing?.id || `col_${idx + 1}`,
+        header,
+        originalIndex: idx,
+        headerTitle: sapMeta?.title || header,
+        isSapZone: Boolean(sapMeta)
+      });
+    });
+
+    return [...byIndex.values()]
+      .filter((col) => needed.has(Number(col.originalIndex)))
+      .sort((a, b) => Number(a.originalIndex) - Number(b.originalIndex));
   }
 
   getCodigosPermitidos() {
@@ -435,6 +556,10 @@ export class ArandanoMpService {
         { cartilla, fechaLmrMayoritaria }
       );
       const partialMap = buildErrorMap(resultado, compuestaMap);
+      stripInsertedSapObligatorioErrors(
+        partialMap,
+        this._sapInsertedJsByCartilla?.[cartilla] || []
+      );
 
       partialMap.forEach((filaMap, filaNum) => {
         if (!errorMap.has(filaNum)) errorMap.set(filaNum, new Map());
@@ -511,7 +636,10 @@ export class ArandanoMpService {
       this.getReglas(cartilla),
       { cartilla, fechaLmrMayoritaria }
     );
-    const errorMap = buildErrorMap(resultado, this.compuestaMapFor(cartilla));
+    const errorMap = stripInsertedSapObligatorioErrors(
+      buildErrorMap(resultado, this.compuestaMapFor(cartilla)),
+      this._sapInsertedJsByCartilla?.[cartilla] || []
+    );
     const duplicateLotes = detectDuplicateLotes(rows, colLoteJs);
     return { errorMap, duplicateLotes };
   }
@@ -553,7 +681,7 @@ export class ArandanoMpService {
     const headers = this.headersByCartilla[cartilla] || [];
     const exportCfg = this.getExportConfig(cartilla);
     const wsData = buildFilteredSheetData(rows, cartilla, headers, exportCfg, this.exportFormatHelpers());
-    const fechaLabel = formatISOToDMY(fechaISO).replaceAll("-", "");
+    const fechaLabel = fechaLabelParaArchivo(fechaISO);
     const nombre = `ARANDANOS_${cartilla}_Filtrado_${fechaLabel}.xlsx`;
 
     this.writeWorkbook(nombre, [{ name: cartilla, data: wsData }]);
@@ -593,7 +721,7 @@ export class ArandanoMpService {
       return;
     }
 
-    const fechaLabel = formatISOToDMY(fechaISO).replaceAll("-", "");
+    const fechaLabel = fechaLabelParaArchivo(fechaISO);
     const nombre = `ARANDANOS_MP_Filtrado_${fechaLabel}.xlsx`;
     this.writeWorkbook(nombre, sheets);
 
@@ -637,7 +765,7 @@ export class ArandanoMpService {
       this.exportFormatHelpers()
     );
 
-    const fechaSuffix = fechaISO ? `_${formatISOToDMY(fechaISO).replaceAll("-", "")}` : "";
+    const fechaSuffix = fechaISO ? `_${fechaLabelParaArchivo(fechaISO)}` : "";
     const nombre = `ARANDANOS_${cartilla}_Errores${fechaSuffix}.xlsx`;
     this.writeWorkbook(nombre, [{ name: `${cartilla}_Errores`, data: wsData }]);
 
@@ -742,6 +870,9 @@ export class ArandanoMpService {
     this.duplicateLotes = new Set();
     this.excelLoaded = false;
     this.lastReviewKey = "";
+    this._sapLayoutNotice = null;
+    this._sapInsertedJsByCartilla = {};
+    this.cartillaAnalysis?.clear();
   }
 
   async onFileSelected(event) {
@@ -838,12 +969,30 @@ export class ArandanoMpService {
           return;
         }
 
-        const headers = sheet[0] || [];
+        const rawHeaders = sheet[0] || [];
+        const rawDataRows = sheet
+          .slice(1)
+          .filter((row) => row.some((cell) => cell !== "" && cell != null));
+
+        // Si Nota Condición no está en col 28 → faltan SAP: insertar 15 + 5 vacías (Cond. Transporte → 34).
+        const {
+          headers,
+          rows: layoutRows,
+          expanded: sapLayoutExpanded,
+          insertedSap15,
+          insertedSap5,
+          insertedJsIndexes
+        } = expandMissingSapLayout(rawHeaders, rawDataRows, getSapPerfil("mp"));
+
         if (headers.length !== this.totalColumnasFor(cartilla)) {
           showMpDialog({
             icon: "error",
             title: "Estructura incorrecta",
-            html: `El archivo de <b>${htmlEscape(cartilla)}</b> tiene <b>${headers.length}</b> columnas.<br>
+            html: `El archivo de <b>${htmlEscape(cartilla)}</b> tiene <b>${headers.length}</b> columnas${
+              sapLayoutExpanded
+                ? ` (tras completar huecos SAP: +${insertedSap15 + insertedSap5})`
+                : ""
+            }.<br>
               Se requieren <b>${this.totalColumnasFor(cartilla)} columnas</b>.`
           });
           if (refs.fileInput) refs.fileInput.value = "";
@@ -851,6 +1000,8 @@ export class ArandanoMpService {
         }
 
         this.headersByCartilla[cartilla] = headers;
+        this._sapInsertedJsByCartilla = this._sapInsertedJsByCartilla || {};
+        this._sapInsertedJsByCartilla[cartilla] = insertedJsIndexes || [];
         this.columnsByCartilla[cartilla] = headers.map((h, i) => ({
           id: `col_${i + 1}`,
           header: h || "",
@@ -858,16 +1009,22 @@ export class ArandanoMpService {
         }));
 
         const colFechaJs = this.colFechaInspeccionJsFor(cartilla);
-        const filas = sheet
-          .slice(1)
-          .filter((row) => row.some((cell) => cell !== "" && cell != null))
-          .map((row) => {
-            row._fechaInspeccionISO = parseExcelDateISO(row[colFechaJs]);
-            return row;
-          });
+        const filas = layoutRows.map((row) => {
+          const copy = [...row];
+          copy._fechaInspeccionISO = parseExcelDateISO(copy[colFechaJs]);
+          if (sapLayoutExpanded) copy._sapLayoutExpanded = true;
+          return copy;
+        });
         if (filas.length) {
           this.cartillaStatus[cartilla] = true;
           this.rawRows.push(...filas);
+        }
+        if (sapLayoutExpanded) {
+          this._sapLayoutNotice = {
+            cartilla,
+            insertedSap15,
+            insertedSap5
+          };
         }
       }
 
@@ -894,11 +1051,14 @@ export class ArandanoMpService {
 
       const cartillas = [...cartillasCargadas];
       const primeraCartilla = cartillas[0];
+      const sapNote = this._sapLayoutNotice
+        ? `<br><small>Se completaron huecos SAP vacíos (+${this._sapLayoutNotice.insertedSap15} + ${this._sapLayoutNotice.insertedSap5}) para alinear Nota Condición (col 28) y Condición Transporte (col 34).</small>`
+        : "";
       showMpDialog({
         icon: "success",
         title: "Excel cargado",
-        html: `Cartilla(s) <b>${htmlEscape(cartillas.join(", "))}</b> · <b>${this.rawRows.length}</b> registros · <b>${primeraCartilla ? this.totalColumnasFor(primeraCartilla) : 0}</b> columnas`,
-        timer: 1800,
+        html: `Cartilla(s) <b>${htmlEscape(cartillas.join(", "))}</b> · <b>${this.rawRows.length}</b> registros · <b>${primeraCartilla ? this.totalColumnasFor(primeraCartilla) : 0}</b> columnas${sapNote}`,
+        timer: sapNote ? 3200 : 1800,
         showConfirmButton: false
       });
 
@@ -1207,7 +1367,10 @@ export class ArandanoMpService {
         reglas,
         { cartilla, fechaLmrMayoritaria }
       );
-      const errorMap = buildErrorMap(resultado, compuestaMap);
+      const errorMap = stripInsertedSapObligatorioErrors(
+        buildErrorMap(resultado, compuestaMap),
+        this._sapInsertedJsByCartilla?.[cartilla] || []
+      );
       const dupLotes = detectDuplicateLotes(rows, colLoteJs);
       const filasDetalle = rows.filter((row) => {
         const filaMap = errorMap.get(row._filaNum);
@@ -1250,6 +1413,7 @@ export class ArandanoMpService {
     }
     if (refs.resultsSubtitleEl) refs.resultsSubtitleEl.textContent = "";
     if (refs.totalFilasDiv) refs.totalFilasDiv.textContent = "";
+    this.cartillaAnalysis?.clear();
     this.processedRows = [];
     this.lastReviewKey = "";
     this.syncActionButtons();
@@ -1287,13 +1451,15 @@ export class ArandanoMpService {
     if (!filas?.length) return "";
 
     const allColumns = this.columnsByCartilla[cartilla] || [];
-    const columns = pickResultColumns(allColumns, errorMap, filas);
+    const columns = this.pickColumnsForResults(cartilla, allColumns, errorMap, filas);
     const thead = columns
       .map((col) => {
         const sticky = isPinnedColumn(col.originalIndex)
           ? ` agv-mp-sticky-col agv-mp-sticky-col-${col.originalIndex}`
           : "";
-        return `<th class="agv-mp-table__col-header${sticky}">${htmlEscape(translateExcelHeader(col.header, col.originalIndex))}</th>`;
+        return `<th class="agv-mp-table__col-header${sticky}" title="${htmlEscape(
+          resultColumnHeaderTitle(col)
+        )}">${htmlEscape(formatResultColumnHeader(col))}</th>`;
       })
       .join("");
 
@@ -1447,11 +1613,21 @@ export class ArandanoMpService {
         ${detailsBlock}
       </div>`;
     el.hidden = false;
-    bindLazyDateDetailTables(el, items, (item) =>
-      this.htmlTablaFilasConError(cartilla, item.filasDetalle, item.errorMap, item.duplicateLotes, {
-        titled: false
-      })
-    );
+    bindLazyDateDetailTables(el, items, (item) => {
+      const html = this.htmlTablaFilasConError(
+        cartilla,
+        item.filasDetalle,
+        item.errorMap,
+        item.duplicateLotes,
+        { titled: false }
+      );
+      queueMicrotask(() => {
+        el.querySelectorAll(".agv-mp-table-scroll .agv-mp-table").forEach((tableEl) => {
+          syncArandanoMpStickyOffsets(tableEl);
+        });
+      });
+      return html;
+    });
   }
 
   onReviewAll() {
@@ -1590,7 +1766,10 @@ export class ArandanoMpService {
     );
 
     this.processedRows = rows;
-    this.lastErrorMap = buildErrorMap(resultado, this.compuestaMapFor(cartilla));
+    this.lastErrorMap = stripInsertedSapObligatorioErrors(
+      buildErrorMap(resultado, this.compuestaMapFor(cartilla)),
+      this._sapInsertedJsByCartilla?.[cartilla] || []
+    );
     this.duplicateLotes = detectDuplicateLotes(rows, this.colLoteJsFor(cartilla));
 
     const filasConError = rows.filter((row) => this.rowHasError(row));
@@ -1598,19 +1777,17 @@ export class ArandanoMpService {
     this.lastReviewKey = `${cartilla}|${fechaISO}`;
     this.syncActionButtons();
 
-    if (this.duplicateLotes.size) {
-      showMpDialog({
-        icon: "warning",
-        title: t("plagasArandano.duplicateLotsTitle"),
-        html: [...this.duplicateLotes].map((l) => htmlEscape(l)).join("<br>")
-      });
-    } else if (!filasConError.length) {
-      showMpDialog({
-        icon: "success",
-        title: t("plagasArandano.allCorrect"),
-        text: t("arandanoMp.noInspectionErrors")
-      });
-    }
+    this.cartillaAnalysis?.present({
+      rows,
+      filasConError,
+      errorMap: this.lastErrorMap || null,
+      duplicateLotes: this.duplicateLotes || new Set(),
+      colLoteJs: this.colLoteJsFor(cartilla),
+      columns: this.columnsByCartilla?.[cartilla] || [],
+      cartilla: cartilla || "—",
+      fechaLabel: formatISOToDMY(fechaISO),
+      translateHeader: translateExcelHeader
+    });
   }
 
   rowHasError(row) {
@@ -1625,7 +1802,7 @@ export class ArandanoMpService {
     const refs = this.shell.refs;
     const headers = this.headersByCartilla[cartilla] || [];
     const allColumns = this.columnsByCartilla[cartilla] || [];
-    const columns = pickResultColumns(allColumns, this.lastErrorMap, filasConError);
+    const columns = this.pickColumnsForResults(cartilla, allColumns, this.lastErrorMap, filasConError);
 
     if (refs.resultsHeader) refs.resultsHeader.innerHTML = "";
     if (refs.resultsBody) refs.resultsBody.innerHTML = "";
@@ -1678,7 +1855,8 @@ export class ArandanoMpService {
         th.className = "agv-mp-table__col-header";
         th.dataset.colIndex = String(col.originalIndex);
         th.dataset.excelHeader = String(col.header ?? "");
-        th.textContent = translateExcelHeader(col.header, col.originalIndex);
+        th.textContent = formatResultColumnHeader(col);
+        th.title = resultColumnHeaderTitle(col);
         applyStickyColumnClasses(th, col.originalIndex);
         headerFrag.appendChild(th);
       });
@@ -1724,8 +1902,13 @@ export class ArandanoMpService {
       });
     }
     refs.resultsHeader?.querySelectorAll("th[data-excel-header], th[data-col-index]").forEach((th) => {
-      const raw = th.dataset.excelHeader;
       const idx = Number(th.dataset.colIndex);
+      if (Number.isFinite(idx) && STICKY_HEADER_SHORT_BY_JS[idx] != null) {
+        th.textContent = STICKY_HEADER_SHORT_BY_JS[idx];
+        th.title = STICKY_HEADER_TITLE_BY_JS[idx] || th.title;
+        return;
+      }
+      const raw = th.dataset.excelHeader;
       if (raw != null && raw !== "") {
         th.textContent = translateExcelHeader(raw, idx);
         return;
@@ -1733,7 +1916,7 @@ export class ArandanoMpService {
       if (Number.isFinite(idx)) {
         const cartilla = this.shell?.refs?.inspectionTypeSelect?.value;
         const col = (this.columnsByCartilla?.[cartilla] || []).find((c) => c.originalIndex === idx);
-        if (col) th.textContent = translateExcelHeader(col.header, idx);
+        if (col) th.textContent = formatResultColumnHeader(col);
       }
     });
     const okCell = refs.resultsBody?.querySelector("tr.agv-mp-row-ok td");

@@ -3,6 +3,7 @@ import { CartillaShellUi } from "../shared/cartilla-shell.ui.js";
 import { cargarReglasDesdeRuta, analizarReporte } from "../../../../../engine/rule-engine.js";
 import { hydrateLucideIcons } from "../../../utils/lucide-icon.util.js";
 import { i18nService } from "../../../services/i18n.service.js";
+import { appConfig } from "../../../config/app.config.js";
 import { showMpDialog, showMpConfirmDialog, showMpExportChoiceDialog } from "../arandano-mp/arandano-mp-dialog.js";
 import {
   buildFilteredSheetData,
@@ -10,10 +11,33 @@ import {
 } from "./esparrago-mp-export.js";
 import { translateExcelHeader } from "../../../utils/excel-header-i18n.util.js";
 import { refreshTranslatedHeaderRow } from "../../../utils/table-header-i18n.util.js";
+import {
+  createCartillaAnalysisController
+} from "./esparrago-mp-cartilla-analysis.js";
+import {
+  collectValidatedColumnIndexesJs,
+  DEFAULT_MP_CONTEXT_COLS_JS,
+  SAP_ZONE_FRONTEND_COLS_JS,
+  resolveSapZoneHeader,
+  SAP_ZONE_HEADER_LABELS_BY_JS
+} from "../shared/mp-results-perf.util.js?v=2026072219";
+import { expandMissingSapLayout } from "../shared/mp-sap-layout.util.js?v=2026072219";
+import { loadSapColumnasCatalog, getSapPerfil } from "../../../config/sap-columnas.registry.js";
 
 const STICKY_COLUMNS = [0, 1, 6, 9]; // Id, Inspección código, Usuario, Lote
+/** Anchos base sticky Espárrago MP (Usuario ancho por emails). */
+const STICKY_COL_WIDTHS = {
+  0: 88,
+  1: 108,
+  6: 260,
+  9: 118
+};
 /** Columnas de contexto siempre visibles en la tabla de errores (JS 0-based). */
-const CONTEXT_COLUMNS_JS = [0, 1, 6, 9, 10]; // + Cant Muestra
+const CONTEXT_COLUMNS_JS = DEFAULT_MP_CONTEXT_COLS_JS;
+/** Productor…Peso Bruto (Excel 13–33). */
+const SAP_ZONE_COLS_JS = SAP_ZONE_FRONTEND_COLS_JS || [
+  12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32
+];
 const FILAS_SKIP = 5;
 
 /** Columnas Excel (1-based) para verificación visual de sumas en tabla de revisión */
@@ -67,6 +91,36 @@ function isPinnedColumn(index) {
 function applyStickyColumnClasses(el, index) {
   if (!isPinnedColumn(index)) return;
   el.classList.add("agv-mp-sticky-col", `agv-mp-sticky-col-${index}`);
+}
+
+/** Recalcula left según anchos reales pintados (sin aplastar columnas). */
+function syncEsparragoMpStickyOffsets(tableEl) {
+  if (!tableEl) return;
+
+  STICKY_COLUMNS.forEach((idx) => {
+    const width = STICKY_COL_WIDTHS[idx] ?? 90;
+    tableEl.querySelectorAll(`.agv-mp-sticky-col-${idx}`).forEach((el) => {
+      el.style.boxSizing = "border-box";
+      el.style.minWidth = `${width}px`;
+      el.style.width = `${width}px`;
+      el.style.maxWidth = `${width}px`;
+      el.style.left = "";
+    });
+  });
+
+  let left = 0;
+  STICKY_COLUMNS.forEach((idx) => {
+    const cells = tableEl.querySelectorAll(`.agv-mp-sticky-col-${idx}`);
+    if (!cells.length) return;
+    const sample = cells[0];
+    const measured = Math.ceil(sample.getBoundingClientRect().width);
+    const width = measured > 0 ? measured : STICKY_COL_WIDTHS[idx] ?? 90;
+    cells.forEach((el) => {
+      el.style.left = `${left}px`;
+      el.style.zIndex = idx === 0 ? "6" : "5";
+    });
+    left += width;
+  });
 }
 
 function excelColToJs(col) {
@@ -233,15 +287,56 @@ function rowToRegistro(row, filaNum) {
   return { fila: filaNum, _cols };
 }
 
-/** Solo sticky + contexto + columnas con error en las filas mostradas (evita pintar ~189 cols). */
-function pickResultColumns(allColumns, errorMap, filas) {
-  const needed = new Set(CONTEXT_COLUMNS_JS);
-  filas.forEach((row) => {
+/** Contexto + zona SAP (se valida) + columnas con reglas + columnas con error. */
+function pickResultColumnsForCartilla(cartilla, allColumns, errorMap, filas, getReglas, headersByCartilla) {
+  const baseCols = collectValidatedColumnIndexesJs(getReglas(cartilla), {
+    contextColsJs: CONTEXT_COLUMNS_JS,
+    stickyColsJs: STICKY_COLUMNS,
+    includeSapZone: true
+  });
+  const needed = new Set([...CONTEXT_COLUMNS_JS, ...STICKY_COLUMNS, ...SAP_ZONE_COLS_JS, ...baseCols]);
+  errorMap?.forEach((filaMap) => {
+    filaMap?.forEach((_err, colNum) => {
+      const js = Number(colNum) - 1;
+      if (Number.isFinite(js) && js >= 0) needed.add(js);
+    });
+  });
+  (filas || []).forEach((row) => {
     const filaMap = errorMap?.get(row._filaNum);
     if (!filaMap) return;
-    filaMap.forEach((_err, colNum) => needed.add(colNum - 1));
+    filaMap.forEach((_err, colNum) => {
+      const js = Number(colNum) - 1;
+      if (Number.isFinite(js) && js >= 0) needed.add(js);
+    });
   });
-  return allColumns.filter((col) => needed.has(col.originalIndex));
+
+  const headers = headersByCartilla?.[cartilla] || [];
+  const byIndex = new Map();
+  (allColumns || []).forEach((col) => {
+    if (!col || col.originalIndex == null) return;
+    const idx = Number(col.originalIndex);
+    if (!Number.isFinite(idx)) return;
+    byIndex.set(idx, col);
+  });
+  needed.forEach((idx) => {
+    const excelHeader = headers[idx] || byIndex.get(idx)?.header || "";
+    const sapMeta = SAP_ZONE_HEADER_LABELS_BY_JS[idx]
+      ? resolveSapZoneHeader(idx, excelHeader)
+      : null;
+    const header = sapMeta?.label || String(excelHeader || "").trim() || `Col ${idx + 1}`;
+    const existing = byIndex.get(idx);
+    byIndex.set(idx, {
+      id: existing?.id || `col_${idx + 1}`,
+      header,
+      originalIndex: idx,
+      headerTitle: sapMeta?.title || header,
+      isSapZone: Boolean(sapMeta)
+    });
+  });
+
+  return [...byIndex.values()]
+    .filter((col) => needed.has(Number(col.originalIndex)))
+    .sort((a, b) => Number(a.originalIndex) - Number(b.originalIndex));
 }
 
 function groupRowsByInspectionDate(rows, colFechaJs) {
@@ -343,11 +438,15 @@ export class EsparragoMpService {
     this.abortController = null;
     this.root = null;
     this.compuestaColumnMapByCartilla = {};
+    this.cartillaAnalysis = null;
   }
 
   async init(appRoot) {
     this.root = appRoot;
-    const reglas = await cargarReglasDesdeRuta(REGLAS_PATH);
+    const [reglas] = await Promise.all([
+      cargarReglasDesdeRuta(`${REGLAS_PATH}?v=${appConfig.cacheBustingVersion}`),
+      loadSapColumnasCatalog(appConfig.cacheBustingVersion)
+    ]);
     this.reglasByCartilla = { MPES: reglas };
     this.reglas = this.reglasByCartilla.MPES;
     this.cfgCartillas = this.reglas?.["configuracion-cartillas"] || {};
@@ -364,6 +463,13 @@ export class EsparragoMpService {
       i18nPrefix: "plagasEsparrago"
     });
     this.shell.cacheDom();
+    this.cartillaAnalysis = createCartillaAnalysisController({
+      getRoot: () => this.root,
+      hostSelector: "#agv-mp-cartilla-analysis",
+      showDialog: (opts) => showMpDialog(opts),
+      t,
+      htmlEscape
+    });
     this.bindEvents();
     this.shell.resetDashboard();
     hydrateLucideIcons(appRoot);
@@ -813,6 +919,8 @@ export class EsparragoMpService {
     this.duplicateLotes = new Set();
     this.excelLoaded = false;
     this.lastReviewKey = "";
+    this._sapLayoutNotice = null;
+    this.cartillaAnalysis?.clear();
   }
 
   async onFileSelected(event) {
@@ -908,12 +1016,29 @@ export class EsparragoMpService {
           return;
         }
 
-        const headers = sheet[0] || [];
+        const rawHeaders = sheet[0] || [];
+        const rawDataRows = sheet
+          .slice(1)
+          .filter((row) => row.some((cell) => cell !== "" && cell != null));
+
+        // Si Nota Condición no está en col 28 → faltan SAP: insertar 15 + 5 vacías.
+        const {
+          headers,
+          rows: layoutRows,
+          expanded: sapLayoutExpanded,
+          insertedSap15,
+          insertedSap5
+        } = expandMissingSapLayout(rawHeaders, rawDataRows, getSapPerfil("mp"));
+
         if (headers.length !== this.totalColumnasFor(cartilla)) {
           showMpDialog({
             icon: "error",
             title: "Estructura incorrecta",
-            html: `El archivo de <b>${htmlEscape(cartilla)}</b> tiene <b>${headers.length}</b> columnas.<br>
+            html: `El archivo de <b>${htmlEscape(cartilla)}</b> tiene <b>${headers.length}</b> columnas${
+              sapLayoutExpanded
+                ? ` (tras completar huecos SAP: +${insertedSap15 + insertedSap5})`
+                : ""
+            }.<br>
               Se requieren <b>${this.totalColumnasFor(cartilla)} columnas</b>.`
           });
           if (refs.fileInput) refs.fileInput.value = "";
@@ -928,16 +1053,22 @@ export class EsparragoMpService {
         }));
 
         const colFechaJs = this.colFechaInspeccionJsFor(cartilla);
-        const filas = sheet
-          .slice(1)
-          .filter((row) => row.some((cell) => cell !== "" && cell != null))
-          .map((row) => {
-            row._fechaInspeccionISO = parseExcelDateISO(row[colFechaJs]);
-            return row;
-          });
+        const filas = layoutRows.map((row) => {
+          const copy = [...row];
+          copy._fechaInspeccionISO = parseExcelDateISO(copy[colFechaJs]);
+          if (sapLayoutExpanded) copy._sapLayoutExpanded = true;
+          return copy;
+        });
         if (filas.length) {
           this.cartillaStatus[cartilla] = true;
           this.rawRows.push(...filas);
+        }
+        if (sapLayoutExpanded) {
+          this._sapLayoutNotice = {
+            cartilla,
+            insertedSap15,
+            insertedSap5
+          };
         }
       }
 
@@ -964,11 +1095,14 @@ export class EsparragoMpService {
 
       const cartillas = [...cartillasCargadas];
       const primeraCartilla = cartillas[0];
+      const sapNote = this._sapLayoutNotice
+        ? `<br><small>Se completaron huecos SAP vacíos (+${this._sapLayoutNotice.insertedSap15} + ${this._sapLayoutNotice.insertedSap5}) para alinear Nota Condición (col 28) y el bloque siguiente (col 34).</small>`
+        : "";
       showMpDialog({
         icon: "success",
         title: "Excel cargado",
-        html: `Cartilla(s) <b>${htmlEscape(cartillas.join(", "))}</b> · <b>${this.rawRows.length}</b> registros · <b>${primeraCartilla ? this.totalColumnasFor(primeraCartilla) : 0}</b> columnas`,
-        timer: 1800,
+        html: `Cartilla(s) <b>${htmlEscape(cartillas.join(", "))}</b> · <b>${this.rawRows.length}</b> registros · <b>${primeraCartilla ? this.totalColumnasFor(primeraCartilla) : 0}</b> columnas${sapNote}`,
+        timer: sapNote ? 3200 : 1800,
         showConfirmButton: false
       });
 
@@ -1312,6 +1446,7 @@ export class EsparragoMpService {
     }
     if (refs.resultsSubtitleEl) refs.resultsSubtitleEl.textContent = "";
     if (refs.totalFilasDiv) refs.totalFilasDiv.textContent = "";
+    this.cartillaAnalysis?.clear();
     this.processedRows = [];
     this.lastReviewKey = "";
     this.syncActionButtons();
@@ -1349,14 +1484,23 @@ export class EsparragoMpService {
     if (!filas?.length) return "";
 
     const allColumns = this.columnsByCartilla[cartilla] || [];
-    const columns = pickResultColumns(allColumns, errorMap, filas);
+    const columns = pickResultColumnsForCartilla(
+      cartilla,
+      allColumns,
+      errorMap,
+      filas,
+      (c) => this.getReglas(c),
+      this.headersByCartilla
+    );
     const thead =
       columns
         .map((col) => {
           const sticky = isPinnedColumn(col.originalIndex)
             ? ` agv-mp-sticky-col agv-mp-sticky-col-${col.originalIndex}`
             : "";
-          return `<th class="agv-mp-table__col-header${sticky}">${htmlEscape(col.header)}</th>`;
+          return `<th class="agv-mp-table__col-header${sticky}"${
+            col.headerTitle ? ` title="${htmlEscape(col.headerTitle)}"` : ""
+          }>${htmlEscape(col.header)}</th>`;
         })
         .join("") + htmlSumVerificationHeaders();
 
@@ -1541,6 +1685,10 @@ export class EsparragoMpService {
           item.duplicateLotes,
           { titled: false }
         );
+        syncEsparragoMpStickyOffsets(body.querySelector(".agv-mp-table"));
+        requestAnimationFrame(() => {
+          syncEsparragoMpStickyOffsets(body.querySelector(".agv-mp-table"));
+        });
         detailsEl.dataset.loaded = "1";
       });
     });
@@ -1687,19 +1835,17 @@ export class EsparragoMpService {
     this.lastReviewKey = `${cartilla}|${fechaISO}`;
     this.syncActionButtons();
 
-    if (this.duplicateLotes.size) {
-      showMpDialog({
-        icon: "warning",
-        title: t("plagasArandano.duplicateLotsTitle"),
-        html: [...this.duplicateLotes].map((l) => htmlEscape(l)).join("<br>")
-      });
-    } else if (!filasConError.length) {
-      showMpDialog({
-        icon: "success",
-        title: t("plagasArandano.allCorrect"),
-        text: t("esparragoMp.noInspectionErrors")
-      });
-    }
+    this.cartillaAnalysis?.present({
+      rows,
+      filasConError,
+      errorMap: this.lastErrorMap || null,
+      duplicateLotes: this.duplicateLotes || new Set(),
+      colLoteJs: this.colLoteJsFor(cartilla),
+      columns: this.columnsByCartilla?.[cartilla] || [],
+      cartilla: cartilla || "—",
+      fechaLabel: formatISOToDMY(fechaISO),
+      translateHeader: translateExcelHeader
+    });
   }
 
   rowHasError(row) {
@@ -1714,7 +1860,14 @@ export class EsparragoMpService {
     const refs = this.shell.refs;
     const headers = this.headersByCartilla[cartilla] || [];
     const allColumns = this.columnsByCartilla[cartilla] || [];
-    const columns = pickResultColumns(allColumns, this.lastErrorMap, filasConError);
+    const columns = pickResultColumnsForCartilla(
+      cartilla,
+      allColumns,
+      this.lastErrorMap,
+      filasConError,
+      (c) => this.getReglas(c),
+      this.headersByCartilla
+    );
 
     if (refs.resultsHeader) refs.resultsHeader.innerHTML = "";
     if (refs.resultsBody) refs.resultsBody.innerHTML = "";
@@ -1765,7 +1918,10 @@ export class EsparragoMpService {
         th.className = "agv-mp-table__col-header";
         th.dataset.colIndex = String(col.originalIndex);
         th.dataset.excelHeader = String(col.header ?? "");
-        th.textContent = translateExcelHeader(col.header, col.originalIndex);
+        th.textContent = col.isSapZone
+          ? col.header
+          : translateExcelHeader(col.header, col.originalIndex);
+        if (col.headerTitle) th.title = col.headerTitle;
         applyStickyColumnClasses(th, col.originalIndex);
         headerFrag.appendChild(th);
       });
@@ -1792,6 +1948,9 @@ export class EsparragoMpService {
     }
 
     if (refs.resultsTable) refs.resultsTable.hidden = false;
+    requestAnimationFrame(() => {
+      syncEsparragoMpStickyOffsets(refs.resultsTable);
+    });
     if (refs.resultsIconEl) hydrateLucideIcons(refs.resultsIconEl);
   }
 
@@ -1810,6 +1969,23 @@ export class EsparragoMpService {
     refs.resultsBody?.querySelectorAll("tr.agv-mp-row-ok td").forEach((td) => {
       td.textContent = t("esparragoMp.noInspectionErrors");
     });
+    if (this.cartillaAnalysis?.getLast() && this.processedRows?.length) {
+      const [cartilla, fechaISO] = String(this.lastReviewKey || "").split("|");
+      if (cartilla && fechaISO) {
+        const filasConError = this.processedRows.filter((row) => this.rowHasError(row));
+        this.cartillaAnalysis.refreshPanel({
+          rows: this.processedRows,
+          filasConError,
+          errorMap: this.lastErrorMap || null,
+          duplicateLotes: this.duplicateLotes || new Set(),
+          colLoteJs: this.colLoteJsFor(cartilla),
+          columns: this.columnsByCartilla?.[cartilla] || [],
+          cartilla,
+          fechaLabel: formatISOToDMY(fechaISO),
+          translateHeader: translateExcelHeader
+        });
+      }
+    }
   }
 
   destroy() {

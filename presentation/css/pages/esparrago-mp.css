@@ -1,14 +1,46 @@
 /**
- * Espárrago MP — offsets sticky Usuario / Lote (solo este módulo).
- * Scope: #agvMpApp .agv-mp-table--esparrago
+ * Espárrago MP — offsets sticky Id/Código/Usuario/Lote.
+ * El análisis de cartilla vive en cartilla-analysis.css (shared).
  */
 
+#agvMpApp .agv-mp-table.agv-mp-table--esparrago .agv-mp-sticky-col {
+  position: -webkit-sticky;
+  position: sticky;
+  background: #fff;
+  box-sizing: border-box;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+#agvMpApp .agv-mp-table.agv-mp-table--esparrago .agv-mp-sticky-col-0 {
+  left: 0;
+  min-width: 88px;
+  width: 88px;
+}
+
+#agvMpApp .agv-mp-table.agv-mp-table--esparrago .agv-mp-sticky-col-1 {
+  left: 88px;
+  min-width: 108px;
+  width: 108px;
+}
+
 #agvMpApp .agv-mp-table.agv-mp-table--esparrago .agv-mp-sticky-col-6 {
-  left: 231px;
-  min-width: 254px;
+  left: 196px;
+  min-width: 260px;
+  width: 260px;
 }
 
 #agvMpApp .agv-mp-table.agv-mp-table--esparrago .agv-mp-sticky-col-9 {
-  left: 485px;
-  min-width: 90px;
+  left: 456px;
+  min-width: 118px;
+  width: 118px;
+}
+
+#agvMpApp .agv-mp-table.agv-mp-table--esparrago thead th.agv-mp-sticky-col {
+  z-index: 6;
+  background: #f1f5f9;
+}
+
+#agvMpApp .agv-mp-table.agv-mp-table--esparrago tbody td.agv-mp-sticky-col {
+  z-index: 4;
 }

@@ -4,6 +4,10 @@ import { refreshModuleLanguage } from "../../utils/module-i18n.util.js";
 import { i18nService } from "../../services/i18n.service.js";
 import { hydrateLucideIcons } from "../../utils/lucide-icon.util.js";
 import { appConfig } from "../../config/app.config.js";
+import {
+  maskIncognitoJsonText,
+  maskIncognitoNumber
+} from "../../utils/brand-pixel.util.js";
 
 const CATALOG_URL = `presentation/data/cartillas-catalog.json?v=${appConfig.cacheBustingVersion}`;
 
@@ -63,7 +67,13 @@ export class ModuleController extends GenericModuleController {
     }
 
     hydrateLucideIcons(root);
+    window.addEventListener("agv:brand-pixel-changed", this.onBrandPixelChanged);
   }
+
+  onBrandPixelChanged = () => {
+    this.renderFilters();
+    this.render();
+  };
 
   bindEvents() {
     this.onSearch = () => {
@@ -145,16 +155,16 @@ export class ModuleController extends GenericModuleController {
         const rows = matchedItems
           .map((item) => {
             const codeHtml = item.code
-              ? `<span class="cartillas-crop__code">${escapeHtml(item.code)}</span>`
+              ? `<span class="cartillas-crop__code">${escapeHtml(maskIncognitoJsonText(item.code))}</span>`
               : `<span class="cartillas-crop__empty">—</span>`;
             const idHtml =
               item.id != null
-                ? `<span class="cartillas-crop__id">${escapeHtml(item.id)}</span>`
+                ? `<span class="cartillas-crop__id">${escapeHtml(maskIncognitoNumber(item.id))}</span>`
                 : `<span class="cartillas-crop__empty">—</span>`;
             return `
               <tr>
                 <td><span class="cartillas-status cartillas-status--ok">${escapeHtml(t("cartillas.statusAvailable"))}</span></td>
-                <td class="cartillas-crop__name-cell">${escapeHtml(item.name)}</td>
+                <td class="cartillas-crop__name-cell">${escapeHtml(maskIncognitoJsonText(item.name))}</td>
                 <td>${codeHtml}</td>
                 <td>${idHtml}</td>
               </tr>
@@ -167,9 +177,9 @@ export class ModuleController extends GenericModuleController {
             <header class="cartillas-crop__head">
               <h2 class="cartillas-crop__name">${escapeHtml(cropName)}</h2>
               <div class="cartillas-crop__meta">
-                <span class="cartillas-crop__badge">${escapeHtml(t("cartillas.cropCode"))} <code>${escapeHtml(crop.code)}</code></span>
-                <span class="cartillas-crop__badge">${escapeHtml(t("cartillas.cropId"))} <code>${escapeHtml(crop.id)}</code></span>
-                <span class="cartillas-crop__badge">${matchedItems.length} ${escapeHtml(t("cartillas.itemCount"))}</span>
+                <span class="cartillas-crop__badge">${escapeHtml(t("cartillas.cropCode"))} <code>${escapeHtml(maskIncognitoJsonText(crop.code))}</code></span>
+                <span class="cartillas-crop__badge">${escapeHtml(t("cartillas.cropId"))} <code>${escapeHtml(maskIncognitoNumber(crop.id))}</code></span>
+                <span class="cartillas-crop__badge">${maskIncognitoNumber(matchedItems.length)} ${escapeHtml(t("cartillas.itemCount"))}</span>
               </div>
             </header>
             <div class="cartillas-crop__table-wrap">
@@ -199,9 +209,11 @@ export class ModuleController extends GenericModuleController {
 
     if (this.summaryEl) {
       const totalAll = (this.catalog.crops || []).reduce((n, c) => n + (c.items?.length || 0), 0);
+      const cropsCount = maskIncognitoNumber((this.catalog.crops || []).length);
+      const itemsCount = maskIncognitoNumber(q || this.activeCrop !== "all" ? visibleItems : totalAll);
       this.summaryEl.innerHTML = `
-        <span class="cartillas-page__pill">${escapeHtml(t("cartillas.summaryCrops"))} <strong>${(this.catalog.crops || []).length}</strong></span>
-        <span class="cartillas-page__pill">${escapeHtml(t("cartillas.summaryItems"))} <strong>${q || this.activeCrop !== "all" ? visibleItems : totalAll}</strong></span>
+        <span class="cartillas-page__pill">${escapeHtml(t("cartillas.summaryCrops"))} <strong>${cropsCount}</strong></span>
+        <span class="cartillas-page__pill">${escapeHtml(t("cartillas.summaryItems"))} <strong>${itemsCount}</strong></span>
       `;
     }
 
@@ -216,6 +228,7 @@ export class ModuleController extends GenericModuleController {
   }
 
   destroy() {
+    window.removeEventListener("agv:brand-pixel-changed", this.onBrandPixelChanged);
     this.searchEl?.removeEventListener("input", this.onSearch);
     this.clearEl?.removeEventListener("click", this.onClear);
     this.filtersEl?.removeEventListener("click", this.onFilterClick);

@@ -149,6 +149,7 @@
     {
       "numero": 29,
       "nombre-de-la-columna": "Tipo de formato",
+      "es-obligatorio": true,
       "igual-a-valor": "59",
       "si-falla-mostrar": "Debe ser 59"
     },
@@ -161,15 +162,21 @@
     },
     {
       "numero": 31,
-      "nombre-de-la-columna": "Jaba"
+      "nombre-de-la-columna": "Jaba",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "ERROR: El valor no puede estar vacio"
     },
     {
       "numero": 32,
-      "nombre-de-la-columna": "Viaje"
+      "nombre-de-la-columna": "Viaje",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "ERROR: El valor no puede estar vacio"
     },
     {
       "numero": 33,
-      "nombre-de-la-columna": "Peso Bruto"
+      "nombre-de-la-columna": "Peso Bruto",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "ERROR: El valor no puede estar vacio"
     },
     {
       "numero": 34,

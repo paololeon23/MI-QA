@@ -40,6 +40,7 @@ import {
   IngestionError,
   isXlsxAvailable
 } from "../../../../../ingestion/index.js";
+import { createCartillaAnalysisController, headersToAnalysisColumns } from "../shared/cartilla-analysis.js";
 
 function t(key, vars = {}) {
   let text = i18nService.translate(key);
@@ -162,6 +163,13 @@ export class UvaMpService {
       i18nPrefix: "uvaMp"
     });
     this.shell.cacheDom();
+    this.cartillaAnalysis = createCartillaAnalysisController({
+      getRoot: () => this.root,
+      hostSelector: "#agv-mp-cartilla-analysis",
+      showDialog: (opts) => showMpDialog(opts),
+      t,
+      htmlEscape
+    });
     this.bindEvents();
     this.shell.resetDashboard();
     hydrateLucideIcons(appRoot);
@@ -498,6 +506,7 @@ export class UvaMpService {
     }
     if (refs.resultsSubtitleEl) refs.resultsSubtitleEl.textContent = "";
     if (refs.totalFilasDiv) refs.totalFilasDiv.textContent = "";
+    this.cartillaAnalysis?.clear();
     this.processedRows = [];
     this.lastReviewKey = "";
     this.syncActionButtons();
@@ -563,19 +572,16 @@ export class UvaMpService {
     this.syncActionButtons();
     hydrateLucideIcons(this.root);
 
-    if (lotesDuplicados.length) {
-      showMpDialog({
-        icon: "error",
-        title: t("plagasArandano.duplicateLotsTitle"),
-        html: lotesDuplicados.map((l) => htmlEscape(l)).join("<br>")
-      });
-    } else if (!filasConError.length) {
-      showMpDialog({
-        icon: "success",
-        title: t("plagasArandano.allCorrect"),
-        text: t("uvaMp.noInspectionErrors")
-      });
-    }
+    this.cartillaAnalysis?.present({
+      rows,
+      filasConError,
+      errorMap: null,
+      duplicateLotes: new Set(lotesDuplicados || []),
+      colLoteJs: getColLoteJs(),
+      columns: headersToAnalysisColumns(this.headers),
+      cartilla: CARTILLA_CODE,
+      fechaLabel: formatISOToDMY(fechaISO)
+    });
   }
 
   buildReviewAllItems() {

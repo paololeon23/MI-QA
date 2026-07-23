@@ -14,7 +14,8 @@ import {
   getTotalColumnas,
   getColInspeccionJs,
   getColLmrJs,
-  getExcelCabecera
+  getExcelCabecera,
+  getColumnLabelsByIndex
 } from "./esparrago-pt.config.js";
 import { scanGlobalWarnings, serialExcelAFecha, computeFechaLmrMayoritaria, formatISOToDMY, parseFechaToISO } from "./esparrago-pt.validation.js";
 import {
@@ -24,6 +25,19 @@ import {
   refreshEsparragoPtHeaderLabels
 } from "./esparrago-pt-table.js";
 import { exportEsparragoPtFiltered } from "./esparrago-pt-export.js";
+import { expandMissingSapLayout } from "../shared/mp-sap-layout.util.js?v=2026072219";
+import { loadSapColumnasCatalog, getSapPerfil } from "../../../config/sap-columnas.registry.js";
+import {
+  createCartillaAnalysisController,
+  deriveFilasConErrorFromDom,
+  headersToAnalysisColumns
+} from "../shared/cartilla-analysis.js";
+import {
+  setEsparragoPtAiSnapshot,
+  clearEsparragoPtAiSnapshot
+} from "./esparrago-pt-ai-store.js";
+import { buildEsparragoPtAiDataBrief } from "./esparrago-pt-ai-data.js";
+import { resolvePtEsparragoColumnLabel } from "./esparrago-pt-i18n-labels.js";
 
 function t(key, vars = {}) {
   let text = i18nService.translate(key);
@@ -78,10 +92,15 @@ export class EsparragoPtService {
     this.colMenuBound = false;
     this.searchBound = false;
     this.abortController = null;
+    this.aiAssistant = null;
+    this.lastAiSnapshot = null;
   }
 
   async init(appRoot) {
-    await loadEsparragoPtValidaciones(appConfig.cacheBustingVersion);
+    await Promise.all([
+      loadEsparragoPtValidaciones(appConfig.cacheBustingVersion),
+      loadSapColumnasCatalog(appConfig.cacheBustingVersion)
+    ]);
 
     this.shell = new CartillaShellUi({
       root: appRoot,
@@ -90,6 +109,13 @@ export class EsparragoPtService {
       i18nPrefix: "ptEsparrago"
     });
     this.shell.cacheDom();
+    this.cartillaAnalysis = createCartillaAnalysisController({
+      getRoot: () => this.shell?.root,
+      hostSelector: "#agv-pt-cartilla-analysis",
+      showDialog: (opts) => showPtDialog(opts),
+      t,
+      htmlEscape
+    });
     this.bindEvents();
     this.shell.resetDashboard();
     this.shell.renderExcelInsightEmpty();
@@ -143,19 +169,39 @@ export class EsparragoPtService {
         return;
       }
 
-      this.headers = data[HEADER_ROW_INDEX] || [];
-      if (this.headers.length < getTotalColumnas()) {
+      const rawHeaders = data[HEADER_ROW_INDEX] || [];
+      const rawDataRows = data
+        .slice(DATA_START_INDEX)
+        .filter((row) => row.some((c) => String(c ?? "").trim()));
+
+      // Mismo criterio MP: Nota Condición → col 28; 15+5 huecos SAP si faltan.
+      const {
+        headers,
+        rows: layoutRows,
+        expanded: sapLayoutExpanded,
+        insertedSap15,
+        insertedSap5
+      } = expandMissingSapLayout(rawHeaders, rawDataRows, getSapPerfil("pt"));
+
+      if (headers.length < getTotalColumnas()) {
         showPtDialog({
           icon: "error",
           title: t("plagasArandano.error"),
-          text: t("ptEsparrago.invalidColumns", { expected: getTotalColumnas(), found: this.headers.length })
+          text: t("ptEsparrago.invalidColumns", {
+            expected: getTotalColumnas(),
+            found: headers.length
+          })
         });
         event.target.value = "";
         return;
       }
 
+      this.headers = headers;
       this.excelCabecera = this.parseExcelCabecera(data);
-      this.dataRows = data.slice(DATA_START_INDEX).filter((row) => row.some((c) => String(c ?? "").trim()));
+      this.dataRows = layoutRows;
+      this._sapLayoutNotice = sapLayoutExpanded
+        ? { insertedSap15, insertedSap5 }
+        : null;
       this.resetResultsUi();
 
       const fechas = uniqueInspectionDates(this.dataRows);
@@ -174,11 +220,14 @@ export class EsparragoPtService {
       this.syncButtons();
       this.renderExcelInsight();
 
+      const sapNote = this._sapLayoutNotice
+        ? `<br><small>Se completaron huecos SAP vacíos (+${this._sapLayoutNotice.insertedSap15} + ${this._sapLayoutNotice.insertedSap5}) para alinear Nota Condición (col 28) y el bloque siguiente (col 34).</small>`
+        : "";
       showPtDialog({
         icon: "success",
         title: "Excel cargado",
-        html: `Cartilla <b>${htmlEscape(CARTILLA_CODE)}</b> · <b>${this.dataRows.length}</b> registros · <b>${getTotalColumnas()}</b> columnas`,
-        timer: 1800,
+        html: `Cartilla <b>${htmlEscape(CARTILLA_CODE)}</b> · <b>${this.dataRows.length}</b> registros · <b>${getTotalColumnas()}</b> columnas${sapNote}`,
+        timer: sapNote ? 3200 : 1800,
         showConfirmButton: false
       });
     } catch (err) {
@@ -394,6 +443,25 @@ export class EsparragoPtService {
     this.syncButtons();
     hydrateLucideIcons(this.shell.root);
     refs.resultsSection?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+
+    const filasConError = deriveFilasConErrorFromDom(refs.resultsBody, filtradas);
+    const columnLabelsByIndex = getColumnLabelsByIndex();
+    const analysis = this.cartillaAnalysis?.present({
+      rows: filtradas,
+      filasConError,
+      errorMap: null,
+      duplicateLotes: new Set(),
+      colLoteJs: 9,
+      columns: headersToAnalysisColumns(this.headers),
+      cartilla: CARTILLA_CODE,
+      fechaLabel: formatISOToDMY(fecha) || fecha || "—",
+      translateHeader: (_header, idx) =>
+        resolvePtEsparragoColumnLabel(idx, this.headers, columnLabelsByIndex) ||
+        String(_header ?? `Col ${idx + 1}`)
+    });
+    const base = analysis || this.cartillaAnalysis?.getLast?.() || {};
+    this.lastAiSnapshot = buildEsparragoPtAiDataBrief(filtradas, base, this.headers);
+    setEsparragoPtAiSnapshot(this.lastAiSnapshot);
   }
 
   /** Tras cambiar idioma: conservar datos y solo refrescar textos/cabeceras. */
@@ -465,6 +533,9 @@ export class EsparragoPtService {
     if (refs.tableSearch) refs.tableSearch.value = "";
     if (refs.totalFilasDiv) refs.totalFilasDiv.textContent = "";
     this.filteredTableRows = [];
+    this.cartillaAnalysis?.clear();
+    this.lastAiSnapshot = null;
+    clearEsparragoPtAiSnapshot();
   }
 
   onClear() {
@@ -495,6 +566,9 @@ export class EsparragoPtService {
   destroy() {
     this.abortController?.abort();
     this.abortController = null;
+    this.aiAssistant = null;
+    this.lastAiSnapshot = null;
+    clearEsparragoPtAiSnapshot();
     this.shell = null;
   }
 }

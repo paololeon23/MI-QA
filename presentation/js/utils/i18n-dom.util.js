@@ -1,5 +1,6 @@
 import { i18nService } from "../services/i18n.service.js";
 import { hydrateLucideIcons } from "./lucide-icon.util.js";
+import { applyBrandPixelText, isBrandPixelMode } from "./brand-pixel.util.js";
 
 /**
  * @param {ParentNode|null} containerElement
@@ -35,5 +36,9 @@ export function applyTranslationsToContainer(containerElement, options = {}) {
 
   if (hydrateIcons) {
     hydrateLucideIcons(containerElement);
+  }
+
+  if (isBrandPixelMode()) {
+    applyBrandPixelText(containerElement instanceof Element ? containerElement : document.body);
   }
 }

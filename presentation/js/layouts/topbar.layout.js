@@ -9,6 +9,7 @@ import { renderBreadcrumbHtml } from "../utils/breadcrumb.util.js";
 import { buildSidebarCollapseIconMarkup } from "./sidebar-collapse-icon.layout.js";
 import { lucideIcon } from "../utils/lucide-icon.util.js";
 import { hydrateLucideIcons } from "../utils/lucide-icon.util.js";
+import { getBrandAcronym } from "../utils/brand-pixel.util.js";
 
 function buildDatetimeMarkup(locale) {
   const displayDate = formatCompactDate(new Date(), locale);
@@ -49,7 +50,7 @@ export function buildTopbarMarkup(currentLanguageCode, routeHash = "#/inicio") {
           <nav class="topbar__breadcrumb" id="navBreadcrumb" aria-label="Breadcrumb">
             <span class="topbar__breadcrumb-root">${i18nService.translate("breadcrumb.home")}</span>
             ${lucideIcon("chevron-right", "topbar__breadcrumb-separator")}
-            <span class="topbar__breadcrumb-segment">AGV</span>
+            <span class="topbar__breadcrumb-segment" data-brand-acronym>${getBrandAcronym()}</span>
             ${lucideIcon("chevron-right", "topbar__breadcrumb-separator")}
             <span id="navBreadcrumbDynamic">${breadcrumbHtml}</span>
           </nav>

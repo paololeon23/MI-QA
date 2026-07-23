@@ -79,7 +79,12 @@ function dmyToISO(dmy) {
 
 export function formatISOToDMY(iso) {
   if (!iso) return "";
-  const [y, m, d] = iso.split("-");
+  const raw = String(iso).trim();
+  // Ya viene como dd/mm/yyyy (valor del select de inspección)
+  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(raw)) return raw;
+  if (!raw.includes("-")) return raw;
+  const [y, m, d] = raw.split("-");
+  if (!y || !m || !d) return raw;
   return `${d}/${m}/${y}`;
 }
 
@@ -118,6 +123,7 @@ function getJulianoFromDMY(dmy) {
     .padStart(3, "0");
 }
 
+/** Datos SAP = cols Excel 13–27 y 29–33. Nota Condición (28) puede venir de WULUT y NO es SAP. */
 function hasSapData(fila) {
   for (let i = 12; i <= 26; i++) {
     const val = fila[i];

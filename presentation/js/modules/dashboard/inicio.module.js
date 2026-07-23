@@ -24,6 +24,7 @@ import {
   resizeInicioVarietyCharts
 } from "./inicio-varieties-charts.service.js";
 import { consumeGlobalSearchJump } from "../../utils/global-search-jump.util.js";
+import { maskIncognitoJsonText } from "../../utils/brand-pixel.util.js";
 
 const FUNDO_THEMES = {
   A9: { label: "Fundo A9", accent: "#0E1B40", soft: "rgba(125, 226, 255, 0.18)", border: "rgba(31, 54, 104, 0.28)" },
@@ -32,6 +33,11 @@ const FUNDO_THEMES = {
   LN: { label: "Fundo LN", accent: "#1F3668", soft: "rgba(125, 226, 255, 0.24)", border: "rgba(125, 226, 255, 0.4)" },
   LC: { label: "Fundo LC", accent: "#3d5a8a", soft: "rgba(125, 226, 255, 0.16)", border: "rgba(61, 90, 138, 0.24)" }
 };
+
+function fundoDisplayLabel(fundo) {
+  const theme = FUNDO_THEMES[fundo];
+  return maskIncognitoJsonText(theme?.label ?? `Fundo ${fundo}`);
+}
 
 let activeFundoId = "";
 
@@ -161,7 +167,7 @@ function buildTableRowsMarkup(fundo) {
       <td colspan="4">${
         filtered
           ? '<span data-i18n="inicio.tableFilteredTotal"></span>'
-          : `Total ${FUNDO_THEMES[fundo]?.label ?? `Fundo ${fundo}`}`
+          : `Total ${fundoDisplayLabel(fundo)}`
       }</td>
       <td>${formatAreaHa(totalValue)}</td>
     </tr>
@@ -291,7 +297,7 @@ function buildFundoTabsMarkup() {
           aria-selected="${fundo === activeFundoId}"
           aria-controls="fundoTablePanel"
         >
-          <span class="inicio-varieties__tab-name">${FUNDO_THEMES[fundo]?.label ?? `Fundo ${fundo}`}</span>
+          <span class="inicio-varieties__tab-name">${fundoDisplayLabel(fundo)}</span>
           <span class="inicio-varieties__tab-meta">${formatAreaHa(summary?.totalAreaHa ?? 0)} ha</span>
         </button>
       `;
@@ -390,7 +396,6 @@ function renderActiveFundoTable(fundo) {
   }
 
   const summary = getFundoAreaSummary().find((item) => item.fundo === fundo);
-  const theme = FUNDO_THEMES[fundo];
   const stagesLabel = summary?.stages?.join(" · ") ?? "";
 
   activeFundoId = fundo;
@@ -398,7 +403,7 @@ function renderActiveFundoTable(fundo) {
   tablePanel.dataset.fundo = fundo;
 
   tableHead.innerHTML = `
-    <h5 class="inicio-varieties__table-card-title">${theme?.label ?? `Fundo ${fundo}`}</h5>
+    <h5 class="inicio-varieties__table-card-title">${fundoDisplayLabel(fundo)}</h5>
     <p class="inicio-varieties__table-card-meta">${stagesLabel} · ${formatAreaHa(summary?.totalAreaHa ?? 0)} ha</p>
   `;
 
@@ -733,7 +738,7 @@ function buildMiniBarsSvg(values) {
 
 function buildKpiCardsData(stats) {
   const summaries = getFundoAreaSummary();
-  const fundoList = summaries.map((item) => item.fundo).join(" · ");
+  const fundoList = summaries.map((item) => maskIncognitoJsonText(item.fundo)).join(" · ");
 
   return [
     {
@@ -840,7 +845,7 @@ function buildChartFilterSelectOptions(type) {
 
   const fundos = getFundosList();
   const options = [{ value: "all", label: i18nService.translate("inicio.chartFilterAllFundos") }];
-  fundos.forEach((fundo) => options.push({ value: fundo, label: `Fundo ${fundo}` }));
+  fundos.forEach((fundo) => options.push({ value: fundo, label: fundoDisplayLabel(fundo) }));
   return options;
 }
 
@@ -1042,6 +1047,7 @@ export class ModuleController extends GenericModuleController {
     this.bindChartResizeObserver();
     window.addEventListener("resize", this.onResize);
     window.addEventListener("agv:global-search-jump", this.onGlobalSearchJump);
+    window.addEventListener("agv:brand-pixel-changed", this.onBrandPixelChanged);
     applyGlobalSearchJumpIfAny();
   }
 
@@ -1065,6 +1071,16 @@ export class ModuleController extends GenericModuleController {
     applyGlobalSearchJumpIfAny();
   };
 
+  onBrandPixelChanged = () => {
+    renderCoverPanel();
+    updateActiveCropTitle();
+    renderCropSelect();
+    renderKpiStrip();
+    renderTablesSection();
+    renderChartFilterControls();
+    scheduleChartRender();
+  };
+
   async onLanguageChange() {
     applyTranslationsToContainer(document.getElementById("moduleRoot"), { hydrateIcons: false });
     applyTranslationsToContainer(document.querySelector(".inicio-cover"));
@@ -1081,6 +1097,7 @@ export class ModuleController extends GenericModuleController {
   destroy() {
     window.removeEventListener("resize", this.onResize);
     window.removeEventListener("agv:global-search-jump", this.onGlobalSearchJump);
+    window.removeEventListener("agv:brand-pixel-changed", this.onBrandPixelChanged);
     this.resizeObserver?.disconnect();
     this.resizeObserver = null;
     destroyInicioVarietyCharts();

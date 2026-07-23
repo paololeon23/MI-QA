@@ -1813,6 +1813,7 @@
 #agvMpApp .agv-mp-table td {
   padding: 0.625rem 0.9rem;
   text-align: center;
+  vertical-align: middle;
   line-height: 1.4;
   white-space: nowrap;
   border-right: 1px solid #e2e8f0;
@@ -2414,12 +2415,14 @@
   line-height: 1;
 }
 
-/* Columnas fijas: Id, Código, Usuario, Lote — anchos fijos (no se encogen con texto corto). */
+/* Columnas fijas: Id, Código, Usuario, Lote — anchos fijos (no se encogen con texto corto).
+   No usar overflow:hidden aquí: en Chrome rompe la altura de sticky td/th y desnivela filas. */
 #agvMpApp .agv-mp-sticky-col {
   position: -webkit-sticky;
   position: sticky;
   background: #fff;
   box-sizing: border-box;
+  vertical-align: middle;
 }
 
 #agvMpApp .agv-mp-table:not(.agv-mp-table--uva):not(.agv-mp-table--esparrago):not(.agv-mp-table--palta) .agv-mp-sticky-col-0 {
@@ -2438,21 +2441,19 @@
 
 #agvMpApp .agv-mp-table:not(.agv-mp-table--uva):not(.agv-mp-table--esparrago):not(.agv-mp-table--palta) .agv-mp-sticky-col-6 {
   left: 190px;
-  width: 181px;
-  min-width: 181px;
-  max-width: 181px;
+  width: 230px;
+  min-width: 230px;
+  max-width: 230px;
 }
 
 #agvMpApp .agv-mp-table:not(.agv-mp-table--uva):not(.agv-mp-table--esparrago):not(.agv-mp-table--palta) .agv-mp-sticky-col-9 {
-  left: 371px;
+  left: 420px;
   width: 126px;
   min-width: 126px;
   max-width: 126px;
 }
 
 #agvMpApp .agv-mp-table:not(.agv-mp-table--uva):not(.agv-mp-table--esparrago):not(.agv-mp-table--palta) .agv-mp-sticky-col {
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 

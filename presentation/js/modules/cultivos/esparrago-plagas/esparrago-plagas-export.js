@@ -4,12 +4,40 @@ import {
   cellDisplayValue,
   collectLotes,
   findDuplicates,
-  formatYyyyMmDd,
+  formatPlagasCellDisplay,
   getCellExportClass
 } from "./esparrago-plagas.validation.js";
 
 const LOTE_IDX = 9;
 const FECHA_IDX = 76;
+
+/** Excel: fechas se exportan como texto dd/mm/yyyy (no como número serial). */
+const DATE_COLS_JS = new Set([3, 19, 20, 76]);
+/** Excel cols que deben quedar como texto: 10 Lote, 13 Productor, 19 Variedad. */
+const TEXT_COLS_EXCEL = new Set([10, 13, 19]);
+
+function parseFlexibleNumber(val) {
+  const str = cellDisplayValue(val).replace(/\s/g, "").replace(",", ".");
+  if (!str) return NaN;
+  const n = Number(str);
+  return Number.isFinite(n) ? n : NaN;
+}
+
+/** Valor de celda para export: número si aplica; fechas y cols 10/13/19 como texto. */
+function valorExportCelda(idx, rawVal) {
+  if (DATE_COLS_JS.has(idx)) {
+    return formatPlagasCellDisplay(idx, rawVal) || "";
+  }
+  const excelCol = idx + 1;
+  if (TEXT_COLS_EXCEL.has(excelCol)) {
+    return cellDisplayValue(rawVal);
+  }
+  const display = formatPlagasCellDisplay(idx, rawVal);
+  if (display === "") return "";
+  const n = parseFlexibleNumber(rawVal);
+  if (Number.isFinite(n)) return n;
+  return display;
+}
 
 function estiloExportCeldaError(cellClass) {
   if (cellClass === "agv-mp-cell-error-empty") {
@@ -50,12 +78,21 @@ function rangeJs(from, to) {
   return out;
 }
 
+/** Ordenar de A a Z por Lote (Excel col 10 / JS 9). */
+function sortRowsByLoteAsc(rows) {
+  return [...(rows || [])].sort((a, b) => {
+    const la = cellDisplayValue(a?.[LOTE_IDX]);
+    const lb = cellDisplayValue(b?.[LOTE_IDX]);
+    return la.localeCompare(lb, "es", { numeric: true, sensitivity: "base" });
+  });
+}
+
 export function buildExportMatrix(rows, headers, config) {
   const exp = config.exportacion;
   const rango1 = rangeJs(exp.rango1.desde_js, exp.rango1.hasta_js);
   const rango2 = rangeJs(exp.rango2.desde_js, exp.rango2.hasta_js);
   const rango3 = rangeJs(exp.rango3.desde_js, exp.rango3.hasta_js);
-  const fmtIdx = exp.formatear_fecha_js ?? 19;
+  const sortedRows = sortRowsByLoteAsc(rows);
 
   const headerRow = [
     ...rango1.map((idx) => headers[idx] || `Col ${idx + 1}`),
@@ -66,28 +103,59 @@ export function buildExportMatrix(rows, headers, config) {
     ...rango3.map((idx) => headers[idx] || `Col ${idx + 1}`)
   ];
 
-  const dataRows = rows.map((row) => [
-    ...rango1.map((idx) => {
-      let val = row[idx] ?? "";
-      if (idx === fmtIdx) return formatYyyyMmDd(val) || val;
-      return val;
-    }),
+  const formatCell = (idx, row) => valorExportCelda(idx, row[idx] ?? "");
+
+  const dataRows = sortedRows.map((row) => [
+    ...rango1.map((idx) => formatCell(idx, row)),
     "",
-    ...rango2.map((idx) => row[idx] ?? ""),
+    ...rango2.map((idx) => formatCell(idx, row)),
     "",
     "",
-    ...rango3.map((idx) => row[idx] ?? "")
+    ...rango3.map((idx) => formatCell(idx, row))
   ]);
 
   return [headerRow, ...dataRows];
 }
 
-export function writePlagasExportFile(rows, headers, config, fileName) {
+export function writePlagasExportFile(rows, headers, config, fileName, sheetName = "Sheet1") {
   if (!window.XLSX?.utils) return false;
   const matrix = buildExportMatrix(rows, headers, config);
   const wb = window.XLSX.utils.book_new();
   const ws = window.XLSX.utils.aoa_to_sheet(matrix);
-  window.XLSX.utils.book_append_sheet(wb, ws, "Revision_Export");
+  window.XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  window.XLSX.writeFile(wb, fileName);
+  return true;
+}
+
+/**
+ * Un archivo: hoja IPP primero, luego hoja ISP.
+ * Las fechas elegidas van unidas dentro de cada hoja.
+ * @param {{ IPP?: unknown[][], ISP?: unknown[][] }} rowsByCartilla
+ * @param {{ IPP?: unknown[], ISP?: unknown[] }|unknown[]} headersByCartilla
+ */
+export function writePlagasIppIspExportFile(rowsByCartilla, headersByCartilla, config, fileName) {
+  if (!window.XLSX?.utils) return false;
+
+  const resolveHeaders = (cartilla) => {
+    if (Array.isArray(headersByCartilla)) return headersByCartilla;
+    return headersByCartilla?.[cartilla] || headersByCartilla?.IPP || headersByCartilla?.ISP || [];
+  };
+
+  const wb = window.XLSX.utils.book_new();
+  let sheets = 0;
+
+  ["IPP", "ISP"].forEach((cartilla) => {
+    if (!Object.prototype.hasOwnProperty.call(rowsByCartilla || {}, cartilla)) return;
+    const rows = rowsByCartilla[cartilla] || [];
+    const headers = resolveHeaders(cartilla);
+    if (!headers.length) return;
+    const matrix = buildExportMatrix(rows, headers, config);
+    const ws = window.XLSX.utils.aoa_to_sheet(matrix);
+    window.XLSX.utils.book_append_sheet(wb, ws, cartilla);
+    sheets += 1;
+  });
+
+  if (!sheets) return false;
   window.XLSX.writeFile(wb, fileName);
   return true;
 }

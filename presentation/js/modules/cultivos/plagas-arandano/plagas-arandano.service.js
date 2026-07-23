@@ -7,6 +7,10 @@ import { mergeValidacionesDesdeReglas } from "../../../../../engine/cartilla-rul
 import { ejecutarValidacionPlagasArandano } from "./plagas-arandano.validation.js";
 import { translateExcelHeader } from "../../../utils/excel-header-i18n.util.js";
 import { refreshTranslatedHeaderRow } from "../../../utils/table-header-i18n.util.js";
+import {
+  createCartillaAnalysisController,
+  headersToAnalysisColumns
+} from "../shared/cartilla-analysis.js";
 
 const VALIDACIONES_PATH = "presentation/data/plagas-arandano-validaciones.json";
 const REGLAS_PATH = "rules/modulos/arandano-plagas.rules.json";
@@ -167,6 +171,13 @@ export class PlagasArandanoService {
     this.columnsToShow = [...this.config.columnas_visibles_frontend.indices_js];
     this.columnasARevisar = [...this.config.columnas_a_revisar.indices_js];
     this.cacheDom();
+    this.cartillaAnalysis = createCartillaAnalysisController({
+      getRoot: () => this.root,
+      hostSelector: "#pmpar-cartilla-analysis",
+      showDialog: (opts) => showPlagasDialog(opts),
+      t,
+      htmlEscape
+    });
     this.bindEvents();
     this.resetDashboard();
   }
@@ -463,6 +474,8 @@ export class PlagasArandanoService {
     if (this.totalFilasDiv) {
       this.totalFilasDiv.textContent = "";
     }
+
+    this.cartillaAnalysis?.clear();
 
     if (this.resumenTodasFechasEl) {
       this.resumenTodasFechasEl.innerHTML = "";
@@ -1143,19 +1156,23 @@ export class PlagasArandanoService {
     this.processedData = this.rawData.filter((r) => r[idxInspeccion] === this.inspectionSelect.value);
     this.limpiarMarcasValidacion(this.processedData);
     const { lotesDuplicados } = this.ejecutarValidacion(this.processedData);
-    if (lotesDuplicados.length) {
-      showPlagasDialog({
-        icon: "warning",
-        title: t("plagasArandano.duplicateLotsTitle"),
-        html: lotesDuplicados.map((l) => htmlEscape(l)).join("<br>")
-      });
-    }
 
     const filasConError = this.processedData.filter(
       (r) => r._errorLote || (r._errors && r._errors.length > 0)
     );
     this.renderReviewStats(filasConError, lotesDuplicados);
     this.renderTable();
+
+    this.cartillaAnalysis?.present({
+      rows: this.processedData,
+      filasConError,
+      errorMap: null,
+      duplicateLotes: new Set(lotesDuplicados || []),
+      colLoteJs: 9,
+      columns: headersToAnalysisColumns(this.columns.map((c) => c.header)),
+      cartilla: "Plagas",
+      fechaLabel: this.inspectionSelect?.value || "—"
+    });
   }
 
   updateResultsHeader(filasConError) {
@@ -1216,12 +1233,6 @@ export class PlagasArandanoService {
       td.textContent = t("plagasArandano.noErrorsOnInspection");
       tr.appendChild(td);
       this.resultsBody.appendChild(tr);
-
-      showPlagasDialog({
-        icon: "success",
-        title: t("plagasArandano.allCorrect"),
-        text: t("plagasArandano.noErrorsOnInspection")
-      });
     } else {
       this.columnsToShow.forEach((colIndex) => {
         this.resultsHeader.appendChild(this.createColumnHeaderTh(colIndex));

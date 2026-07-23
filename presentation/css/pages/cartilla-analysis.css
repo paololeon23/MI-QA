@@ -1,0 +1,324 @@
+/**
+ * Análisis gerencial de cartilla — estilos compartidos (MP / PT / Plagas).
+ */
+
+.agv-cartilla-analysis-host,
+#agv-mp-cartilla-analysis,
+#agv-pt-cartilla-analysis,
+#pmpar-cartilla-analysis {
+  padding: 0.75rem 0.875rem 0.25rem;
+}
+
+.agv-cartilla-analysis-host[hidden],
+#agv-mp-cartilla-analysis[hidden],
+#agv-pt-cartilla-analysis[hidden],
+#pmpar-cartilla-analysis[hidden] {
+  display: none !important;
+}
+
+.agv-cartilla-analysis {
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  background: #ffffff;
+  padding: 0.875rem 1rem;
+}
+
+.agv-cartilla-analysis--ok {
+  border-color: #c8e6d0;
+  background: linear-gradient(180deg, #f6fbf7 0%, #ffffff 55%);
+}
+
+.agv-cartilla-analysis--warn {
+  border-color: #f1e0a8;
+  background: linear-gradient(180deg, #fffdf5 0%, #ffffff 55%);
+}
+
+.agv-cartilla-analysis--critical {
+  border-color: #f0c9c9;
+  background: linear-gradient(180deg, #fdf7f7 0%, #ffffff 55%);
+}
+
+.agv-cartilla-analysis__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.agv-cartilla-analysis__title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: #1f3668;
+}
+
+.agv-cartilla-analysis__meta {
+  margin: 0.2rem 0 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.agv-cartilla-analysis--modal .agv-cartilla-analysis__meta {
+  margin: 0 0 0.75rem;
+  text-align: center;
+}
+
+.agv-cartilla-analysis__badge {
+  flex-shrink: 0;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  background: #eef2f8;
+  color: #1f3668;
+}
+
+.agv-cartilla-analysis--ok .agv-cartilla-analysis__badge {
+  background: #d4eddc;
+  color: #2f6b45;
+}
+
+.agv-cartilla-analysis--warn .agv-cartilla-analysis__badge {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.agv-cartilla-analysis--critical .agv-cartilla-analysis__badge {
+  background: #fee2e2;
+  color: #b54545;
+}
+
+.agv-cartilla-analysis__kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin-bottom: 0.9rem;
+}
+
+@media (max-width: 720px) {
+  .agv-cartilla-analysis__kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
+  }
+}
+
+.agv-cartilla-analysis__kpi {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.35rem;
+  min-width: 0;
+  padding: 0.55rem 0.45rem 0.5rem;
+  border: 1px solid #e8eef5;
+  border-radius: 0.55rem;
+  background: rgba(255, 255, 255, 0.95);
+  text-align: center;
+  overflow: visible;
+}
+
+.agv-cartilla-analysis__kpi-label {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  font-size: 0.5rem;
+  font-weight: 650;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #64748b;
+  line-height: 1.25;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
+  word-break: break-word;
+  hyphens: auto;
+}
+
+.agv-cartilla-analysis__kpi-value {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #1f3668;
+  line-height: 1.25;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
+  word-break: break-word;
+}
+
+/* Modal: más aire y tipografía compacta corporativa */
+.agv-cartilla-analysis--modal .agv-cartilla-analysis__kpis {
+  gap: 0.7rem;
+  margin-bottom: 1rem;
+}
+
+.agv-cartilla-analysis--modal .agv-cartilla-analysis__kpi {
+  padding: 0.6rem 0.5rem;
+  gap: 0.4rem;
+  min-height: 3.6rem;
+}
+
+.agv-cartilla-analysis--modal .agv-cartilla-analysis__kpi-label {
+  font-size: 0.5rem;
+  letter-spacing: 0.04em;
+}
+
+.agv-cartilla-analysis--modal .agv-cartilla-analysis__kpi-value {
+  font-size: 0.72rem;
+}
+
+.agv-cartilla-analysis--modal .agv-cartilla-analysis__grid {
+  gap: 0.65rem;
+  margin-bottom: 0.65rem;
+}
+
+.agv-cartilla-analysis--modal .agv-cartilla-analysis__block {
+  padding: 0.65rem 0.75rem;
+}
+
+.agv-cartilla-analysis--modal .agv-cartilla-analysis__block-label {
+  margin-bottom: 0.35rem;
+  font-size: 0.5625rem;
+}
+
+.agv-cartilla-analysis--modal .agv-cartilla-analysis__block-value {
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.agv-cartilla-analysis--modal .agv-cartilla-analysis__reading {
+  margin-top: 0.15rem;
+  padding: 0.65rem 0.75rem;
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.agv-cartilla-analysis__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+@media (max-width: 720px) {
+  .agv-cartilla-analysis__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.agv-cartilla-analysis__block {
+  padding: 0.55rem 0.65rem;
+  border: 1px solid #e8eef5;
+  border-radius: 0.5rem;
+  background: #f8fafc;
+}
+
+.agv-cartilla-analysis__block--lots {
+  margin-bottom: 0.5rem;
+}
+
+.agv-cartilla-analysis__block-label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.agv-cartilla-analysis__block-value {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #1e293b;
+  line-height: 1.35;
+}
+
+.agv-cartilla-analysis__lots {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.agv-cartilla-analysis__lots li {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.15rem;
+  font-size: 0.75rem;
+  color: #334155;
+  padding: 0.35rem 0.4rem;
+  border-radius: 0.35rem;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+}
+
+.agv-cartilla-analysis__lot-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.35rem 0.75rem;
+}
+
+.agv-cartilla-analysis__lot-code {
+  color: #1f3668;
+  font-weight: 700;
+}
+
+.agv-cartilla-analysis__lot-id {
+  color: #475569;
+  font-size: 0.6875rem;
+}
+
+.agv-cartilla-analysis__lot-cols {
+  color: #b45309;
+  font-size: 0.6875rem;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.agv-cartilla-analysis__lots strong {
+  color: #1f3668;
+}
+
+.agv-cartilla-analysis__empty {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.agv-cartilla-analysis__dup {
+  margin: 0 0 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #b45309;
+}
+
+.agv-cartilla-analysis__reading {
+  margin: 0;
+  padding: 0.55rem 0.65rem;
+  border-radius: 0.5rem;
+  background: #eef2f8;
+  color: #1f3668;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.agv-mp-dialog--wide .agv-cartilla-analysis--modal,
+.agv-pt-dialog--wide .agv-cartilla-analysis--modal,
+.pmpar-dialog--wide .agv-cartilla-analysis--modal {
+  text-align: left;
+  margin-top: 0.25rem;
+}

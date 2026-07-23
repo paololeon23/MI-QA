@@ -7,6 +7,49 @@ import {
 
 export { cellDisplayValue };
 
+/** Excel col → JS: Fecha registro(4→3), Fecha Cosecha(20→19), Fecha Producción(21→20), Fecha inspección(77→76). */
+const DATE_COLS_JS = new Set([3, 19, 20, 76]);
+
+/** Serial Excel → dd/mm/yyyy (ej. 46224 → 21/07/2026). */
+export function serialExcelAFecha(serial) {
+  const n = Number(serial);
+  if (!Number.isFinite(n) || n < 20000 || n > 80000) return "";
+  const fecha = new Date(Math.round((n - 25569) * 86400 * 1000));
+  if (Number.isNaN(fecha.getTime())) return "";
+  const dia = fecha.getUTCDate().toString().padStart(2, "0");
+  const mes = (fecha.getUTCMonth() + 1).toString().padStart(2, "0");
+  const anio = fecha.getUTCFullYear();
+  return `${dia}/${mes}/${anio}`;
+}
+
+export function formatYyyyMmDd(raw) {
+  const str = String(raw ?? "").trim();
+  if (str.length !== 8 || !/^\d{8}$/.test(str)) return str;
+  const yyyy = str.slice(0, 4);
+  const mm = str.slice(4, 6);
+  const dd = str.slice(6, 8);
+  return `${dd}/${mm}/${yyyy}`;
+}
+
+/** Valor legible en UI: convierte serial Excel / YYYYMMDD en fechas. */
+export function formatPlagasCellDisplay(idx, rawVal) {
+  if (DATE_COLS_JS.has(idx)) {
+    if (typeof rawVal === "number" && Number.isFinite(rawVal)) {
+      const asDate = serialExcelAFecha(rawVal);
+      if (asDate) return asDate;
+    }
+    const str = cellDisplayValue(rawVal);
+    if (!str) return "";
+    if (/^\d{5,6}(\.\d+)?$/.test(str)) {
+      const asDate = serialExcelAFecha(str);
+      if (asDate) return asDate;
+    }
+    if (/^\d{8}$/.test(str)) return formatYyyyMmDd(str);
+    return str;
+  }
+  return cellDisplayValue(rawVal);
+}
+
 export function getCellValidationIssues(idx, rawVal, ctx, config, options = {}) {
   const issues = getCellIssuesFromConfig(idx, rawVal, ctx, config, {
     ...options,
@@ -20,15 +63,6 @@ export function getCellValidationIssues(idx, rawVal, ctx, config, options = {}) 
     issues.push({ kind: "empty", message: "Campo de plaga obligatorio" });
   }
   return issues;
-}
-
-export function formatYyyyMmDd(raw) {
-  const str = String(raw ?? "").trim();
-  if (str.length !== 8 || !/^\d{8}$/.test(str)) return str;
-  const yyyy = str.slice(0, 4);
-  const mm = str.slice(4, 6);
-  const dd = str.slice(6, 8);
-  return `${dd}/${mm}/${yyyy}`;
 }
 
 export function findDuplicates(values) {
@@ -66,7 +100,13 @@ export function getCellExportClass(idx, rawVal, ctx, config) {
 
 function indicesToValidate(config) {
   const set = new Set(config.columnas_visibles_frontend?.indices_js || []);
-  (config.validaciones_por_columna || []).forEach((c) => set.add(c.indice_js));
+  (config.columnas_sticky || []).forEach((i) => set.add(i));
+  if (Number.isFinite(config.filtro_principal?.indice_js)) {
+    set.add(config.filtro_principal.indice_js);
+  }
+  (config.validaciones_por_columna || []).forEach((c) => {
+    if (Number.isFinite(c.indice_js)) set.add(c.indice_js);
+  });
   (config.rangos_obligatorios || []).forEach((range) => {
     for (let i = range.desde_js; i <= range.hasta_js; i += 1) {
       if (!(range.excepto_js || []).includes(i)) set.add(i);
@@ -75,7 +115,23 @@ function indicesToValidate(config) {
   const plagaDesde = config.plagas_desde_indice_js ?? 78;
   const plagaHasta = config.plagas_hasta_indice_js ?? 102;
   for (let i = plagaDesde; i <= plagaHasta; i += 1) set.add(i);
-  return [...set];
+
+  // También columnas con reglas activas en el JSON de rules (por si faltan en visibles).
+  const metaKeys = new Set(["numero", "nombre-de-la-columna", "que-se-revisa", "aplica-a-cartilla"]);
+  (config._reglasOrigen?.columnas || []).forEach((col) => {
+    const keys = Object.keys(col || {});
+    const hasRule = keys.some((k) => !metaKeys.has(k));
+    if (!hasRule) return;
+    const js = Number(col.numero) - 1;
+    if (Number.isFinite(js) && js >= 0) set.add(js);
+  });
+
+  return [...set].sort((a, b) => a - b);
+}
+
+/** Columnas que deben verse en resultados: todas las que se validan (completo). */
+export function resolvePlagasVisibleColumnIndexes(config) {
+  return indicesToValidate(config);
 }
 
 function buildRowContext(tipo, syncContext) {
@@ -98,12 +154,14 @@ export function getCompareColumnLabel(idx, headers, config, columnLabelsByIndex 
   return `Col ${idx + 1}`;
 }
 
-export function getRowErrorColumnIndices(row, tipo, config, syncContext) {
+export function getRowErrorColumnIndices(row, tipo, config, syncContext, options = {}) {
   const ctx = buildRowContext(tipo, syncContext);
   const fixed = config.columnas_compare?.fijas_js ?? [0, 6, 9];
-  return indicesToValidate(config).filter(
-    (idx) => !fixed.includes(idx) && getCellValidationIssues(idx, row[idx], ctx, config).length > 0
-  );
+  const includeFixed = options.includeFixed === true;
+  return indicesToValidate(config).filter((idx) => {
+    if (!includeFixed && fixed.includes(idx)) return false;
+    return getCellValidationIssues(idx, row[idx], ctx, config).length > 0;
+  });
 }
 
 export function sortCompareRowsForDisplay(rows, loteIdx = 9, duplicadosCartilla = []) {
@@ -242,7 +300,7 @@ export function analyzeDateComparison(fecha, rawDataByCartilla, config, loteIdx 
 }
 
 export function applyPlagasCellValidation(td, idx, rawVal, ctx, config) {
-  const val = cellDisplayValue(rawVal);
+  const val = formatPlagasCellDisplay(idx, rawVal);
   td.textContent = val;
 
   if (isDuplicateLoteCell(idx, rawVal, ctx)) {

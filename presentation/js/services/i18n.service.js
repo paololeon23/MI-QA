@@ -1,4 +1,5 @@
 import { appConfig } from "../config/app.config.js";
+import { maskBrandText } from "../utils/brand-pixel.util.js";
 
 class InternationalizationService {
   constructor() {
@@ -106,7 +107,7 @@ class InternationalizationService {
     Object.entries(replacements).forEach(([name, value]) => {
       translated = String(translated).split(`{{${name}}}`).join(String(value));
     });
-    return translated;
+    return maskBrandText(translated);
   }
 
   getActiveLanguage() {

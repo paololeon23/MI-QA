@@ -7,7 +7,7 @@ import {
 import {
   formatAreaHa,
   getCropTabs
-} from "../config/crop-hectares.registry.js";
+} from "../config/crop-hectares.registry.js?v=20260800";
 import { i18nService } from "../services/i18n.service.js";
 import { setGlobalSearchJump } from "../utils/global-search-jump.util.js";
 

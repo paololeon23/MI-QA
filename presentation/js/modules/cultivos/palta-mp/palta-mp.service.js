@@ -38,6 +38,7 @@ import {
   buildLazyDateDetailPlaceholders,
   bindLazyDateDetailTables
 } from "../shared/mp-results-perf.util.js";
+import { createCartillaAnalysisController, headersToAnalysisColumns } from "../shared/cartilla-analysis.js";
 
 function t(key, vars = {}) {
   let text = i18nService.translate(key);
@@ -101,6 +102,13 @@ export class PaltaMpService {
       i18nPrefix: "paltaMp"
     });
     this.shell.cacheDom();
+    this.cartillaAnalysis = createCartillaAnalysisController({
+      getRoot: () => this.root,
+      hostSelector: "#agv-mp-cartilla-analysis",
+      showDialog: (opts) => showMpDialog(opts),
+      t,
+      htmlEscape
+    });
     this.bindEvents();
     this.shell.resetDashboard();
     hydrateLucideIcons(appRoot);
@@ -516,6 +524,7 @@ export class PaltaMpService {
     }
     if (refs.resultsSubtitleEl) refs.resultsSubtitleEl.textContent = "";
     if (refs.totalFilasDiv) refs.totalFilasDiv.textContent = "";
+    this.cartillaAnalysis?.clear();
     this.processedRows = [];
     this.lastReviewKey = "";
     this.syncActionButtons();
@@ -580,19 +589,16 @@ export class PaltaMpService {
     this.lastReviewKey = `MPCP|${fechaISO}`;
     this.syncActionButtons();
 
-    if (lotesDuplicados.length) {
-      showMpDialog({
-        icon: "error",
-        title: t("plagasArandano.duplicateLotsTitle"),
-        html: lotesDuplicados.map((l) => htmlEscape(l)).join("<br>")
-      });
-    } else if (!filasConError.length) {
-      showMpDialog({
-        icon: "success",
-        title: t("plagasArandano.allCorrect"),
-        text: t("paltaMp.noInspectionErrors")
-      });
-    }
+    this.cartillaAnalysis?.present({
+      rows,
+      filasConError,
+      errorMap: null,
+      duplicateLotes: new Set(lotesDuplicados || []),
+      colLoteJs: getColLoteJs(),
+      columns: headersToAnalysisColumns(this.headers),
+      cartilla: CARTILLA_CODE,
+      fechaLabel: formatISOToDMY(fechaISO)
+    });
   }
 
   buildReviewAllItems() {

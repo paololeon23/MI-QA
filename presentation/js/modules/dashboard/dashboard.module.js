@@ -2,6 +2,10 @@ import { appConfig } from "../../config/app.config.js";
 import { i18nService } from "../../services/i18n.service.js";
 import { hydrateLucideIcons } from "../../utils/lucide-icon.util.js";
 import { applyTranslationsToContainer } from "../../utils/i18n-dom.util.js";
+import {
+  maskIncognitoJsonText,
+  maskIncognitoNumber
+} from "../../utils/brand-pixel.util.js";
 
 const VAR_MAP_PATH = "presentation/data/catalogos/var-map-arandano.json";
 
@@ -111,7 +115,7 @@ function getTopGenetics(rows) {
 }
 
 function geneticsChipMarkup(name, count, isActive) {
-  const display = name || t("dashboard.noLicensor");
+  const display = name ? maskIncognitoJsonText(name) : t("dashboard.noLicensor");
   const value = name ? htmlEscape(name) : "__empty__";
   const activeClass = isActive ? " is-active" : "";
   const emptyClass = name ? "" : " var-catalog-page__genetics-chip--empty";
@@ -124,12 +128,12 @@ function geneticsChipMarkup(name, count, isActive) {
       aria-pressed="${isActive ? "true" : "false"}"
     >
       <span class="var-catalog-page__genetics-chip-name">${htmlEscape(display)}</span>
-      <span class="var-catalog-page__genetics-chip-count">${count}</span>
+      <span class="var-catalog-page__genetics-chip-count">${maskIncognitoNumber(count)}</span>
     </button>
   `;
 }
 function licensorBadgeMarkup(licensor) {
-  const display = licensor || t("dashboard.noLicensor");
+  const display = licensor ? maskIncognitoJsonText(licensor) : t("dashboard.noLicensor");
   const modifier = licensor ? "" : " var-catalog-page__genetics-badge--empty";
 
   return `<span class="var-catalog-page__genetics-badge${modifier}">${htmlEscape(display)}</span>`;
@@ -174,7 +178,12 @@ export class ModuleController {
     this.bindEvents();
     this.renderAll();
     hydrateLucideIcons(document.getElementById("moduleRoot"));
+    window.addEventListener("agv:brand-pixel-changed", this.onBrandPixelChanged);
   }
+
+  onBrandPixelChanged = () => {
+    this.renderAll();
+  };
 
   async onLanguageChange() {
     this.renderAll();
@@ -308,12 +317,14 @@ export class ModuleController {
       return;
     }
 
-    const totalVarieties = this.rows.length;
-    const totalLicensors = countUniqueLicensors(this.rows);
+    const totalVarieties = maskIncognitoNumber(this.rows.length);
+    const totalLicensors = maskIncognitoNumber(countUniqueLicensors(this.rows));
     const distribution = countByLicensor(this.rows);
     const barValues = distribution.map(([, count]) => count);
-    const [topName, topCount] = getTopGenetics(this.rows);
-    const organicCount = countOrganic(this.rows);
+    const [topNameRaw, topCountRaw] = getTopGenetics(this.rows);
+    const topName = topNameRaw && topNameRaw !== "—" ? maskIncognitoJsonText(topNameRaw) : topNameRaw;
+    const topCount = maskIncognitoNumber(topCountRaw);
+    const organicCount = maskIncognitoNumber(countOrganic(this.rows));
     const noGeneticsCount = countWithoutGenetics(this.rows);
 
     statsContainer.innerHTML = `
@@ -348,7 +359,7 @@ export class ModuleController {
         <span class="inicio-varieties__kpi-label">${htmlEscape(t("dashboard.statOrganic"))}</span>
         <div class="inicio-varieties__kpi-main">
           <span class="inicio-varieties__kpi-value">${organicCount}</span>
-          ${buildMiniBarsSvg([organicCount, noGeneticsCount, Math.max(totalVarieties - organicCount - noGeneticsCount, 1)])}
+          ${buildMiniBarsSvg([organicCount, noGeneticsCount, Math.max(this.rows.length - countOrganic(this.rows) - noGeneticsCount, 1)])}
         </div>
         <span class="inicio-varieties__kpi-meta">${htmlEscape(t("dashboard.statOrganicMeta"))}</span>
       </article>
@@ -367,7 +378,9 @@ export class ModuleController {
     const currentFilter = this.tableState.filterLicensor;
 
     if (metaElement) {
-      metaElement.textContent = t("dashboard.geneticsGridMeta", { count: geneticsCount });
+      metaElement.textContent = t("dashboard.geneticsGridMeta", {
+        count: maskIncognitoNumber(geneticsCount)
+      });
     }
 
     gridElement.innerHTML = distribution
@@ -395,7 +408,9 @@ export class ModuleController {
 
     licensors.forEach((licensor) => {
       const selected = currentValue === licensor ? " selected" : "";
-      options.push(`<option value="${htmlEscape(licensor)}"${selected}>${htmlEscape(licensor)}</option>`);
+      options.push(
+        `<option value="${htmlEscape(licensor)}"${selected}>${htmlEscape(maskIncognitoJsonText(licensor))}</option>`
+      );
     });
 
     if (hasEmpty) {
@@ -461,9 +476,9 @@ export class ModuleController {
           (row) => `
         <tr class="inicio-varieties__data-row">
           <td class="var-catalog-page__cell-code">
-            <span class="var-catalog-page__code-pill">${htmlEscape(row.code)}</span>
+            <span class="var-catalog-page__code-pill">${htmlEscape(maskIncognitoJsonText(row.code))}</span>
           </td>
-          <td class="inicio-varieties__cell-variedad var-catalog-page__cell-variedad">${htmlEscape(row.variety)}</td>
+          <td class="inicio-varieties__cell-variedad var-catalog-page__cell-variedad">${htmlEscape(maskIncognitoJsonText(row.variety))}</td>
           <td class="var-catalog-page__cell-licensor">${licensorBadgeMarkup(row.licensor)}</td>
           <td class="var-catalog-page__cell-estado">
             <span class="var-catalog-page__status var-catalog-page__status--ok">${htmlEscape(t("dashboard.statusActive"))}</span>
@@ -494,13 +509,14 @@ export class ModuleController {
     if (countElement) {
       const filteredCount = this.getFilteredRows().length;
       countElement.textContent = t("dashboard.showingCount", {
-        count: filteredCount,
-        total: this.rows.length
+        count: maskIncognitoNumber(filteredCount),
+        total: maskIncognitoNumber(this.rows.length)
       });
     }
   }
 
   destroy() {
+    window.removeEventListener("agv:brand-pixel-changed", this.onBrandPixelChanged);
     document.getElementById("inpVarCatalogSearch")?.removeEventListener("input", this.onSearchInput);
     document.getElementById("selVarCatalogLicensor")?.removeEventListener("change", this.onLicensorChange);
 
