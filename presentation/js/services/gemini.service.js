@@ -1,4 +1,4 @@
-import { geminiConfig } from "../config/gemini.config.js";
+import { geminiConfig as geminiConfigDefaults } from "../config/gemini.config.js";
 import {
   answerPrimaryAiLocal,
   buildPrimaryAiPrompt,
@@ -21,6 +21,27 @@ import { finalizeIncognitoAiText } from "../utils/brand-pixel.util.js";
  */
 
 const GEMINI_TIMEOUT_MS = 15000;
+
+/** Config efectiva: defaults públicos + override local (gitignore) si existe. */
+let geminiConfig = { ...geminiConfigDefaults };
+let geminiConfigLoadPromise = null;
+
+async function ensureGeminiConfigLoaded() {
+  if (!geminiConfigLoadPromise) {
+    geminiConfigLoadPromise = (async () => {
+      try {
+        const mod = await import("../config/gemini.config.local.js");
+        if (mod?.geminiConfig && typeof mod.geminiConfig === "object") {
+          geminiConfig = { ...geminiConfigDefaults, ...mod.geminiConfig };
+        }
+      } catch {
+        /* Netlify / sin archivo local: solo defaults */
+      }
+      return geminiConfig;
+    })();
+  }
+  return geminiConfigLoadPromise;
+}
 
 function friendlyApiError(err) {
   const msg = String(err?.message || "");
@@ -232,6 +253,7 @@ async function requestGeminiModel(model, prompt, options = {}) {
 }
 
 export async function generateGeminiText(prompt, options = {}) {
+  await ensureGeminiConfigLoaded();
   const { apiKey, model, fallbackModels = [] } = geminiConfig;
   if (!apiKey || apiKey.startsWith("TU_")) {
     throw new Error("Falta configurar la API key de Gemini.");
@@ -263,6 +285,7 @@ export async function generateGeminiText(prompt, options = {}) {
  * options.history: { lastCropId, lastIntent, lastQuestion } para seguir la conversación.
  */
 export async function generatePrimaryAssistantReply(userQuestion = "", options = {}) {
+  await ensureGeminiConfigLoaded();
   const hash = options.hash || window.location.hash || "#/inicio";
   const ctx = getPrimaryAiRouteContext(hash);
   const question = String(userQuestion || "").trim();
