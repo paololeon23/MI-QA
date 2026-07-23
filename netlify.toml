@@ -2,6 +2,7 @@
 
 [build]
   publish = "."
+  command = "node scripts/inject-gemini-config.mjs"
 
 # Solo rutas inexistentes → SPA (los archivos reales en /presentation no se interceptan).
 [[redirects]]

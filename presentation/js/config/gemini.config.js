@@ -1,7 +1,7 @@
 /**
- * Gemini (Google AI Studio) — config pública (sin secretos).
- * Para clave local: copia gemini.config.example.js → gemini.config.local.js
- * y pon tu API key ahí (ese archivo no se sube al repo).
+ * Gemini (Google AI Studio) — config pública.
+ * - Local: opcional gemini.config.local.js (gitignore) con tu apiKey.
+ * - Netlify: build inyecta GEMINI_API_KEY en este archivo (ver scripts/inject-gemini-config.mjs).
  */
 export const geminiConfig = {
   apiKey: "",
