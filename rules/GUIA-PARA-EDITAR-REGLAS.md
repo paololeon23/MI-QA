@@ -1,6 +1,6 @@
 # Guía para editar las reglas de validación
 
-Esta guía es para auxiliares de información. **No necesita saber programación.**
+Esta guía es para auxiliares de Manejo de la información. **No necesita saber programación.**
 
 ## ¿Dónde están las reglas?
 
