@@ -7,6 +7,13 @@ import {
   getTopVarietiesByArea,
   maskIncognitoJsonText
 } from "../../config/crop-hectares.registry.js?v=20260800";
+import { i18nService } from "../../services/i18n.service.js";
+
+function fundoNamedLabel(fundo) {
+  return i18nService.translate("inicio.fundoNamed", {
+    code: maskIncognitoJsonText(fundo)
+  });
+}
 
 const FONT = "Inter, sans-serif";
 const AXIS_COLOR = "#64748b";
@@ -109,7 +116,7 @@ const donutExternalLabelsPlugin = {
       const endY = elbowY;
       const textX = isRight ? endX + textGap : endX - textGap;
       const fundoLabel = String(chart.data.labels[index] ?? "")
-        .replace(/^Fundo\s+/i, "")
+        .replace(/^(Fundo|Farm|Ferme|农场)\s+/i, "")
         .trim();
 
       ctx.save();
@@ -260,7 +267,7 @@ export function renderInicioFundoAreaChart(filters = {}) {
   return chartService.render("chartInicioFundoArea", {
     type: "doughnut",
     data: {
-      labels: fundoSummary.map((item) => maskIncognitoJsonText(`Fundo ${item.fundo}`)),
+      labels: fundoSummary.map((item) => fundoNamedLabel(item.fundo)),
       datasets: [
         {
           data: fundoSummary.map((item) => item.totalAreaHa),
@@ -485,7 +492,7 @@ export function renderInicioFundoChartLegend(filters = {}) {
         <li class="inicio-varieties__legend-item" data-fundo="${item.fundo}">
           <span class="inicio-varieties__legend-swatch" aria-hidden="true"></span>
           <span class="inicio-varieties__legend-copy">
-            <strong>${maskIncognitoJsonText(`Fundo ${item.fundo}`)}</strong>
+            <strong>${fundoNamedLabel(item.fundo)}</strong>
             <span>${formatAreaHa(item.totalAreaHa)} ha · ${percent}%</span>
           </span>
         </li>

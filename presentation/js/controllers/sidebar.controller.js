@@ -1,5 +1,5 @@
 import { appConfig } from "../config/app.config.js";
-import { getBrandLogoPath, getBrandMarkPath } from "../utils/brand-pixel.util.js";
+import { getBrandLogoPath, getBrandMarkPath, isBrandPixelMode, toggleBrandPixelMode } from "../utils/brand-pixel.util.js";
 import { i18nService } from "../services/i18n.service.js";
 import { readLocalStorage, writeLocalStorage } from "../utils/safe-storage.util.js";
 import { updateActiveSidebarLink, setPinnedPrimaryModule, closePrimaryPanelModules } from "../layouts/sidebar.layout.js";
@@ -8,12 +8,51 @@ import {
   subscribeSidebarActivity
 } from "../services/sidebar-activity.service.js";
 import { renderSidebarActivityList } from "../layouts/sidebar-activity.layout.js";
-import { hydrateLucideIcons } from "../utils/lucide-icon.util.js";
+import { hydrateLucideIcons, lucideIcon } from "../utils/lucide-icon.util.js";
 import { mountSidebarAiAssistant } from "../modules/cultivos/esparrago-pt/esparrago-pt-ai-assistant.js";
 
 const SIDEBAR_STORAGE_KEY = "agv-sidebar-collapsed";
 const SIDEBAR_ACTIVITY_EXPANDED_KEY = "agv-sidebar-activity-expanded";
 const SIDEBAR_ACTIVITY_PINNED_KEY = "agv-sidebar-activity-pinned";
+
+function clearSidebarFlyoutPosition(flyout) {
+  if (!flyout) return;
+  flyout.style.top = "";
+  flyout.style.bottom = "";
+  flyout.style.maxHeight = "";
+  flyout.style.overflowY = "";
+}
+
+/** Sube el flyout solo lo justo si se corta abajo (ej. Uva). */
+function positionSidebarFlyout(groupElement) {
+  const flyout = groupElement?.querySelector("[data-sidebar-flyout]");
+  if (!flyout) return;
+  clearSidebarFlyoutPosition(flyout);
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      if (!groupElement.classList.contains("is-flyout-open")) return;
+
+      const margin = 8;
+      const viewportH = window.innerHeight;
+      const rect = flyout.getBoundingClientRect();
+      const overflow = rect.bottom - (viewportH - margin);
+
+      // Solo un empujón mínimo hacia arriba (no anclar abajo del todo).
+      if (overflow > 0) {
+        flyout.style.top = `${-Math.ceil(overflow)}px`;
+      }
+    });
+  });
+}
+
+function closeAllSidebarFlyouts(exceptGroup = null) {
+  document.querySelectorAll("[data-sidebar-group].is-flyout-open").forEach((openGroup) => {
+    if (exceptGroup && openGroup === exceptGroup) return;
+    openGroup.classList.remove("is-flyout-open");
+    clearSidebarFlyoutPosition(openGroup.querySelector("[data-sidebar-flyout]"));
+  });
+}
 
 class SidebarController {
   initialize() {
@@ -25,7 +64,15 @@ class SidebarController {
     this.bindPrimaryLinkClicks();
     this.bindBrandHomeLink();
     this.bindActivityPanel();
+    this.bindFlyoutViewportGuard();
     this.aiAssistant = mountSidebarAiAssistant();
+  }
+
+  bindFlyoutViewportGuard() {
+    window.addEventListener("resize", () => {
+      const open = document.querySelector("[data-sidebar-group].is-flyout-open");
+      if (open) positionSidebarFlyout(open);
+    });
   }
 
   bindBrandHomeLink() {
@@ -215,6 +262,7 @@ class SidebarController {
 
       document.querySelectorAll("[data-sidebar-group].is-flyout-open").forEach((openGroup) => {
         openGroup.classList.remove("is-flyout-open");
+        clearSidebarFlyoutPosition(openGroup.querySelector("[data-sidebar-flyout]"));
       });
       closePrimaryPanelModules();
       setPinnedPrimaryModule(null);
@@ -259,11 +307,10 @@ class SidebarController {
           document.getElementById("btnSidebarActivityToggle")?.setAttribute("aria-expanded", "false");
 
           const isFlyoutOpen = groupElement.classList.contains("is-flyout-open");
-          document.querySelectorAll("[data-sidebar-group].is-flyout-open").forEach((openGroup) => {
-            openGroup.classList.remove("is-flyout-open");
-          });
+          closeAllSidebarFlyouts();
           if (!isFlyoutOpen) {
             groupElement.classList.add("is-flyout-open");
+            positionSidebarFlyout(groupElement);
           }
           const hash = window.location.hash || appConfig.defaultRoute;
           const moduleId = groupElement.dataset.sidebarGroup;
@@ -273,6 +320,7 @@ class SidebarController {
           ) {
             closePrimaryPanelModules(moduleId);
             groupElement.classList.add("is-flyout-open");
+            positionSidebarFlyout(groupElement);
             setPinnedPrimaryModule(moduleId);
             updateActiveSidebarLink(hash, "module");
           } else {
@@ -322,10 +370,25 @@ class SidebarController {
     const toggleButton = document.getElementById("btnSidebarActivityToggle");
     const refreshButton = document.getElementById("btnSidebarActivityRefresh");
     const pinButton = document.getElementById("btnSidebarActivityPin");
+    const incognitoButton = document.getElementById("btnSidebarActivityIncognito");
 
     if (!panel) {
       return;
     }
+
+    const syncIncognitoButton = () => {
+      if (!incognitoButton) return;
+      const on = isBrandPixelMode();
+      incognitoButton.classList.toggle("is-active", on);
+      incognitoButton.setAttribute("aria-pressed", String(on));
+      const label = i18nService.translate(
+        on ? "sidebar.activityIncognitoOn" : "sidebar.activityIncognito"
+      );
+      incognitoButton.setAttribute("aria-label", label);
+      incognitoButton.title = label;
+      incognitoButton.innerHTML = lucideIcon(on ? "eye-off" : "eye");
+      hydrateLucideIcons(incognitoButton);
+    };
 
     const isExpanded = readLocalStorage(SIDEBAR_ACTIVITY_EXPANDED_KEY) === "true";
     const isPinned = readLocalStorage(SIDEBAR_ACTIVITY_PINNED_KEY) === "true";
@@ -333,6 +396,7 @@ class SidebarController {
     panel.classList.toggle("is-pinned", isPinned);
     toggleButton?.setAttribute("aria-expanded", String(isExpanded));
     pinButton?.classList.toggle("is-active", isPinned);
+    syncIncognitoButton();
 
     toggleButton?.addEventListener("click", () => {
       if (panel.classList.contains("is-pinned")) {
@@ -365,6 +429,17 @@ class SidebarController {
       }
     });
 
+    incognitoButton?.addEventListener("click", (event) => {
+      event.stopPropagation();
+      toggleBrandPixelMode();
+      syncIncognitoButton();
+      const shell = document.getElementById("applicationRoot");
+      const collapsed = Boolean(shell?.classList.contains("is-sidebar-collapsed"));
+      this.updateBrandLogo(collapsed);
+    });
+
+    window.addEventListener("agv:brand-pixel-changed", syncIncognitoButton);
+
     refreshButton?.addEventListener("click", () => {
       refreshButton.classList.add("is-spinning");
       window.location.reload();
@@ -373,6 +448,7 @@ class SidebarController {
     this.unsubscribeActivity = subscribeSidebarActivity((entries) => {
       renderSidebarActivityList(entries);
       hydrateLucideIcons(panel);
+      syncIncognitoButton();
     });
 
     seedSidebarActivityBoot();

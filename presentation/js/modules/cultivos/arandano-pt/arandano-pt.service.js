@@ -22,6 +22,10 @@ import {
   analyzePtRows,
 } from "./arandano-pt-rules.helper.js";
 import {
+  PT_SKIP_SAP_VALIDATION,
+  stripPtSapValidationErrors
+} from "../shared/mp-results-perf.util.js";
+import {
   renderPtTable,
   bindTableSearch,
   bindColumnContextMenu,
@@ -40,7 +44,8 @@ import {
   createCartillaAnalysisController,
   headersToAnalysisColumns
 } from "../shared/cartilla-analysis.js";
-import { expandMissingSapLayout, stripInsertedSapObligatorioErrors } from "../shared/mp-sap-layout.util.js";
+import { expandMissingSapLayout } from "../shared/mp-sap-layout.util.js";
+import { applyDateDisplayFormatToRows } from "../shared/excel-date-format.util.js";
 import { loadSapColumnasCatalog, getSapPerfil } from "../../../config/sap-columnas.registry.js";
 
 function t(key, vars = {}) {
@@ -425,7 +430,7 @@ export class ArandanoPtService {
           return;
         }
 
-        const filas = bodyRows
+        const filas = applyDateDisplayFormatToRows(bodyRows, headerRow, [20, 21, 41, 42, 48, 49, 51])
           .filter((r) => r.some((c) => c !== ""))
           .map((r) => {
             const copy = [...r];
@@ -473,10 +478,12 @@ export class ArandanoPtService {
 
     if (this.dataRows.length) {
       const cartillasLabel = Array.from(cartillasCargadas).join(", ");
-      const sapNotes = CARTILLA_ORDER
-        .map((c) => this.exportMetaByCartilla[c])
-        .filter((m) => m?.sapExpanded)
-        .map((m) => `+${m.insertedSap15 || 0}/+${m.insertedSap5 || 0}`);
+      const sapNotes = PT_SKIP_SAP_VALIDATION
+        ? []
+        : CARTILLA_ORDER
+            .map((c) => this.exportMetaByCartilla[c])
+            .filter((m) => m?.sapExpanded)
+            .map((m) => `+${m.insertedSap15 || 0}/+${m.insertedSap5 || 0}`);
       const sapNote = sapNotes.length
         ? `<br><small>Huecos SAP completados (${sapNotes.join(" · ")}) — Nota Condición col 28 / bloque col 34.</small>`
         : "";
@@ -611,6 +618,15 @@ export class ArandanoPtService {
   }
 
   getRowsForExport(cartilla, fechaISO) {
+    // Preferir el orden actual de la tabla (como lo dejó el usuario)
+    if (
+      this.currentFilteredRows?.length &&
+      this.shell.refs.inspectionTypeSelect?.value === cartilla &&
+      this.shell.refs.inspectionSelect?.value === fechaISO
+    ) {
+      markDuplicateLoteRows(this.currentFilteredRows, this.profile.cols.lote);
+      return [...this.currentFilteredRows];
+    }
     const rows = this.getFilteredRows(cartilla, fechaISO);
     markDuplicateLoteRows(rows, this.profile.cols.lote);
     return applyPtTableState(cartilla, fechaISO, rows, this.profile);
@@ -707,17 +723,31 @@ export class ArandanoPtService {
     }
 
     const countsHtml = loaded
-      .map((c) => `<li><b>${htmlEscape(c)}</b>: ${counts[c] ?? 0} inspecciones</li>`)
+      .map(
+        (c) =>
+          `<li class="agv-mp-export-choice__item">
+            <span class="agv-mp-export-choice__code">${htmlEscape(c)}</span>
+            <span class="agv-mp-export-choice__count">${counts[c] ?? 0} inspecciones</span>
+          </li>`
+      )
       .join("");
     const totalDia = loaded.reduce((sum, c) => sum + (counts[c] ?? 0), 0);
 
     const result = await showPtExportChoiceDialog({
       title: "Exportar Excel filtrado",
-      html: `<div class="agv-pt-dialog__html agv-pt-dialog__html--stacked">
-        <p><b>Fecha de inspección:</b> ${htmlEscape(fechaLabel)}</p>
-        <p><b>Registros por cartilla:</b></p>
-        <ul class="agv-pt-dialog__html-list">${countsHtml}</ul>
-        <p class="agv-pt-dialog__html-foot"><b>Total del día:</b> ${totalDia} inspecciones</p>
+      html: `<div class="agv-mp-export-choice">
+        <div class="agv-mp-export-choice__meta">
+          <span class="agv-mp-export-choice__meta-label">Fecha de inspección</span>
+          <strong class="agv-mp-export-choice__meta-value">${htmlEscape(fechaLabel)}</strong>
+        </div>
+        <div class="agv-mp-export-choice__section">
+          <span class="agv-mp-export-choice__section-label">Registros por cartilla</span>
+          <ul class="agv-mp-export-choice__list">${countsHtml}</ul>
+        </div>
+        <p class="agv-mp-export-choice__total">
+          <span>Total del día</span>
+          <strong>${totalDia} inspecciones</strong>
+        </p>
       </div>`,
       choices: [
         {
@@ -794,10 +824,8 @@ export class ArandanoPtService {
       fechaLmrMayoritaria
     );
 
-    this.errorMap = stripInsertedSapObligatorioErrors(
-      errorMap,
-      this.exportMetaByCartilla?.[cartilla]?.insertedJsIndexes || []
-    );
+    // Por ahora: en PT no se validan ni reportan datos SAP (sí Nota Condición y resto).
+    this.errorMap = PT_SKIP_SAP_VALIDATION ? stripPtSapValidationErrors(errorMap) : errorMap;
     rows.forEach((r) => {
       const loteCol = this.profile.cols.lote + 1;
       const err = errorMap.get(r._filaNum)?.get(loteCol);
@@ -805,6 +833,13 @@ export class ArandanoPtService {
     });
     markDuplicateLoteRows(rows, this.profile.cols.lote);
     this.currentFilteredRows = applyPtTableState(cartilla, fecha, rows, this.profile);
+
+    // Mantener dataRows alineado con el orden/agrupación que el usuario dejó
+    const colFechaSync = this.profile.cols.fechaInspeccion;
+    const others = this.dataRows.filter(
+      (r) => !(r.__cartilla === cartilla && parseExcelDateISO(r[colFechaSync]) === fecha)
+    );
+    this.dataRows = others.concat(this.currentFilteredRows);
 
     if (!this.searchBound) {
       bindTableSearch(refs.tableSearch, refs.resultsBody);
@@ -815,7 +850,7 @@ export class ArandanoPtService {
       this.colMenuBound = true;
     }
 
-    this.renderTable(rows, fecha);
+    this.renderTable(this.currentFilteredRows, fecha);
 
     if (refs.resultsSection) {
       refs.resultsSection.hidden = false;
@@ -823,26 +858,31 @@ export class ArandanoPtService {
     }
     if (refs.tableSearchWrap) refs.tableSearchWrap.hidden = false;
     if (refs.resultsTable) refs.resultsTable.hidden = false;
-    refs.totalFilasDiv.textContent = `${rows.length} inspecciones`;
+    refs.totalFilasDiv.textContent = `${this.currentFilteredRows.length} inspecciones`;
     this.syncButtons();
 
-    const filasConError = rows.filter((r) => {
+    const filasConError = this.currentFilteredRows.filter((r) => {
       const filaMap = this.errorMap?.get?.(r._filaNum);
       return Boolean((filaMap && filaMap.size > 0) || r.__duplicado);
     });
     const duplicateLotes = new Set(
-      rows.filter((r) => r.__duplicado).map((r) => String(r[this.profile.cols.lote] ?? "").trim()).filter(Boolean)
+      this.currentFilteredRows
+        .filter((r) => r.__duplicado)
+        .map((r) => String(r[this.profile.cols.lote] ?? "").trim())
+        .filter(Boolean)
     );
     this.cartillaAnalysis?.present({
-      rows,
+      rows: this.currentFilteredRows,
       filasConError,
       errorMap: this.errorMap || null,
       duplicateLotes,
       colLoteJs: this.profile?.cols?.lote ?? 9,
       columns: headersToAnalysisColumns(this.headers),
       cartilla: cartilla || "—",
-      fechaLabel: formatISOToDMY(fecha)
+      fechaLabel: formatISOToDMY(fecha),
+      skipSapValidation: PT_SKIP_SAP_VALIDATION
     });
+    this.schedulePersistTableState();
   }
 
   persistTableState() {

@@ -173,13 +173,27 @@
         <span id="agv-mp-total-filas" class="agv-mp-results__chip"></span>
       </header>
       <div id="agv-mp-cartilla-analysis" class="agv-cartilla-analysis-host" hidden></div>
-      <div class="agv-mp-table-box">
-        <table id="agv-mp-results-table" class="agv-mp-table" hidden>
-          <thead>
-            <tr id="agv-mp-results-header"></tr>
-          </thead>
-          <tbody id="agv-mp-results-body"></tbody>
-        </table>
+      <div class="agv-mp-table-panel">
+        <div id="agv-mp-table-search-wrap" class="agv-mp-table-search-wrap" hidden>
+          <label class="agv-mp-table-search-label" for="agv-mp-table-search" data-i18n="arandanoPt.searchLabel">Buscar en tabla</label>
+          <input
+            type="text"
+            id="agv-mp-table-search"
+            class="agv-mp-table-search"
+            data-i18n-placeholder="arandanoPt.searchPlaceholder"
+            placeholder="Buscar por ID o Lote..."
+            autocomplete="off"
+            spellcheck="false"
+          />
+        </div>
+        <div class="agv-mp-table-box">
+          <table id="agv-mp-results-table" class="agv-mp-table" hidden>
+            <thead>
+              <tr id="agv-mp-results-header"></tr>
+            </thead>
+            <tbody id="agv-mp-results-body"></tbody>
+          </table>
+        </div>
       </div>
     </section>
 

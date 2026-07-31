@@ -41,24 +41,11 @@ function paintTrazabilidadCell(td, rawValue, cliente) {
   td.textContent = "";
   if (!text) return;
 
-  const traz = extraerTrazabilidad(text);
-  const varNombre = traz ? VAR_MAP[traz.variedad]?.[0] || "" : "";
-  const sekoyaBad = varNombre === "Sekoya Pop Orgánica" && text.length > 4 && text[4] !== "E";
-
-  for (let i = 0; i < text.length; i += 1) {
-    if (sekoyaBad && i === 4) {
-      const span = document.createElement("span");
-      span.textContent = text[i];
-      span.className = "agv-pt-cell-error-char";
-      td.appendChild(span);
-    } else {
-      td.appendChild(document.createTextNode(text[i]));
-    }
-  }
-
-  if (sekoyaBad) {
-    td.title = "Falta letra 'E' en trazabilidad (Sekoya Pop Orgánica)";
-  }
+  // Desactivado por ahora: resaltado letra E (Sekoya Pop Orgánica)
+  // const traz = extraerTrazabilidad(text);
+  // const varNombre = traz ? VAR_MAP[traz.variedad]?.[0] || "" : "";
+  // const sekoyaBad = varNombre === "Sekoya Pop Orgánica" && text.length > 4 && text[4] !== "E";
+  td.textContent = text;
 }
 
 function createColorBtn(className, title, onClick) {

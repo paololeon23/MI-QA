@@ -128,10 +128,11 @@ export function collectRowIncidents(row, profile, fechaInspeccion) {
     }
     if (String(v.trazCode).length > 13) incidencias.push("Trazabilidad excede 13 caracteres");
     if (traz && !VAR_MAP[traz.variedad]) incidencias.push(`Código variedad (${traz.variedad}) no existe`);
-    const varNombre = traz ? VAR_MAP[traz.variedad]?.[0] || "" : "";
-    if (varNombre === "Sekoya Pop Orgánica" && String(v.trazCode)[4] !== "E") {
-      incidencias.push("Falta letra 'E' en trazabilidad (Sekoya Pop Orgánica)");
-    }
+    // Desactivado por ahora: regla letra E en Sekoya Pop Orgánica ya no aplica
+    // const varNombre = traz ? VAR_MAP[traz.variedad]?.[0] || "" : "";
+    // if (varNombre === "Sekoya Pop Orgánica" && String(v.trazCode)[4] !== "E") {
+    //   incidencias.push("Falta letra 'E' en trazabilidad (Sekoya Pop Orgánica)");
+    // }
   }
 
   return incidencias;
@@ -192,7 +193,8 @@ export function formatSubgrupoCellValue(row, profile, cliente) {
 
 export function formatCellValue(val, colIndex) {
   if (val === null || val === undefined) return "";
-  if (colIndex === 3 && typeof val === "number") {
+  // Fechas Excel (serial): Fecha registro (3), Fecha Insp. (41), Fecha LMR (48)
+  if ((colIndex === 3 || colIndex === 41 || colIndex === 48) && typeof val === "number") {
     const f = new Date(Math.round((val - 25569) * 86400 * 1000));
     return `${String(f.getUTCDate()).padStart(2, "0")}/${String(f.getUTCMonth() + 1).padStart(2, "0")}/${f.getUTCFullYear()}`;
   }

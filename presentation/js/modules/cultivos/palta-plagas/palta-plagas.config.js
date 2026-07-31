@@ -17,8 +17,8 @@ export const PRODUCTOR_IDX = 12;
 
 /** Columnas visibles en tabla de revisión (legacy columnsToShow) */
 export const COLUMNS_TO_SHOW = [
-  0, 1, 4, 6,
-  9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+  0, 1, 6, 9, 4,
+  10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
   28, 29, 30, 31, 32,
   81,
   ...Array.from({ length: 33 }, (_, i) => i + 99)

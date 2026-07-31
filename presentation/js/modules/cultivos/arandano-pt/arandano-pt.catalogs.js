@@ -28,12 +28,17 @@ export const DESTINO_EQUIVALENCIAS = {
   EUROPA: "EUROPA",
   CANADA: "CANADA",
   USA: "USA",
-  BRASIL: "BRASIL"
+  /** Brasil / Colombia (fichas LATAM) → destino cartilla LATAM */
+  BRASIL: "LATAM",
+  COLOMBIA: "LATAM",
+  LATAM: "LATAM"
 };
 
 export const PAIS_DESTINO = [
   { cliente: "THE FRUITIST CO", destino: "CANADA" },
-  { cliente: "BENASSI", destino: "BRASIL" },
+  { cliente: "BENASSI", destino: "LATAM" },
+  { cliente: "FRESH FRUITS", destino: "LATAM" },
+  { cliente: "FRESH FRUIT", destino: "LATAM" },
   { cliente: "WISH FARMS INC.", destino: "USA" },
   { cliente: "GIUMARRA INTERNATIONAL BERRY, LLC", destino: "USA" },
   { cliente: "SUNBELLE", destino: "USA" },

@@ -1,6 +1,12 @@
 /** Validaciones Palta MP — configuration-driven desde rules.json */
 
-import { getColInoloroJs, getValidationConfig } from "./palta-mp.config.js";
+import {
+  getColInoloroJs,
+  getColInspeccionJs,
+  getColLoteJs,
+  getTotalColumnas,
+  getValidationConfig
+} from "./palta-mp.config.js";
 import {
   applyReglasCompuestasFila,
   cellDisplayValue,
@@ -9,6 +15,9 @@ import {
   indicesToValidate,
   parseFlexibleNumber
 } from "../../../../../engine/cartilla-cell-validation.js";
+
+/** Columna solo frontend: Σ calibres 36–50 vs Cant. muestra (11). */
+export const EXTRA_COL_SUMA_CALIBRES = "__suma_calibres__";
 
 export function valorCelda(val) {
   return cellDisplayValue(val);
@@ -21,16 +30,36 @@ export function celdaVacia(val) {
 export { parseFlexibleNumber };
 
 export function parseExcelDateISO(v) {
+  if (v instanceof Date && !Number.isNaN(v.getTime())) {
+    const yyyy = v.getFullYear();
+    const mm = String(v.getMonth() + 1).padStart(2, "0");
+    const dd = String(v.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  }
   const s = valorCelda(v).trim();
   if (!s) return "";
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
   if (/^\d{8}$/.test(s)) return `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`;
-  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
+  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)) {
     const [d, m, y] = s.split("/");
-    return `${y}-${m}-${d}`;
+    return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
   }
-  if (/^\d{2}-\d{2}-\d{4}$/.test(s)) {
+  if (/^\d{1,2}-\d{1,2}-\d{4}$/.test(s)) {
     const [d, m, y] = s.split("-");
-    return `${y}-${m}-${d}`;
+    return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+  }
+  // Serial Excel típico
+  if (/^\d{5}(\.\d+)?$/.test(s)) {
+    const n = Number(s);
+    if (Number.isFinite(n) && n > 20000 && n < 80000) {
+      const fecha = new Date(Math.round((n - 25569) * 86400 * 1000));
+      if (!Number.isNaN(fecha.getTime())) {
+        const yyyy = fecha.getUTCFullYear();
+        const mm = String(fecha.getUTCMonth() + 1).padStart(2, "0");
+        const dd = String(fecha.getUTCDate()).padStart(2, "0");
+        return `${yyyy}-${mm}-${dd}`;
+      }
+    }
   }
   const d = Date.parse(s);
   return Number.isFinite(d) ? new Date(d).toISOString().slice(0, 10) : "";
@@ -51,54 +80,114 @@ export function limpiarMarcasValidacion(rows) {
   rows.forEach((row) => {
     delete row._errors;
     delete row._errorCols;
+    delete row._suma_calibres;
+    delete row._suma_calibres_cant;
+    delete row._sumaCalibresError;
   });
 }
 
+/** Excel 20 (JS 19) = Fecha Cosecha, 64 (JS 63) = Fecha de Cosecha, 65 (JS 64) = Fecha inspección. */
 function applyPaltaMpReglasLegacyFechas(row, err) {
+  const rawCosecha = valorCelda(row[19]).trim();
+  const rawCosecha64 = valorCelda(row[63]).trim();
   const fechaCosechaISO = parseExcelDateISO(row[19]);
-  const fechaCosecha2ISO = parseExcelDateISO(row[63]);
+  const fechaCosecha64ISO = parseExcelDateISO(row[63]);
   const fechaInspeccionISO = parseExcelDateISO(row[64]);
-  if (fechaCosechaISO && fechaCosecha2ISO && fechaCosechaISO !== fechaCosecha2ISO) {
-    err(19, "Debe ser igual a Fecha cosecha 2.0 (col. 64)");
+  const msgIgual = "Fecha de Cosecha (64) debe ser igual a Fecha Cosecha (20)";
+
+  // Misma regla en revisión por fecha y en "Revisar todas"
+  if (rawCosecha || rawCosecha64) {
+    if (!rawCosecha || !rawCosecha64) {
+      err(63, msgIgual);
+    } else if (fechaCosechaISO && fechaCosecha64ISO) {
+      if (fechaCosechaISO !== fechaCosecha64ISO) err(63, msgIgual);
+    } else if (rawCosecha !== rawCosecha64) {
+      err(63, msgIgual);
+    }
   }
-  if (fechaInspeccionISO && fechaCosecha2ISO && fechaCosecha2ISO > fechaInspeccionISO) {
-    err(63, "No puede ser mayor a la fecha de inspección");
+  if (fechaInspeccionISO && fechaCosecha64ISO && fechaCosecha64ISO > fechaInspeccionISO) {
+    err(63, "Fecha de Cosecha (64) no puede ser mayor a la fecha de inspección");
   }
+  if (fechaInspeccionISO && fechaCosechaISO && fechaCosechaISO > fechaInspeccionISO) {
+    err(19, "Fecha Cosecha (20) no puede ser mayor a la fecha de inspección");
+  }
+}
+
+/** Solo UI: calcula Σ 36–50 y si coincide con Cant. muestra (11). */
+function attachSumaCalibresFrontend(row, cfg) {
+  const cal = cfg?.validaciones_resumen?.suma_calibres;
+  const from = (cal?.desde_excel ?? 36) - 1;
+  const to = (cal?.hasta_excel ?? 50) - 1;
+  const cantJs = (cal?.igual_a_excel ?? 11) - 1;
+  let suma = 0;
+  for (let i = from; i <= to; i += 1) {
+    const n = parseFlexibleNumber(row[i]);
+    suma += Number.isFinite(n) ? n : 0;
+  }
+  const cant = parseFlexibleNumber(row[cantJs]);
+  row._suma_calibres = suma;
+  row._suma_calibres_cant = Number.isFinite(cant) ? cant : null;
+  row._sumaCalibresError =
+    !Number.isFinite(cant) || Math.abs(suma - cant) > 0.001;
+}
+
+function normalizeRowLength(row, totalCols) {
+  if (!Array.isArray(row)) return Array.from({ length: totalCols }, () => "");
+  if (row.length >= totalCols) return row;
+  const padded = row.slice();
+  while (padded.length < totalCols) padded.push("");
+  return padded;
 }
 
 export function ejecutarValidacion(rows, config = null) {
   const cfg = config || getValidationConfig();
+  if (!cfg?._reglasOrigen?.columnas?.length) {
+    throw new Error("Palta MP: faltan reglas de validación (palta-mp.rules.json). Recarga el módulo.");
+  }
+
+  const totalCols = Number(cfg.total_columnas) || getTotalColumnas();
   const colInoloroJs = getColInoloroJs();
-  const loteIdx = cfg.validaciones_resumen?.lote?.indice_js ?? 9;
+  const loteIdx = cfg.validaciones_resumen?.lote?.indice_js ?? getColLoteJs();
+  const fechaInspeccionIdx = cfg.filtro_principal?.indice_js ?? getColInspeccionJs();
+
+  const normalizedRows = (rows || []).map((row) => normalizeRowLength(row, totalCols));
+  // Mutar in-place para que el service conserve las mismas refs
+  rows.forEach((row, i) => {
+    const norm = normalizedRows[i];
+    if (row.length < totalCols) {
+      for (let c = row.length; c < totalCols; c += 1) row[c] = norm[c] ?? "";
+    }
+  });
 
   const lotes = rows.map((r) => valorCelda(r[loteIdx]).trim()).filter(Boolean);
   const lotesDuplicados = findDuplicates(lotes);
-  const loteCount = {};
-  lotes.forEach((l) => {
-    loteCount[l] = (loteCount[l] || 0) + 1;
-  });
 
   const validationHelpers = {
     parseNumber: parseFlexibleNumber,
     normalizeDate: parseExcelDateISO
   };
 
+  const indices = indicesToValidate(cfg);
+
   rows.forEach((row) => {
     row._errors = new Set();
     row._errorCols = new Set();
 
     const err = (colIndex, msg) => {
-      row._errors.add(`Columna ${colIndex + 1}: ${msg}`);
-      row._errorCols.add(colIndex);
+      const js = Number(colIndex);
+      if (!Number.isFinite(js) || js < 0) return;
+      row._errors.add(`Columna ${js + 1}: ${msg}`);
+      row._errorCols.add(js);
     };
 
     const ctx = {
       row,
       duplicadosLote: lotesDuplicados,
-      normalizeDate: parseExcelDateISO
+      normalizeDate: parseExcelDateISO,
+      fechaInspeccionIdx
     };
 
-    indicesToValidate(cfg).forEach((idx) => {
+    indices.forEach((idx) => {
       getCellValidationIssues(idx, row[idx], ctx, cfg).forEach((issue) => {
         const colIdx = issue.colIdx ?? idx;
         err(colIdx, issue.message);
@@ -114,7 +203,10 @@ export function ejecutarValidacion(rows, config = null) {
 
     applyPaltaMpReglasLegacyFechas(row, err);
 
+    // Inoloro (Excel 69 / JS 68): obligatorio operativo aunque la regla base no lo marque
     if (celdaVacia(row[colInoloroJs])) err(colInoloroJs, "Inoloro obligatorio");
+
+    attachSumaCalibresFrontend(row, cfg);
   });
 
   return { lotesDuplicados };
@@ -144,7 +236,34 @@ export function celdaValorIncorrecto(c, val, row) {
   return row._errorCols && row._errorCols.has(c);
 }
 
+export function formatSumaCalibresDisplay(row) {
+  const suma = row?._suma_calibres;
+  const cant = row?._suma_calibres_cant;
+  if (suma == null || !Number.isFinite(suma)) return "";
+  const sumaTxt = Number.isInteger(suma) ? String(suma) : suma.toFixed(2);
+  if (cant == null || !Number.isFinite(cant)) return `${sumaTxt} (sin Cant. muestra)`;
+  const cantTxt = Number.isInteger(cant) ? String(cant) : cant.toFixed(2);
+  if (row._sumaCalibresError) return `${sumaTxt} ≠ ${cantTxt}`;
+  return `${sumaTxt} = ${cantTxt}`;
+}
+
 export function getCellMeta(row, colJs) {
+  if (colJs === EXTRA_COL_SUMA_CALIBRES) {
+    const val = formatSumaCalibresDisplay(row);
+    if (row._sumaCalibresError) {
+      return {
+        val,
+        cellClass: "agv-mp-cell-error-value",
+        title: "Suma columnas 36–50 debe coincidir con Cant. muestra (11)"
+      };
+    }
+    return {
+      val,
+      cellClass: "agv-mp-cell-suma-ok",
+      title: "Suma calibres 36–50 = Cant. muestra (11)"
+    };
+  }
+
   const valRaw = row[colJs];
   let val;
   if ([19, 63, 64].includes(colJs)) {

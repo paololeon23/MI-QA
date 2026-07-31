@@ -22,6 +22,41 @@ export const NOTA_CONDICION_COL_JS = 27;
 export const SAP_ZONE_FRONTEND_COLS_JS = Array.from({ length: 21 }, (_, i) => 12 + i);
 
 /**
+ * Por ahora: en PT de todos los cultivos no se validan ni se muestran datos SAP.
+ * MP / Plagas no usan este flag. Nota Condición (JS 27) no es SAP y sí se mantiene.
+ */
+export const PT_SKIP_SAP_VALIDATION = true;
+
+export function isPtSapDataColJs(colJs) {
+  return SAP_DATA_COLS_JS.includes(Number(colJs));
+}
+
+/** Excel 1-based: 13–27 y 29–33 (excluye Nota Condición 28). */
+export function isPtSapDataColNum(colNum) {
+  const n = Number(colNum);
+  return (n >= 13 && n <= 27) || (n >= 29 && n <= 33);
+}
+
+/** Quita del errorMap cualquier incidencia en columnas SAP (PT). */
+export function stripPtSapValidationErrors(errorMap) {
+  if (!PT_SKIP_SAP_VALIDATION || !errorMap?.size) return errorMap;
+  [...errorMap.entries()].forEach(([filaNum, filaMap]) => {
+    if (!filaMap?.size) return;
+    [...filaMap.keys()].forEach((colNum) => {
+      if (isPtSapDataColNum(colNum)) filaMap.delete(colNum);
+    });
+    if (!filaMap.size) errorMap.delete(filaNum);
+  });
+  return errorMap;
+}
+
+/** Filtra índices JS SAP de listas de columnas visibles PT. */
+export function filterOutPtSapCols(cols = []) {
+  if (!PT_SKIP_SAP_VALIDATION) return cols;
+  return cols.filter((c) => typeof c !== "number" || !isPtSapDataColJs(c));
+}
+
+/**
  * Nombres canónicos del bloque (Excel 13–33).
  * Nota Condición (27) puede venir de WULUT; el resto son datos SAP.
  */
@@ -55,12 +90,21 @@ export const SAP_ZONE_HEADER_LABELS_BY_JS = {
  * @param {string} [excelHeader]
  * @returns {{ label: string, isSap: boolean, title: string }}
  */
-export function resolveSapZoneHeader(colJs, excelHeader = "") {
+export function resolveSapZoneHeader(colJs, excelHeader = "", options = {}) {
   const idx = Number(colJs);
   const known = SAP_ZONE_HEADER_LABELS_BY_JS[idx];
   if (!known) {
     const raw = String(excelHeader || "").trim();
     return { label: raw || `Col ${idx + 1}`, isSap: false, title: raw };
+  }
+  // PT puede pedir labels sin “(SAP)” mientras PT_SKIP_SAP_VALIDATION esté activo.
+  if (Boolean(options.suppressSapLabel)) {
+    const isNota = idx === NOTA_CONDICION_COL_JS;
+    return {
+      label: isNota ? `${known} (WULUT)` : known,
+      isSap: false,
+      title: isNota ? `Nota Condición (WULUT, no es dato SAP)` : known
+    };
   }
   const isSap = idx !== NOTA_CONDICION_COL_JS;
   const label = isSap ? `${known} (SAP)` : `${known} (WULUT)`;

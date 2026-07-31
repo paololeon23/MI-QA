@@ -211,9 +211,17 @@ function parseFechaIso(valor) {
   if (/^\d{8}$/.test(texto)) {
     return `${texto.slice(0, 4)}-${texto.slice(4, 6)}-${texto.slice(6, 8)}`;
   }
-  if (/^\d{2}\/\d{2}\/\d{4}$/.test(texto)) {
-    const [d, m, y] = texto.split("/");
+  if (/^\d{4}-\d{2}-\d{2}/.test(texto)) {
+    return texto.slice(0, 10);
+  }
+  if (/^\d{2}[/-]\d{2}[/-]\d{4}$/.test(texto)) {
+    const [d, m, y] = texto.split(/[/-]/);
     return `${y}-${m}-${d}`;
+  }
+  if (/^\d{2}[/-]\d{2}[/-]\d{2}$/.test(texto)) {
+    const [d, m, y] = texto.split(/[/-]/);
+    const fullY = Number(y) <= 50 ? `20${y}` : `19${y}`;
+    return `${fullY}-${m}-${d}`;
   }
   const fecha = Date.parse(texto);
   return Number.isFinite(fecha) ? new Date(fecha).toISOString().slice(0, 10) : "";
@@ -309,7 +317,13 @@ export function evaluarColumna(filas, reglaColumna, contexto = {}) {
 
     if (reglaColumna["igual-a-columna"] != null) {
       const otroValor = obtenerValorRegistro(registro, reglaColumna["igual-a-columna"]);
-      if (normalizarTexto(valor) !== normalizarTexto(otroValor)) {
+      const isoA = parseFechaIso(valor);
+      const isoB = parseFechaIso(otroValor);
+      const iguales =
+        isoA && isoB
+          ? isoA === isoB
+          : normalizarTexto(valor) === normalizarTexto(otroValor);
+      if (!iguales) {
         detalle.push(crearDetalle(filaNum, valor, msg("igualdad", valor), "igualdad"));
         filasAfectadasSet.add(filaNum);
       }

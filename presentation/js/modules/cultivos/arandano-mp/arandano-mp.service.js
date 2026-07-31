@@ -13,21 +13,32 @@ import {
   buildLazyDateDetailPlaceholders,
   bindLazyDateDetailTables,
   collectValidatedColumnIndexesJs,
-  DEFAULT_MP_CONTEXT_COLS_JS,
   SAP_ZONE_FRONTEND_COLS_JS,
   resolveSapZoneHeader,
   SAP_ZONE_HEADER_LABELS_BY_JS
 } from "../shared/mp-results-perf.util.js?v=2026072219";
-import { expandMissingSapLayout, stripInsertedSapObligatorioErrors } from "../shared/mp-sap-layout.util.js";
+import { expandMissingSapLayout } from "../shared/mp-sap-layout.util.js";
+import { applyDateDisplayFormatToRows } from "../shared/excel-date-format.util.js";
+import { normalizeMphaColumnLayout } from "./arandano-mp-mpha-layout.util.js";
 import { loadSapColumnasCatalog, getSapPerfil } from "../../../config/sap-columnas.registry.js";
 import { translateExcelHeader } from "../../../utils/excel-header-i18n.util.js";
 import { createCartillaAnalysisController } from "../shared/cartilla-analysis.js";
+import {
+  applyMpColumnVisibility,
+  bindMpColumnContextMenu,
+  bindMpTableSearch
+} from "../shared/mp-column-menu.util.js";
 
-const STICKY_COLUMNS = [0, 1, 6, 9]; // Id, Inspección código, Usuario, Lote
+/** Excel 1,2,4,5,7,10 → JS (Fecha registro + Hora en orden natural). */
+const STICKY_COLUMNS = [0, 1, 3, 4, 6, 9];
+/** Contexto siempre visible en revisión (Excel 4–5 = JS 3–4). */
+const CONTEXT_COLUMNS_JS = [0, 1, 3, 4, 6, 9, 10];
 /** Encabezados cortos sticky (la columna es angosta). */
 const STICKY_HEADER_SHORT_BY_JS = {
   0: "Id",
   1: "IC",
+  3: "F. Reg.",
+  4: "Hora",
   6: "Usuario",
   9: "Lote",
   10: "CM"
@@ -35,6 +46,8 @@ const STICKY_HEADER_SHORT_BY_JS = {
 const STICKY_HEADER_TITLE_BY_JS = {
   0: "Id",
   1: "Inspección código",
+  3: "Fecha registro",
+  4: "Hora",
   6: "Usuario",
   9: "Lote",
   10: "Cant Muestra"
@@ -48,6 +61,8 @@ const FILAS_SKIP = 5;
 const STICKY_COL_WIDTHS = {
   0: 95,
   1: 95,
+  3: 110,
+  4: 72,
   6: 230,
   9: 126
 };
@@ -124,9 +139,17 @@ function parseExcelDateISO(valor) {
   if (/^\d{8}$/.test(texto)) {
     return `${texto.slice(0, 4)}-${texto.slice(4, 6)}-${texto.slice(6, 8)}`;
   }
+  if (/^\d{4}-\d{2}-\d{2}/.test(texto)) {
+    return texto.slice(0, 10);
+  }
   if (/^\d{2}[/-]\d{2}[/-]\d{4}$/.test(texto)) {
     const [d, m, y] = texto.split(/[/-]/);
     return `${y}-${m}-${d}`;
+  }
+  if (/^\d{2}[/-]\d{2}[/-]\d{2}$/.test(texto)) {
+    const [d, m, y] = texto.split(/[/-]/);
+    const fullY = Number(y) <= 50 ? `20${y}` : `19${y}`;
+    return `${fullY}-${m}-${d}`;
   }
   const fecha = Date.parse(texto);
   return Number.isFinite(fecha) ? new Date(fecha).toISOString().slice(0, 10) : "";
@@ -246,6 +269,36 @@ function detectDuplicateLotes(rows, colLoteJs) {
   return new Set(Object.keys(conteo).filter((lote) => conteo[lote] > 1));
 }
 
+/** Filas con error: primero lotes duplicados (agrupados), luego el resto. */
+function sortErrorRowsByDuplicateLote(rows, colLoteJs, duplicateLotes) {
+  if (!rows?.length) return [];
+  if (!duplicateLotes?.size) return [...rows];
+
+  const loteKey = (row) => String(row[colLoteJs] ?? "").trim();
+  const seenLotes = new Set();
+  const loteOrder = [];
+  const rest = [];
+
+  rows.forEach((row) => {
+    const lote = loteKey(row);
+    if (lote && duplicateLotes.has(lote)) {
+      if (!seenLotes.has(lote)) {
+        seenLotes.add(lote);
+        loteOrder.push(lote);
+      }
+    } else {
+      rest.push(row);
+    }
+  });
+
+  const dups = [];
+  loteOrder.forEach((lote) => {
+    rows.filter((r) => loteKey(r) === lote).forEach((r) => dups.push(r));
+  });
+
+  return [...dups, ...rest];
+}
+
 function estiloExportCeldaError(cellClass) {
   const isEmpty = cellClass === "agv-mp-cell-error-empty";
   if (isEmpty) {
@@ -277,10 +330,12 @@ export class ArandanoMpService {
     this.duplicateLotes = new Set();
     this.excelLoaded = false;
     this.lastReviewKey = "";
+    this.lastReviewAllKey = "";
     this.abortController = null;
     this.root = null;
     this.compuestaColumnMapByCartilla = {};
     this.cartillaAnalysis = null;
+    this.searchBound = false;
   }
 
   async init(appRoot) {
@@ -373,7 +428,7 @@ export class ArandanoMpService {
    */
   getValidatedColumnIndexesJs(cartilla) {
     return collectValidatedColumnIndexesJs(this.getReglas(cartilla), {
-      contextColsJs: DEFAULT_MP_CONTEXT_COLS_JS,
+      contextColsJs: CONTEXT_COLUMNS_JS,
       stickyColsJs: STICKY_COLUMNS,
       includeSapZone: true
     });
@@ -381,7 +436,7 @@ export class ArandanoMpService {
 
   pickColumnsForResults(cartilla, allColumns, errorMap, filas) {
     const needed = new Set([
-      ...DEFAULT_MP_CONTEXT_COLS_JS,
+      ...CONTEXT_COLUMNS_JS,
       ...STICKY_COLUMNS,
       ...SAP_ZONE_COLS_JS,
       ...this.getValidatedColumnIndexesJs(cartilla)
@@ -483,6 +538,8 @@ export class ArandanoMpService {
       this.processedRows.length > 0;
     const canUseTodoActions =
       this.excelLoaded && Boolean(cartilla) && Boolean(this.cartillaStatus[cartilla]);
+    const hasReviewedAll =
+      canUseTodoActions && this.lastReviewAllKey === cartilla;
 
     if (refs.runReviewBtn) {
       refs.runReviewBtn.disabled = !canUseTodoActions || !fecha;
@@ -494,7 +551,7 @@ export class ArandanoMpService {
       refs.reviewAllBtn.disabled = !canUseTodoActions;
     }
     if (refs.exportExcelErroresBtn) {
-      refs.exportExcelErroresBtn.disabled = !canUseTodoActions || !fecha;
+      refs.exportExcelErroresBtn.disabled = !hasReviewedAll;
     }
   }
 
@@ -556,10 +613,6 @@ export class ArandanoMpService {
         { cartilla, fechaLmrMayoritaria }
       );
       const partialMap = buildErrorMap(resultado, compuestaMap);
-      stripInsertedSapObligatorioErrors(
-        partialMap,
-        this._sapInsertedJsByCartilla?.[cartilla] || []
-      );
 
       partialMap.forEach((filaMap, filaNum) => {
         if (!errorMap.has(filaNum)) errorMap.set(filaNum, new Map());
@@ -636,10 +689,7 @@ export class ArandanoMpService {
       this.getReglas(cartilla),
       { cartilla, fechaLmrMayoritaria }
     );
-    const errorMap = stripInsertedSapObligatorioErrors(
-      buildErrorMap(resultado, this.compuestaMapFor(cartilla)),
-      this._sapInsertedJsByCartilla?.[cartilla] || []
-    );
+    const errorMap = buildErrorMap(resultado, this.compuestaMapFor(cartilla));
     const duplicateLotes = detectDuplicateLotes(rows, colLoteJs);
     return { errorMap, duplicateLotes };
   }
@@ -765,7 +815,7 @@ export class ArandanoMpService {
       this.exportFormatHelpers()
     );
 
-    const fechaSuffix = fechaISO ? `_${fechaLabelParaArchivo(fechaISO)}` : "";
+    const fechaSuffix = fechaISO ? `_${fechaLabelParaArchivo(fechaISO)}` : "_TodasFechas";
     const nombre = `ARANDANOS_${cartilla}_Errores${fechaSuffix}.xlsx`;
     this.writeWorkbook(nombre, [{ name: `${cartilla}_Errores`, data: wsData }]);
 
@@ -786,7 +836,10 @@ export class ArandanoMpService {
     const countsHtml = loaded
       .map(
         (c) =>
-          `<li><b>${htmlEscape(c)}</b>: ${counts[c] ?? 0} inspecciones</li>`
+          `<li class="agv-mp-export-choice__item">
+            <span class="agv-mp-export-choice__code">${htmlEscape(c)}</span>
+            <span class="agv-mp-export-choice__count">${counts[c] ?? 0} inspecciones</span>
+          </li>`
       )
       .join("");
     const totalDia = loaded.reduce((sum, c) => sum + (counts[c] ?? 0), 0);
@@ -798,12 +851,19 @@ export class ArandanoMpService {
 
     const result = await showMpExportChoiceDialog({
       title: "Exportar Excel filtrado",
-      html: `<div class="agv-mp-dialog__html--stacked">
-        <p><b>Fecha de inspección:</b> ${htmlEscape(fechaLabel)}</p>
-        <p><b>Registros por cartilla:</b></p>
-        <ul class="agv-mp-dialog__html-list">${countsHtml}</ul>
-        <p class="agv-mp-dialog__html-foot"><b>Total del día:</b> ${totalDia} inspecciones</p>
-        <br>
+      html: `<div class="agv-mp-export-choice">
+        <div class="agv-mp-export-choice__meta">
+          <span class="agv-mp-export-choice__meta-label">Fecha de inspección</span>
+          <strong class="agv-mp-export-choice__meta-value">${htmlEscape(fechaLabel)}</strong>
+        </div>
+        <div class="agv-mp-export-choice__section">
+          <span class="agv-mp-export-choice__section-label">Registros por cartilla</span>
+          <ul class="agv-mp-export-choice__list">${countsHtml}</ul>
+        </div>
+        <p class="agv-mp-export-choice__total">
+          <span>Total del día</span>
+          <strong>${totalDia} inspecciones</strong>
+        </p>
       </div>`,
       choices: [
         {
@@ -844,6 +904,37 @@ export class ArandanoMpService {
     refs.exportExcelErroresBtn?.addEventListener("click", () => this.onExportErrors(), { signal });
     refs.exportBtn?.addEventListener("click", () => this.onExportFiltered(), { signal });
     refs.notificationIcon?.addEventListener("click", () => this.onNotificationClick(), { signal });
+
+    this.bindResultsColumnMenu();
+    if (!this.searchBound) {
+      bindMpTableSearch(refs.tableSearch, refs.resultsBody, {
+        idColJs: 0,
+        loteColJs: 9
+      });
+      this.searchBound = true;
+    }
+  }
+
+  bindResultsColumnMenu() {
+    const refs = this.shell?.refs;
+    if (!refs?.resultsTable) return;
+    let menuEl = refs.colMenuEl;
+    if (!menuEl) {
+      menuEl = document.getElementById("agv-mp-col-menu");
+      if (!menuEl) {
+        menuEl = document.createElement("div");
+        menuEl.id = "agv-mp-col-menu";
+        menuEl.className = "agv-mp-col-menu";
+        menuEl.hidden = true;
+        menuEl.setAttribute("role", "menu");
+        (refs.resultsTable.closest(".agv-mp-table-box") || this.root)?.appendChild(menuEl);
+      }
+      if (this.shell?.refs) this.shell.refs.colMenuEl = menuEl;
+    }
+    bindMpColumnContextMenu(refs.resultsTable, menuEl, {
+      protectedColIndices: new Set(STICKY_COLUMNS),
+      onVisibilityChange: () => syncArandanoMpStickyOffsets(refs.resultsTable)
+    });
   }
 
   onClear() {
@@ -870,7 +961,9 @@ export class ArandanoMpService {
     this.duplicateLotes = new Set();
     this.excelLoaded = false;
     this.lastReviewKey = "";
+    this.lastReviewAllKey = "";
     this._sapLayoutNotice = null;
+    this._mphaLayoutNotice = null;
     this._sapInsertedJsByCartilla = {};
     this.cartillaAnalysis?.clear();
   }
@@ -975,7 +1068,7 @@ export class ArandanoMpService {
           .filter((row) => row.some((cell) => cell !== "" && cell != null));
 
         // Si Nota Condición no está en col 28 → faltan SAP: insertar 15 + 5 vacías (Cond. Transporte → 34).
-        const {
+        let {
           headers,
           rows: layoutRows,
           expanded: sapLayoutExpanded,
@@ -983,6 +1076,18 @@ export class ArandanoMpService {
           insertedSap5,
           insertedJsIndexes
         } = expandMissingSapLayout(rawHeaders, rawDataRows, getSapPerfil("mp"));
+
+        // MPHPAR: normalizar Pudrición con Larva / sumatorias al orden canónico (si ya viene así, no toca).
+        let mphaLayoutNormalized = false;
+        if (cartilla === "MPHA") {
+          const mpha = normalizeMphaColumnLayout(headers, layoutRows);
+          headers = mpha.headers;
+          layoutRows = mpha.rows;
+          mphaLayoutNormalized = mpha.normalized;
+          if (mphaLayoutNormalized) {
+            this._mphaLayoutNotice = { cartilla, steps: mpha.steps };
+          }
+        }
 
         if (headers.length !== this.totalColumnasFor(cartilla)) {
           showMpDialog({
@@ -1009,12 +1114,23 @@ export class ArandanoMpService {
         }));
 
         const colFechaJs = this.colFechaInspeccionJsFor(cartilla);
-        const filas = layoutRows.map((row) => {
-          const copy = [...row];
-          copy._fechaInspeccionISO = parseExcelDateISO(copy[colFechaJs]);
-          if (sapLayoutExpanded) copy._sapLayoutExpanded = true;
-          return copy;
-        });
+        const dateColsExcel = [
+          ...new Set([
+            ...(this.getExportConfig(cartilla)?.["columnas-fecha"] || [20, 41, 51]),
+            this.getCfgCartilla(cartilla)["columna-fecha-cosecha"] || 20,
+            this.getCfgCartilla(cartilla)["columna-fecha-inspeccion"] || 41,
+            this.getCfgCartilla(cartilla)["columna-fecha-lmr"] || 51,
+            this.getCfgCartilla(cartilla)["columna-fecha-produccion"] || 21
+          ])
+        ];
+        const filas = applyDateDisplayFormatToRows(layoutRows, headers, dateColsExcel).map(
+          (row) => {
+            const copy = Array.isArray(row) ? row : [...row];
+            copy._fechaInspeccionISO = parseExcelDateISO(copy[colFechaJs]);
+            if (sapLayoutExpanded) copy._sapLayoutExpanded = true;
+            return copy;
+          }
+        );
         if (filas.length) {
           this.cartillaStatus[cartilla] = true;
           this.rawRows.push(...filas);
@@ -1052,13 +1168,16 @@ export class ArandanoMpService {
       const cartillas = [...cartillasCargadas];
       const primeraCartilla = cartillas[0];
       const sapNote = this._sapLayoutNotice
-        ? `<br><small>Se completaron huecos SAP vacíos (+${this._sapLayoutNotice.insertedSap15} + ${this._sapLayoutNotice.insertedSap5}) para alinear Nota Condición (col 28) y Condición Transporte (col 34).</small>`
+        ? `<br><small>Se alineó el bloque SAP (+${this._sapLayoutNotice.insertedSap15} + ${this._sapLayoutNotice.insertedSap5}). Las columnas SAP vacías sí se validan como obligatorias.</small>`
+        : "";
+      const mphaNote = this._mphaLayoutNotice
+        ? `<br><small>MPHPAR: se reordenó el bloque de defectos (Pudrición con Larva / sumatorias) al orden canónico.</small>`
         : "";
       showMpDialog({
         icon: "success",
         title: "Excel cargado",
-        html: `Cartilla(s) <b>${htmlEscape(cartillas.join(", "))}</b> · <b>${this.rawRows.length}</b> registros · <b>${primeraCartilla ? this.totalColumnasFor(primeraCartilla) : 0}</b> columnas${sapNote}`,
-        timer: sapNote ? 3200 : 1800,
+        html: `Cartilla(s) <b>${htmlEscape(cartillas.join(", "))}</b> · <b>${this.rawRows.length}</b> registros · <b>${primeraCartilla ? this.totalColumnasFor(primeraCartilla) : 0}</b> columnas${sapNote}${mphaNote}`,
+        timer: sapNote || mphaNote ? 3200 : 1800,
         showConfirmButton: false
       });
 
@@ -1367,17 +1486,18 @@ export class ArandanoMpService {
         reglas,
         { cartilla, fechaLmrMayoritaria }
       );
-      const errorMap = stripInsertedSapObligatorioErrors(
-        buildErrorMap(resultado, compuestaMap),
-        this._sapInsertedJsByCartilla?.[cartilla] || []
-      );
+      const errorMap = buildErrorMap(resultado, compuestaMap);
       const dupLotes = detectDuplicateLotes(rows, colLoteJs);
-      const filasDetalle = rows.filter((row) => {
-        const filaMap = errorMap.get(row._filaNum);
-        if (filaMap?.size) return true;
-        const lote = String(row[colLoteJs] ?? "").trim();
-        return lote && dupLotes.has(lote);
-      });
+      const filasDetalle = sortErrorRowsByDuplicateLote(
+        rows.filter((row) => {
+          const filaMap = errorMap.get(row._filaNum);
+          if (filaMap?.size) return true;
+          const lote = String(row[colLoteJs] ?? "").trim();
+          return lote && dupLotes.has(lote);
+        }),
+        colLoteJs,
+        dupLotes
+      );
 
       items.push({
         cartilla,
@@ -1408,6 +1528,8 @@ export class ArandanoMpService {
     if (refs.resultsHeader) refs.resultsHeader.innerHTML = "";
     if (refs.resultsBody) refs.resultsBody.innerHTML = "";
     if (refs.resultsTable) refs.resultsTable.hidden = true;
+    if (refs.tableSearchWrap) refs.tableSearchWrap.hidden = true;
+    if (refs.tableSearch) refs.tableSearch.value = "";
     if (refs.resultsSection) {
       refs.resultsSection.classList.remove("is-visible", `${this.shell.cls("results")}--ok`, `${this.shell.cls("results")}--errors`);
     }
@@ -1416,6 +1538,7 @@ export class ArandanoMpService {
     this.cartillaAnalysis?.clear();
     this.processedRows = [];
     this.lastReviewKey = "";
+    this.lastReviewAllKey = "";
     this.syncActionButtons();
   }
 
@@ -1431,6 +1554,16 @@ export class ArandanoMpService {
     const val = valorCeldaParaMostrar(row[colJs]);
     const err = errorMap.get(row._filaNum)?.get(colNum);
     const lote = String(row[this.colLoteJs] ?? "").trim();
+    const isLoteCol = colNum === this.colLoteJs + 1;
+
+    // Duplicado: título claro (aunque el mapa traiga si-falla-mostrar genérico)
+    if (isLoteCol && lote && duplicateLotes?.has?.(lote) && err?.tipo !== "longitud") {
+      return {
+        val,
+        cellClass: "agv-mp-cell-error-value",
+        title: `Lote ${lote} duplicado en esta fecha`
+      };
+    }
 
     if (err) {
       if (err.tipo === "obligatorio") {
@@ -1439,8 +1572,12 @@ export class ArandanoMpService {
       return { val, cellClass: "agv-mp-cell-error-value", title: err.problema };
     }
 
-    if (colNum === this.colLoteJs + 1 && lote && duplicateLotes.has(lote)) {
-      return { val, cellClass: "agv-mp-cell-error-value", title: t("plagasArandano.duplicateLots") };
+    if (isLoteCol && lote && duplicateLotes?.has?.(lote)) {
+      return {
+        val,
+        cellClass: "agv-mp-cell-error-value",
+        title: `Lote ${lote} duplicado en esta fecha`
+      };
     }
 
     return { val, cellClass: "", title: "" };
@@ -1647,6 +1784,8 @@ export class ArandanoMpService {
 
     this.hideSingleDateResults();
     this.renderResumenTodasFechas(cartilla, items);
+    this.lastReviewAllKey = cartilla;
+    this.syncActionButtons();
 
     showMpDialog({
       icon: items.some((item) => item.tieneErrores) ? "warning" : "success",
@@ -1660,18 +1799,16 @@ export class ArandanoMpService {
   onExportErrors() {
     const cartilla = this.getSelectedCartillaOrWarn();
     if (!cartilla) return;
-
-    const fechaISO = this.shell.refs.inspectionSelect?.value || "";
-    if (!fechaISO) {
+    if (this.lastReviewAllKey !== cartilla) {
       showMpDialog({
         icon: "warning",
-        title: "Falta fecha de inspección",
-        html: "Selecciona una <b>fecha de inspección</b> para exportar con errores resaltados."
+        title: "Revisión requerida",
+        html: "Primero pulsa <b>Todo</b> para revisar todas las fechas; luego podrás descargar el Excel completo."
       });
       return;
     }
-
-    this.exportExcelConErroresResaltados(cartilla, fechaISO);
+    // Botón de «Todo el Excel»: siempre todas las fechas de la cartilla.
+    this.exportExcelConErroresResaltados(cartilla, "");
   }
 
   async onExportFiltered() {
@@ -1766,13 +1903,15 @@ export class ArandanoMpService {
     );
 
     this.processedRows = rows;
-    this.lastErrorMap = stripInsertedSapObligatorioErrors(
-      buildErrorMap(resultado, this.compuestaMapFor(cartilla)),
-      this._sapInsertedJsByCartilla?.[cartilla] || []
-    );
+    this.lastErrorMap = buildErrorMap(resultado, this.compuestaMapFor(cartilla));
     this.duplicateLotes = detectDuplicateLotes(rows, this.colLoteJsFor(cartilla));
 
-    const filasConError = rows.filter((row) => this.rowHasError(row));
+    const colLoteJs = this.colLoteJsFor(cartilla);
+    const filasConError = sortErrorRowsByDuplicateLote(
+      rows.filter((row) => this.rowHasError(row)),
+      colLoteJs,
+      this.duplicateLotes
+    );
     this.renderResultsTable(rows, filasConError, cartilla, fechaISO);
     this.lastReviewKey = `${cartilla}|${fechaISO}`;
     this.syncActionButtons();
@@ -1782,7 +1921,7 @@ export class ArandanoMpService {
       filasConError,
       errorMap: this.lastErrorMap || null,
       duplicateLotes: this.duplicateLotes || new Set(),
-      colLoteJs: this.colLoteJsFor(cartilla),
+      colLoteJs,
       columns: this.columnsByCartilla?.[cartilla] || [],
       cartilla: cartilla || "—",
       fechaLabel: formatISOToDMY(fechaISO),
@@ -1856,7 +1995,7 @@ export class ArandanoMpService {
         th.dataset.colIndex = String(col.originalIndex);
         th.dataset.excelHeader = String(col.header ?? "");
         th.textContent = formatResultColumnHeader(col);
-        th.title = resultColumnHeaderTitle(col);
+        th.title = `${resultColumnHeaderTitle(col)} — ${t("plagasArandano.hideColumnHint")}`;
         applyStickyColumnClasses(th, col.originalIndex);
         headerFrag.appendChild(th);
       });
@@ -1881,7 +2020,13 @@ export class ArandanoMpService {
     }
 
     if (refs.resultsTable) refs.resultsTable.hidden = false;
+    if (refs.tableSearchWrap) refs.tableSearchWrap.hidden = false;
+    this.bindResultsColumnMenu();
+    applyMpColumnVisibility(refs.resultsTable);
     syncArandanoMpStickyOffsets(refs.resultsTable);
+    if (refs.tableSearch?.value) {
+      refs.tableSearch.dispatchEvent(new Event("input", { bubbles: true }));
+    }
     if (refs.resultsIconEl) hydrateLucideIcons(refs.resultsIconEl);
   }
 

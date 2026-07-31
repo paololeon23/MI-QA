@@ -22,7 +22,12 @@ import {
   SAP_ZONE_HEADER_LABELS_BY_JS
 } from "../shared/mp-results-perf.util.js?v=2026072219";
 import { expandMissingSapLayout } from "../shared/mp-sap-layout.util.js?v=2026072219";
+import { applyDateDisplayFormatToRows } from "../shared/excel-date-format.util.js";
 import { loadSapColumnasCatalog, getSapPerfil } from "../../../config/sap-columnas.registry.js";
+import {
+  applyMpColumnVisibility,
+  bindMpColumnContextMenu
+} from "../shared/mp-column-menu.util.js";
 
 const STICKY_COLUMNS = [0, 1, 6, 9]; // Id, Inspección código, Usuario, Lote
 /** Anchos base sticky Espárrago MP (Usuario ancho por emails). */
@@ -435,6 +440,7 @@ export class EsparragoMpService {
     this.duplicateLotes = new Set();
     this.excelLoaded = false;
     this.lastReviewKey = "";
+    this.lastReviewAllKey = "";
     this.abortController = null;
     this.root = null;
     this.compuestaColumnMapByCartilla = {};
@@ -576,6 +582,8 @@ export class EsparragoMpService {
       this.processedRows.length > 0;
     const canUseTodoActions =
       this.excelLoaded && Boolean(cartilla) && Boolean(this.cartillaStatus[cartilla]);
+    const hasReviewedAll =
+      canUseTodoActions && this.lastReviewAllKey === cartilla;
 
     if (refs.runReviewBtn) {
       refs.runReviewBtn.disabled = !canUseTodoActions || !fecha;
@@ -587,7 +595,7 @@ export class EsparragoMpService {
       refs.reviewAllBtn.disabled = !canUseTodoActions;
     }
     if (refs.exportExcelErroresBtn) {
-      refs.exportExcelErroresBtn.disabled = !canUseTodoActions || !fecha;
+      refs.exportExcelErroresBtn.disabled = !hasReviewedAll;
     }
   }
 
@@ -839,8 +847,8 @@ export class EsparragoMpService {
       this.exportFormatHelpers()
     );
 
-    const fechaSuffix = fechaISO ? `_${formatISOToDMY(fechaISO).replaceAll("-", "")}` : "";
-    const nombre = `ARANDANOS_${cartilla}_Errores${fechaSuffix}.xlsx`;
+    const fechaSuffix = fechaISO ? `_${formatISOToDMY(fechaISO).replaceAll("-", "")}` : "_TodasFechas";
+    const nombre = `ESPARRAGO_${cartilla}_Errores${fechaSuffix}.xlsx`;
     this.writeWorkbook(nombre, [{ name: `${cartilla}_Errores`, data: wsData }]);
 
     showMpDialog({
@@ -893,6 +901,30 @@ export class EsparragoMpService {
     refs.exportExcelErroresBtn?.addEventListener("click", () => this.onExportErrors(), { signal });
     refs.exportBtn?.addEventListener("click", () => this.onExportFiltered(), { signal });
     refs.notificationIcon?.addEventListener("click", () => this.onNotificationClick(), { signal });
+
+    this.bindResultsColumnMenu();
+  }
+
+  bindResultsColumnMenu() {
+    const refs = this.shell?.refs;
+    if (!refs?.resultsTable) return;
+    let menuEl = refs.colMenuEl;
+    if (!menuEl) {
+      menuEl = document.getElementById("agv-mp-col-menu");
+      if (!menuEl) {
+        menuEl = document.createElement("div");
+        menuEl.id = "agv-mp-col-menu";
+        menuEl.className = "agv-mp-col-menu";
+        menuEl.hidden = true;
+        menuEl.setAttribute("role", "menu");
+        (refs.resultsTable.closest(".agv-mp-table-box") || this.root)?.appendChild(menuEl);
+      }
+      if (this.shell?.refs) this.shell.refs.colMenuEl = menuEl;
+    }
+    bindMpColumnContextMenu(refs.resultsTable, menuEl, {
+      protectedColIndices: new Set(STICKY_COLUMNS),
+      onVisibilityChange: () => syncEsparragoMpStickyOffsets(refs.resultsTable)
+    });
   }
 
   onClear() {
@@ -919,6 +951,7 @@ export class EsparragoMpService {
     this.duplicateLotes = new Set();
     this.excelLoaded = false;
     this.lastReviewKey = "";
+    this.lastReviewAllKey = "";
     this._sapLayoutNotice = null;
     this.cartillaAnalysis?.clear();
   }
@@ -1053,8 +1086,10 @@ export class EsparragoMpService {
         }));
 
         const colFechaJs = this.colFechaInspeccionJsFor(cartilla);
-        const filas = layoutRows.map((row) => {
-          const copy = [...row];
+        const dateColsExcel =
+          this.getExportConfig(cartilla)?.["columnas-fecha"] || [20, 47, 48, 57];
+        const filas = applyDateDisplayFormatToRows(layoutRows, headers, dateColsExcel).map((row) => {
+          const copy = Array.isArray(row) ? row : [...row];
           copy._fechaInspeccionISO = parseExcelDateISO(copy[colFechaJs]);
           if (sapLayoutExpanded) copy._sapLayoutExpanded = true;
           return copy;
@@ -1096,7 +1131,7 @@ export class EsparragoMpService {
       const cartillas = [...cartillasCargadas];
       const primeraCartilla = cartillas[0];
       const sapNote = this._sapLayoutNotice
-        ? `<br><small>Se completaron huecos SAP vacíos (+${this._sapLayoutNotice.insertedSap15} + ${this._sapLayoutNotice.insertedSap5}) para alinear Nota Condición (col 28) y el bloque siguiente (col 34).</small>`
+        ? `<br><small>Se alineó el bloque SAP (+${this._sapLayoutNotice.insertedSap15} + ${this._sapLayoutNotice.insertedSap5}). Las columnas SAP vacías sí se validan como obligatorias.</small>`
         : "";
       showMpDialog({
         icon: "success",
@@ -1449,6 +1484,7 @@ export class EsparragoMpService {
     this.cartillaAnalysis?.clear();
     this.processedRows = [];
     this.lastReviewKey = "";
+    this.lastReviewAllKey = "";
     this.syncActionButtons();
   }
 
@@ -1711,6 +1747,8 @@ export class EsparragoMpService {
 
     this.hideSingleDateResults();
     this.renderResumenTodasFechas(cartilla, items);
+    this.lastReviewAllKey = cartilla;
+    this.syncActionButtons();
 
     showMpDialog({
       icon: items.some((item) => item.tieneErrores) ? "warning" : "success",
@@ -1724,18 +1762,15 @@ export class EsparragoMpService {
   onExportErrors() {
     const cartilla = this.getSelectedCartillaOrWarn();
     if (!cartilla) return;
-
-    const fechaISO = this.shell.refs.inspectionSelect?.value || "";
-    if (!fechaISO) {
+    if (this.lastReviewAllKey !== cartilla) {
       showMpDialog({
         icon: "warning",
-        title: "Falta fecha de inspección",
-        html: "Selecciona una <b>fecha de inspección</b> para exportar con errores resaltados."
+        title: "Revisión requerida",
+        html: "Primero pulsa <b>Todo</b> para revisar todas las fechas; luego podrás descargar el Excel completo."
       });
       return;
     }
-
-    this.exportExcelConErroresResaltados(cartilla, fechaISO);
+    this.exportExcelConErroresResaltados(cartilla, "");
   }
 
   async onExportFiltered() {
@@ -1948,6 +1983,8 @@ export class EsparragoMpService {
     }
 
     if (refs.resultsTable) refs.resultsTable.hidden = false;
+    this.bindResultsColumnMenu();
+    applyMpColumnVisibility(refs.resultsTable);
     requestAnimationFrame(() => {
       syncEsparragoMpStickyOffsets(refs.resultsTable);
     });

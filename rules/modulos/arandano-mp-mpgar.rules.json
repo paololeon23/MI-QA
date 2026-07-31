@@ -49,7 +49,7 @@
       "longitud-exacta": 10,
       "no-puede-repetirse": true,
       "agrupar-por-columna": 41,
-      "si-falla-mostrar": "Lote obligatorio, 10 caracteres, unico por inspeccion"
+      "si-falla-mostrar": "Lote obligatorio"
     },
     {
       "numero": 11,

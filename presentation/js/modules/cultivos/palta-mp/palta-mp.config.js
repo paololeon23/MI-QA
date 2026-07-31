@@ -17,9 +17,12 @@ export async function loadPaltaMpValidaciones(version = "") {
   const qs = version ? `?v=${version}` : "";
   const [res, reglas] = await Promise.all([
     fetch(`${CONFIG_PATH}${qs}`),
-    cargarReglasDesdeRuta(`${REGLAS_PATH}${qs}`).catch(() => null)
+    cargarReglasDesdeRuta(`${REGLAS_PATH}${qs}`)
   ]);
   if (!res.ok) throw new Error("No se pudo cargar palta-mp-validaciones.json");
+  if (!reglas?.columnas?.length) {
+    throw new Error("No se pudo cargar rules/modulos/palta-mp.rules.json");
+  }
   _validaciones = await res.json();
   _reglas = reglas;
   _validationConfig = mergeValidacionesDesdeReglas(_validaciones, reglas, {

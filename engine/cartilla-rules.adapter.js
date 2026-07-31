@@ -80,7 +80,13 @@ function mensajeAutomatico(col, vars, tipoFallo) {
   }
   if (tipoFallo === "longitud" && vars["longitud-exacta"] != null) {
     const detectado = vars["longitud-detectada"] ?? vars.detectado ?? "?";
-    return `${nombre}: debe tener exactamente ${vars["longitud-exacta"]} caracteres (detectados: ${detectado})`;
+    return `${nombre} debe tener exactamente ${vars["longitud-exacta"]} caracteres (tiene: ${detectado})`;
+  }
+  if (tipoFallo === "duplicado") {
+    const lote = vars.lote || vars.texto || vars.valor || "";
+    return lote
+      ? `Lote ${lote} duplicado en esta fecha`
+      : `${nombre} duplicado en esta fecha`;
   }
   if (tipoFallo === "rango") {
     const partes = [];
@@ -102,6 +108,10 @@ function mensajeAutomatico(col, vars, tipoFallo) {
  */
 export function resolverMensajeRegla(col, extras = {}, tipoFallo = null) {
   const vars = varsDesdeReglaColumna(col, extras);
+  // Longitud / duplicado: mensaje concreto (no el si-falla-mostrar genérico combinado)
+  if (tipoFallo === "longitud" || tipoFallo === "duplicado") {
+    return mensajeAutomatico(col, vars, tipoFallo);
+  }
   const template = col?.["si-falla-mostrar"];
   if (template != null && String(template).trim()) {
     return interpolarMensaje(String(template).trim(), vars);

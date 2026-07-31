@@ -49,7 +49,7 @@
       "longitud-exacta": 10,
       "no-puede-repetirse": true,
       "agrupar-por-columna": 41,
-      "si-falla-mostrar": "Lote obligatorio, 10 caracteres, unico por inspeccion"
+      "si-falla-mostrar": "Lote obligatorio"
     },
     {
       "numero": 11,
@@ -381,67 +381,67 @@
     },
     {
       "numero": 72,
-      "nombre-de-la-columna": "Sumatoria Defectos de Condición",
-      "es-obligatorio": true,
-      "si-falla-mostrar": "Campo obligatorio"
-    },
-    {
-      "numero": 73,
       "nombre-de-la-columna": "Presencia de insectos",
       "es-obligatorio": true,
       "si-falla-mostrar": "Campo obligatorio"
     },
     {
-      "numero": 74,
+      "numero": 73,
       "nombre-de-la-columna": "Residuos",
       "es-obligatorio": true,
       "si-falla-mostrar": "Campo obligatorio"
     },
     {
-      "numero": 75,
+      "numero": 74,
       "nombre-de-la-columna": "Polvo",
       "es-obligatorio": true,
       "si-falla-mostrar": "Campo obligatorio"
     },
     {
-      "numero": 76,
+      "numero": 75,
       "nombre-de-la-columna": "Fruto Verde",
       "es-obligatorio": true,
       "si-falla-mostrar": "Campo obligatorio"
     },
     {
-      "numero": 77,
+      "numero": 76,
       "nombre-de-la-columna": "Fruto Rojo",
       "es-obligatorio": true,
       "si-falla-mostrar": "Campo obligatorio"
     },
     {
-      "numero": 78,
+      "numero": 77,
       "nombre-de-la-columna": "Sin pruina",
       "es-obligatorio": true,
       "si-falla-mostrar": "Campo obligatorio"
     },
     {
-      "numero": 79,
+      "numero": 78,
       "nombre-de-la-columna": "Heridas Cicatrizadas / Russet",
       "es-obligatorio": true,
       "si-falla-mostrar": "Campo obligatorio"
     },
     {
-      "numero": 80,
+      "numero": 79,
       "nombre-de-la-columna": "Restos florales",
       "es-obligatorio": true,
       "si-falla-mostrar": "Campo obligatorio"
     },
     {
-      "numero": 81,
+      "numero": 80,
       "nombre-de-la-columna": "Presencia de Pedúnculo",
       "es-obligatorio": true,
       "si-falla-mostrar": "Campo obligatorio"
     },
     {
-      "numero": 82,
+      "numero": 81,
       "nombre-de-la-columna": "Deformes",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Campo obligatorio"
+    },
+    {
+      "numero": 82,
+      "nombre-de-la-columna": "Sumatoria Defectos de Calidad",
       "es-obligatorio": true,
       "si-falla-mostrar": "Campo obligatorio"
     },
@@ -451,7 +451,7 @@
     },
     {
       "numero": 84,
-      "nombre-de-la-columna": "Sumatoria Defectos de Calidad",
+      "nombre-de-la-columna": "Sumatoria Defectos de Condición",
       "es-obligatorio": true,
       "si-falla-mostrar": "Campo obligatorio"
     },
@@ -499,67 +499,67 @@
     },
     {
       "numero": 92,
-      "nombre-de-la-columna": "Sumatoria Defectos de Condición",
-      "es-obligatorio": true,
-      "si-falla-mostrar": "Campo obligatorio"
-    },
-    {
-      "numero": 93,
       "nombre-de-la-columna": "Presencia de insectos",
       "es-obligatorio": true,
       "si-falla-mostrar": "Campo obligatorio"
     },
     {
-      "numero": 94,
+      "numero": 93,
       "nombre-de-la-columna": "Residuos",
       "es-obligatorio": true,
       "si-falla-mostrar": "Campo obligatorio"
     },
     {
-      "numero": 95,
+      "numero": 94,
       "nombre-de-la-columna": "Polvo",
       "es-obligatorio": true,
       "si-falla-mostrar": "Campo obligatorio"
     },
     {
-      "numero": 96,
+      "numero": 95,
       "nombre-de-la-columna": "Fruto Verde",
       "es-obligatorio": true,
       "si-falla-mostrar": "Campo obligatorio"
     },
     {
-      "numero": 97,
+      "numero": 96,
       "nombre-de-la-columna": "Fruto Rojo",
       "es-obligatorio": true,
       "si-falla-mostrar": "Campo obligatorio"
     },
     {
-      "numero": 98,
+      "numero": 97,
       "nombre-de-la-columna": "Sin pruina",
       "es-obligatorio": true,
       "si-falla-mostrar": "Campo obligatorio"
     },
     {
-      "numero": 99,
+      "numero": 98,
       "nombre-de-la-columna": "Heridas Cicatrizadas / Russet",
       "es-obligatorio": true,
       "si-falla-mostrar": "Campo obligatorio"
     },
     {
-      "numero": 100,
+      "numero": 99,
       "nombre-de-la-columna": "Restos florales",
       "es-obligatorio": true,
       "si-falla-mostrar": "Campo obligatorio"
     },
     {
-      "numero": 101,
+      "numero": 100,
       "nombre-de-la-columna": "Presencia de Pedúnculo",
       "es-obligatorio": true,
       "si-falla-mostrar": "Campo obligatorio"
     },
     {
-      "numero": 102,
+      "numero": 101,
       "nombre-de-la-columna": "Deformes",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Campo obligatorio"
+    },
+    {
+      "numero": 102,
+      "nombre-de-la-columna": "Sumatoria Defectos de Calidad",
       "es-obligatorio": true,
       "si-falla-mostrar": "Campo obligatorio"
     },
@@ -569,7 +569,7 @@
     },
     {
       "numero": 104,
-      "nombre-de-la-columna": "Sumatoria Defectos de Calidad",
+      "nombre-de-la-columna": "Sumatoria Defectos de Condición",
       "es-obligatorio": true,
       "si-falla-mostrar": "Campo obligatorio"
     }

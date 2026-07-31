@@ -52,7 +52,7 @@
       "longitud-exacta": 10,
       "no-puede-repetirse": true,
       "agrupar-por-columna": 72,
-      "si-falla-mostrar": "Lote obligatorio, exactamente 10 caracteres y sin duplicar en la misma fecha de inspección"
+      "si-falla-mostrar": "Lote obligatorio"
     },
     {
       "numero": 11,
@@ -71,8 +71,8 @@
     {
       "numero": 13,
       "nombre-de-la-columna": "Productor",
+      "es-obligatorio": true,
       "patron-regex": "^\\d{10}$",
-      "validar-solo-si-tiene-valor": true,
       "si-falla-mostrar": "Debe tener exactamente 10 dígitos (Productor)"
     },
     {
@@ -158,7 +158,8 @@
       "numero": 29,
       "nombre-de-la-columna": "Tipo de formato",
       "es-obligatorio": true,
-      "si-falla-mostrar": "Campo obligatorio"
+      "valores-permitidos": [55, 56, 57, 58, 59, 61, 69, 73, 78],
+      "si-falla-mostrar": "Tipo de formato debe ser 55, 56, 57, 58, 59, 61, 69, 73 o 78"
     },
     {
       "numero": 30,

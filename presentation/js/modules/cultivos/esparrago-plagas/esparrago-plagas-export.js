@@ -15,6 +15,9 @@ const FECHA_IDX = 76;
 const DATE_COLS_JS = new Set([3, 19, 20, 76]);
 /** Excel cols que deben quedar como texto: 10 Lote, 13 Productor, 19 Variedad. */
 const TEXT_COLS_EXCEL = new Set([10, 13, 19]);
+/** Desde col Excel 80 (plagas): número con 2 decimales (0 → 0.00). */
+const NUMBER_FROM_EXCEL_COL = 80;
+const NUMBER_FMT_2DEC = "0.00";
 
 function parseFlexibleNumber(val) {
   const str = cellDisplayValue(val).replace(/\s/g, "").replace(",", ".");
@@ -23,19 +26,33 @@ function parseFlexibleNumber(val) {
   return Number.isFinite(n) ? n : NaN;
 }
 
-/** Valor de celda para export: número si aplica; fechas y cols 10/13/19 como texto. */
+function keepAsTextExcelCol(excelCol) {
+  return TEXT_COLS_EXCEL.has(excelCol);
+}
+
+function asNumberCell(n, fmt = NUMBER_FMT_2DEC) {
+  return { t: "n", v: n, z: fmt };
+}
+
+/** Valor de celda para export: fechas/texto fijos; plagas ≥80 como número 0.00. */
 function valorExportCelda(idx, rawVal) {
   if (DATE_COLS_JS.has(idx)) {
-    return formatPlagasCellDisplay(idx, rawVal) || "";
+    const display = formatPlagasCellDisplay(idx, rawVal) || "";
+    return display === "" ? "" : { t: "s", v: String(display), z: "@" };
   }
   const excelCol = idx + 1;
-  if (TEXT_COLS_EXCEL.has(excelCol)) {
-    return cellDisplayValue(rawVal);
+  if (keepAsTextExcelCol(excelCol)) {
+    const display = formatPlagasCellDisplay(idx, rawVal);
+    if (display === "") return "";
+    return { t: "s", v: String(display), z: "@" };
   }
   const display = formatPlagasCellDisplay(idx, rawVal);
   if (display === "") return "";
   const n = parseFlexibleNumber(rawVal);
-  if (Number.isFinite(n)) return n;
+  if (Number.isFinite(n)) {
+    if (excelCol >= NUMBER_FROM_EXCEL_COL) return asNumberCell(n);
+    return n;
+  }
   return display;
 }
 
@@ -177,15 +194,16 @@ export function writePlagasErrorsExport({ cartilla, rows, headers, config, rawDa
     const linea = [];
     for (let js = 0; js < totalCols; js += 1) {
       const val = row[js] ?? "";
+      const outVal = valorExportCelda(js, val);
       const cellClass = getCellExportClass(js, val, ctx, config);
       if (!cellClass) {
-        if (val === "") linea.push("");
-        else if (typeof val === "number") linea.push(val);
-        else linea.push(String(val));
+        linea.push(outVal === "" ? "" : outVal);
+      } else if (outVal && typeof outVal === "object" && "v" in outVal) {
+        linea.push({ ...outVal, s: estiloExportCeldaError(cellClass) });
       } else {
         linea.push({
-          v: val === "" ? "" : val,
-          t: typeof val === "number" ? "n" : "s",
+          v: outVal === "" ? "" : outVal,
+          t: typeof outVal === "number" ? "n" : "s",
           s: estiloExportCeldaError(cellClass)
         });
       }

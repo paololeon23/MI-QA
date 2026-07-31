@@ -12,8 +12,10 @@ import {
   paintCellValidation,
   parseFlexibleNumber
 } from "../../../../../engine/cartilla-cell-validation.js";
+import { isPtSapDataColJs, PT_SKIP_SAP_VALIDATION } from "../shared/mp-results-perf.util.js";
 
-const CRITICOS_VACIOS = [9, 10, 37, 49, 50, 53, 64];
+const CRITICOS_VACIOS = [9, 10, 37, 49, 50, 53, 58, 59, 60, 61, 62, 64];
+/** Peso 01–05 → Excel 59–63 / JS 58–62 */
 const MERCADOS_VALIDOS = ["USA", "EUROPA", "ASIA"];
 export const LINEA_JS = 26;
 export const LINEA_ASP_JS = 50;
@@ -170,7 +172,7 @@ export function scanGlobalWarnings(filas) {
   let errorCalidad = false;
 
   filas.forEach((fila) => {
-    if (!errorSAP && hasSapData(fila)) errorSAP = true;
+    if (!PT_SKIP_SAP_VALIDATION && !errorSAP && hasSapData(fila)) errorSAP = true;
     if (!errorDefectos && (defectoFueraRango(fila, 40, 0, 20) || defectoFueraRango(fila, 42, 0, 70) || defectoFueraRango(fila, 66, 0, 80))) {
       errorDefectos = true;
     }
@@ -200,7 +202,12 @@ export function applyCellValidation(td, fila, colIdx, valor) {
   td.title = "";
 
   const ctx = { row: fila };
-  const configIssues = cfg ? getCellValidationIssues(colIdx, valorEfectivo, ctx, cfg) : [];
+  const configIssues =
+    PT_SKIP_SAP_VALIDATION && isPtSapDataColJs(colIdx)
+      ? []
+      : cfg
+        ? getCellValidationIssues(colIdx, valorEfectivo, ctx, cfg)
+        : [];
   if (configIssues.length) {
     paintCellValidation(td, configIssues, "agv-pt");
   }

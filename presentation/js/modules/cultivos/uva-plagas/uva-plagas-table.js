@@ -9,6 +9,13 @@ import {
 } from "./uva-plagas.validation.js";
 import { translateExcelHeader } from "../../../utils/excel-header-i18n.util.js";
 import { refreshTranslatedHeaderRow } from "../../../utils/table-header-i18n.util.js";
+import {
+  DEFAULT_MP_STICKY_COLS,
+  DEFAULT_MP_STICKY_HEADER_SHORT,
+  DEFAULT_MP_STICKY_HEADER_TITLE,
+  DEFAULT_MP_STICKY_WIDTHS,
+  syncMpStickyOffsets
+} from "../shared/mp-sticky-offsets.util.js";
 
 const SUMMARY_COL_MIN = 79;
 const SUMMARY_COL_MAX = 104;
@@ -16,6 +23,16 @@ const SUMMARY_COL_MAX = 104;
 function applySticky(el, excelCol, stickyCols) {
   if (!stickyCols.includes(excelCol)) return;
   el.classList.add("agv-mp-sticky-col", `agv-mp-sticky-col-${excelCol}`);
+}
+
+function stickyHeaderLabel(idx, rawLabel) {
+  if (DEFAULT_MP_STICKY_HEADER_SHORT[idx] != null) return DEFAULT_MP_STICKY_HEADER_SHORT[idx];
+  return translateExcelHeader(rawLabel, idx);
+}
+
+function stickyHeaderTitle(idx, rawLabel) {
+  if (DEFAULT_MP_STICKY_HEADER_TITLE[idx] != null) return DEFAULT_MP_STICKY_HEADER_TITLE[idx];
+  return translateExcelHeader(rawLabel, idx);
 }
 
 function isSummaryCol(idx) {
@@ -40,7 +57,7 @@ export function renderUvaPlagasTable({
   t
 }) {
   const visibleCols = config.columnas_visibles_frontend?.indices_js || COLUMNS_TO_SHOW;
-  const stickyCols = config.columnas_sticky || [0, 1, 6, 9];
+  const stickyCols = config.columnas_sticky || DEFAULT_MP_STICKY_COLS;
   const errorRows = rows.filter((r) => rowHasMarkedErrors(r));
   const ctx = { duplicadosLote: syncContext.duplicadosLote };
 
@@ -51,8 +68,8 @@ export function renderUvaPlagasTable({
     const rawLabel = resolveColumnLabel(idx, headers, columnLabelsByIndex, config);
     th.dataset.colIndex = String(idx);
     th.dataset.excelHeader = rawLabel;
-    th.textContent = translateExcelHeader(rawLabel, idx);
-    th.title = th.textContent;
+    th.textContent = stickyHeaderLabel(idx, rawLabel);
+    th.title = stickyHeaderTitle(idx, rawLabel);
     applySticky(th, idx, stickyCols);
     if (isSummaryCol(idx)) th.classList.add("agv-mp-col-texto-wrap");
     headerRow.appendChild(th);
@@ -69,6 +86,7 @@ export function renderUvaPlagasTable({
     td.textContent = t("plagasArandano.noErrorsOnInspection");
     tr.appendChild(td);
     bodyRows.appendChild(tr);
+    syncMpStickyOffsets(headerRow.closest("table"), stickyCols, DEFAULT_MP_STICKY_WIDTHS);
     return { errorCount: 0, totalRows: rows.length };
   }
 
@@ -93,6 +111,7 @@ export function renderUvaPlagasTable({
     bodyRows.appendChild(tr);
   });
 
+  syncMpStickyOffsets(headerRow.closest("table"), stickyCols, DEFAULT_MP_STICKY_WIDTHS);
   return { errorCount: errorRows.length, totalRows: rows.length };
 }
 
@@ -149,7 +168,10 @@ export function renderNestedErrorTableHtml(filas, headers, config, columnLabelsB
 }
 
 export function refreshUvaPlagasHeaderLabels(headerRow, headers, columnLabelsByIndex, config) {
-  refreshTranslatedHeaderRow(headerRow, (idx) =>
-    resolveColumnLabel(idx, headers, columnLabelsByIndex, config)
-  );
+  refreshTranslatedHeaderRow(headerRow, (idx) => {
+    const raw = resolveColumnLabel(idx, headers, columnLabelsByIndex, config);
+    return stickyHeaderLabel(idx, raw);
+  });
+  const stickyCols = config?.columnas_sticky || DEFAULT_MP_STICKY_COLS;
+  syncMpStickyOffsets(headerRow?.closest("table"), stickyCols, DEFAULT_MP_STICKY_WIDTHS);
 }

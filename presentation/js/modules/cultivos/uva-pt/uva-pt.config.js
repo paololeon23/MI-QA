@@ -2,6 +2,7 @@
 
 import { cargarReglasDesdeRuta } from "../../../../../engine/rule-engine.js";
 import { mergeValidacionesDesdeReglas } from "../../../../../engine/cartilla-rules.adapter.js";
+import { filterOutPtSapCols } from "../shared/mp-results-perf.util.js";
 
 let _validaciones = null;
 let _reglas = null;
@@ -77,11 +78,17 @@ export function getSumaTonalidadesConfig() {
 
 export function getColumnasFront() {
   const cfg = getUvaPtValidaciones().columnas_visibles_frontend;
-  if (cfg?.indices_js?.length) return [...cfg.indices_js, ...(cfg.extra ?? [])];
-  return [
-    0, 1, 6, 9, 10, 37, 38, 40, 53, 54, 55, 69, 71, 73, 75, 76, 83, 91, 92, 94, 95,
-    "Suma Tonalidades"
-  ];
+  const sticky = getStickyColsPt();
+  const stickySet = new Set(sticky);
+  const indices = filterOutPtSapCols(
+    cfg?.indices_js?.length
+      ? [...cfg.indices_js]
+      : [0, 1, 6, 9, 10, 37, 38, 40, 53, 54, 55, 69, 71, 73, 75, 76, 83, 91, 92, 94, 95]
+  );
+  const head = sticky.filter((i) => indices.includes(i));
+  const rest = indices.filter((i) => !stickySet.has(i));
+  const extra = cfg?.extra ?? ["Suma Tonalidades"];
+  return [...head, ...rest, ...extra];
 }
 
 export function getStickyColsPt() {

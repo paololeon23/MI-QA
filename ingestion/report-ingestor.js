@@ -7,10 +7,8 @@ import { readFileAsWorkbook } from "./file-reader.js";
 import { sheetToMatrix } from "./sheet-matrix.js";
 import { parseCabeceraFromMatrix } from "./cabecera-parser.js";
 import { validateArchivoMetadata } from "./archivo-validator.js";
-import {
-  extractStructuredRows,
-  validateCartillaEnDatos
-} from "./row-extractor.js";
+import { extractStructuredRows, validateCartillaEnDatos } from "./row-extractor.js";
+import { applyDateDisplayFormatToRows } from "./date-format.js";
 
 /**
  * @typedef {object} IngestReportConfig
@@ -24,6 +22,7 @@ import {
  * @property {string} [estadoEsperado] - Override del estado esperado
  * @property {number} [sheetIndex=0] - Índice de hoja Excel
  * @property {object} [sheetOptions] - Opciones para sheet_to_json
+ * @property {number[]} [columnasFechaExcel] - Columnas Excel 1-based a formatear como fecha
  */
 
 /**
@@ -46,7 +45,14 @@ export async function ingestReportFile(file, ingestConfig = {}) {
   }
 
   const cabecera = parseCabeceraFromMatrix(matrix, ingestConfig.cabeceraExcel);
-  const { headers, rows } = extractStructuredRows(matrix, ingestConfig);
+  let { headers, rows } = extractStructuredRows(matrix, ingestConfig);
+
+  // Fechas SAP: 20251110 → 10/11/2025
+  const dateHints =
+    ingestConfig.columnasFechaExcel ||
+    ingestConfig.validacionArchivo?.columnas_fecha ||
+    [20, 21, 41, 51];
+  rows = applyDateDisplayFormatToRows(rows, headers, dateHints);
 
   if (ingestConfig.cartillaEsperada) {
     validateCartillaEnDatos(

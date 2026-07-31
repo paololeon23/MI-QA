@@ -92,6 +92,9 @@ async function handleLanguageChange(selectedLanguage) {
   const activeModule = document.getElementById("dynamicModuleInner");
   applyTranslationsToContainer(activeModule, { hydrateIcons: false });
   await moduleLoaderService.applyLanguageChange(selectedLanguage);
+  window.dispatchEvent(
+    new CustomEvent("agv:language-changed", { detail: { language: selectedLanguage } })
+  );
 }
 
 async function renderApplicationShellAndBind(languageCode) {
@@ -113,7 +116,8 @@ async function bootstrapApplication() {
   await Promise.all([
     i18nService.initialize(appConfig.defaultLanguage),
     ensureStylesheets([
-      "https://cdn.jsdelivr.net/npm/flag-icons@7.2.3/css/flag-icons.min.css"
+      "https://cdn.jsdelivr.net/npm/flag-icons@7.2.3/css/flag-icons.min.css",
+      "presentation/css/pages/esparrago-pt.css"
     ])
   ]);
 

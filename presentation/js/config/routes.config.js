@@ -2,6 +2,7 @@
 
 const MODULE_PAGES = "presentation/css/pages/module-pages.css";
 const CARTILLA_ANALYSIS = "presentation/css/pages/cartilla-analysis.css";
+const PT_SHELL = "presentation/css/pages/agv-pt-shell.css";
 
 export const routesConfig = {
   "#/inicio": {
@@ -45,21 +46,36 @@ export const routesConfig = {
     viewPath: "presentation/views/cultivos/uva-mp.html",
     modulePath: "presentation/js/modules/cultivos/uva-mp.module.js",
     needsXlsx: true,
-    stylesheets: [MODULE_PAGES, CARTILLA_ANALYSIS, "presentation/css/pages/uva-mp.css"]
+    stylesheets: [
+      MODULE_PAGES,
+      CARTILLA_ANALYSIS,
+      "presentation/css/pages/arandano-mp.css",
+      "presentation/css/pages/uva-mp.css"
+    ]
   },
   "#/uva/pt": {
     titleKey: "cultivo.uvaPt.title",
     viewPath: "presentation/views/cultivos/uva-pt.html",
     modulePath: "presentation/js/modules/cultivos/uva-pt.module.js",
     needsXlsx: true,
-    stylesheets: [MODULE_PAGES, CARTILLA_ANALYSIS, "presentation/css/pages/uva-pt.css"]
+    stylesheets: [
+      MODULE_PAGES,
+      CARTILLA_ANALYSIS,
+      PT_SHELL,
+      "presentation/css/pages/uva-pt.css"
+    ]
   },
   "#/uva/plagas": {
     titleKey: "cultivo.uvaPlagas.title",
     viewPath: "presentation/views/cultivos/uva-plagas.html",
     modulePath: "presentation/js/modules/cultivos/uva-plagas.module.js",
     needsXlsx: true,
-    stylesheets: [MODULE_PAGES, "presentation/css/pages/plagas-arandano.css"]
+    stylesheets: [
+      MODULE_PAGES,
+      CARTILLA_ANALYSIS,
+      "presentation/css/pages/arandano-mp.css",
+      "presentation/css/pages/uva-mp.css"
+    ]
   },
   "#/arandano/mp": {
     titleKey: "cultivo.arandanoMp.title",
@@ -73,21 +89,26 @@ export const routesConfig = {
     viewPath: "presentation/views/cultivos/arandano-pt.html",
     modulePath: "presentation/js/modules/cultivos/arandano-pt.module.js",
     needsXlsx: true,
-    stylesheets: [MODULE_PAGES, CARTILLA_ANALYSIS, "presentation/css/pages/arandano-pt.css"]
+    stylesheets: [MODULE_PAGES, CARTILLA_ANALYSIS, PT_SHELL]
   },
   "#/arandano/plagas": {
     titleKey: "cultivo.arandanoPlagas.title",
     viewPath: "presentation/views/cultivos/arandano-plagas.html",
     modulePath: "presentation/js/modules/cultivos/arandano-plagas.module.js",
     needsXlsx: true,
-    stylesheets: [MODULE_PAGES, "presentation/css/pages/plagas-arandano.css"]
+    stylesheets: [MODULE_PAGES, CARTILLA_ANALYSIS, "presentation/css/pages/plagas-arandano.css"]
   },
   "#/esparrago/mp": {
     titleKey: "cultivo.esparragoMp.title",
     viewPath: "presentation/views/cultivos/esparrago-mp.html",
     modulePath: "presentation/js/modules/cultivos/esparrago-mp.module.js",
     needsXlsx: true,
-    stylesheets: [MODULE_PAGES, CARTILLA_ANALYSIS, "presentation/css/pages/esparrago-mp.css"]
+    stylesheets: [
+      MODULE_PAGES,
+      CARTILLA_ANALYSIS,
+      "presentation/css/pages/arandano-mp.css",
+      "presentation/css/pages/esparrago-mp.css"
+    ]
   },
   "#/esparrago/pt": {
     titleKey: "cultivo.esparragoPt.title",
@@ -97,6 +118,7 @@ export const routesConfig = {
     stylesheets: [
       MODULE_PAGES,
       CARTILLA_ANALYSIS,
+      PT_SHELL,
       "presentation/css/pages/esparrago-pt.css",
       "presentation/css/pages/esparrago-mp.css"
     ]
@@ -106,27 +128,47 @@ export const routesConfig = {
     viewPath: "presentation/views/cultivos/esparrago-plagas.html",
     modulePath: "presentation/js/modules/cultivos/esparrago-plagas.module.js",
     needsXlsx: true,
-    stylesheets: [MODULE_PAGES, "presentation/css/pages/plagas-arandano.css"]
+    stylesheets: [
+      MODULE_PAGES,
+      CARTILLA_ANALYSIS,
+      "presentation/css/pages/arandano-mp.css",
+      "presentation/css/pages/esparrago-mp.css"
+    ]
   },
   "#/palta/mp": {
     titleKey: "cultivo.paltaMp.title",
     viewPath: "presentation/views/cultivos/palta-mp.html",
     modulePath: "presentation/js/modules/cultivos/palta-mp.module.js",
     needsXlsx: true,
-    stylesheets: [MODULE_PAGES, CARTILLA_ANALYSIS, "presentation/css/pages/palta-mp.css"]
+    stylesheets: [
+      MODULE_PAGES,
+      CARTILLA_ANALYSIS,
+      "presentation/css/pages/arandano-mp.css",
+      "presentation/css/pages/palta-mp.css"
+    ]
   },
   "#/palta/pt": {
     titleKey: "cultivo.paltaPt.title",
     viewPath: "presentation/views/cultivos/palta-pt.html",
     modulePath: "presentation/js/modules/cultivos/palta-pt.module.js",
     needsXlsx: true,
-    stylesheets: [MODULE_PAGES, CARTILLA_ANALYSIS, "presentation/css/pages/palta-pt.css"]
+    stylesheets: [
+      MODULE_PAGES,
+      CARTILLA_ANALYSIS,
+      PT_SHELL,
+      "presentation/css/pages/palta-pt.css"
+    ]
   },
   "#/palta/plagas": {
     titleKey: "cultivo.paltaPlagas.title",
     viewPath: "presentation/views/cultivos/palta-plagas.html",
     modulePath: "presentation/js/modules/cultivos/palta-plagas.module.js",
     needsXlsx: true,
-    stylesheets: [MODULE_PAGES, "presentation/css/pages/plagas-arandano.css"]
+    stylesheets: [
+      MODULE_PAGES,
+      CARTILLA_ANALYSIS,
+      "presentation/css/pages/arandano-mp.css",
+      "presentation/css/pages/palta-mp.css"
+    ]
   }
 };

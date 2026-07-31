@@ -186,7 +186,13 @@ export function showMpExportChoiceDialog({ title = "", html = "", choices = [] }
     overlay.setAttribute("aria-modal", "true");
 
     const dialog = document.createElement("div");
-    dialog.className = "agv-mp-dialog agv-mp-dialog--wide";
+    dialog.className = "agv-mp-dialog agv-mp-dialog--export";
+
+    const iconEl = document.createElement("div");
+    iconEl.className = "agv-mp-dialog__icon agv-mp-dialog__icon--info";
+    iconEl.setAttribute("aria-hidden", "true");
+    iconEl.textContent = "↓";
+    dialog.appendChild(iconEl);
 
     const titleEl = document.createElement("h3");
     titleEl.className = "agv-mp-dialog__title";

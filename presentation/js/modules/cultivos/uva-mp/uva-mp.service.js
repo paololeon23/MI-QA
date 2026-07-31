@@ -13,7 +13,8 @@ import {
   getColLmrJs,
   getColLoteJs,
   getExcelCabecera,
-  getValidacionArchivo
+  getValidacionArchivo,
+  getStickyCols
 } from "./uva-mp.config.js";
 import {
   ejecutarValidacion,
@@ -41,6 +42,12 @@ import {
   isXlsxAvailable
 } from "../../../../../ingestion/index.js";
 import { createCartillaAnalysisController, headersToAnalysisColumns } from "../shared/cartilla-analysis.js";
+import {
+  applyMpColumnVisibility,
+  bindMpColumnContextMenu,
+  bindMpTableSearch
+} from "../shared/mp-column-menu.util.js";
+import { syncMpStickyOffsets } from "../shared/mp-sticky-offsets.util.js";
 
 function t(key, vars = {}) {
   let text = i18nService.translate(key);
@@ -148,8 +155,10 @@ export class UvaMpService {
     this.lotesDuplicados = [];
     this.excelLoaded = false;
     this.lastReviewKey = "";
+    this.lastReviewAllKey = "";
     this.abortController = null;
     this.root = null;
+    this.searchBound = false;
   }
 
   async init(appRoot) {
@@ -185,7 +194,9 @@ export class UvaMpService {
     if (refs.runReviewBtn) refs.runReviewBtn.disabled = !canUseActions || !fecha;
     if (refs.exportBtn) refs.exportBtn.disabled = !canUseActions || !fecha;
     if (refs.reviewAllBtn) refs.reviewAllBtn.disabled = !canUseActions;
-    if (refs.exportExcelErroresBtn) refs.exportExcelErroresBtn.disabled = !canUseActions || !fecha;
+    if (refs.exportExcelErroresBtn) {
+      refs.exportExcelErroresBtn.disabled = !(canUseActions && this.lastReviewAllKey === CARTILLA_CODE);
+    }
   }
 
   bindEvents() {
@@ -202,6 +213,37 @@ export class UvaMpService {
     refs.exportExcelErroresBtn?.addEventListener("click", () => this.onExportErrors(), { signal });
     refs.exportBtn?.addEventListener("click", () => this.onExportFiltered(), { signal });
     refs.notificationIcon?.addEventListener("click", () => this.onNotificationClick(), { signal });
+
+    this.bindResultsColumnMenu();
+    if (!this.searchBound) {
+      bindMpTableSearch(refs.tableSearch, refs.resultsBody, {
+        idColJs: 0,
+        loteColJs: getColLoteJs()
+      });
+      this.searchBound = true;
+    }
+  }
+
+  bindResultsColumnMenu() {
+    const refs = this.shell?.refs;
+    if (!refs?.resultsTable) return;
+    let menuEl = refs.colMenuEl;
+    if (!menuEl) {
+      menuEl = document.getElementById("agv-mp-col-menu");
+      if (!menuEl) {
+        menuEl = document.createElement("div");
+        menuEl.id = "agv-mp-col-menu";
+        menuEl.className = "agv-mp-col-menu";
+        menuEl.hidden = true;
+        menuEl.setAttribute("role", "menu");
+        (refs.resultsTable.closest(".agv-mp-table-box") || this.root)?.appendChild(menuEl);
+      }
+      if (this.shell?.refs) this.shell.refs.colMenuEl = menuEl;
+    }
+    bindMpColumnContextMenu(refs.resultsTable, menuEl, {
+      protectedColIndices: new Set(getStickyCols()),
+      onVisibilityChange: () => syncMpStickyOffsets(refs.resultsTable, getStickyCols())
+    });
   }
 
   onClear() {
@@ -225,6 +267,7 @@ export class UvaMpService {
     this.lotesDuplicados = [];
     this.excelLoaded = false;
     this.lastReviewKey = "";
+    this.lastReviewAllKey = "";
     this.hideResumenTodasFechas();
     this.hideSingleDateResults();
   }
@@ -385,7 +428,7 @@ export class UvaMpService {
           <div class="${p("excel-insight__ring")}" aria-hidden="true">
             <svg viewBox="0 0 100 100" shape-rendering="geometricPrecision">
               <defs>
-                <linearGradient id="uvampInsightRingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <linearGradient id="pmparInsightRingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                   <stop offset="0%" stop-color="#5eb8d9"></stop>
                   <stop offset="100%" stop-color="#22c55e"></stop>
                 </linearGradient>
@@ -497,6 +540,8 @@ export class UvaMpService {
     if (refs.resultsHeader) refs.resultsHeader.innerHTML = "";
     if (refs.resultsBody) refs.resultsBody.innerHTML = "";
     if (refs.resultsTable) refs.resultsTable.hidden = true;
+    if (refs.tableSearchWrap) refs.tableSearchWrap.hidden = true;
+    if (refs.tableSearch) refs.tableSearch.value = "";
     if (refs.resultsSection) {
       refs.resultsSection.classList.remove(
         "is-visible",
@@ -509,6 +554,7 @@ export class UvaMpService {
     this.cartillaAnalysis?.clear();
     this.processedRows = [];
     this.lastReviewKey = "";
+    this.lastReviewAllKey = "";
     this.syncActionButtons();
   }
 
@@ -571,6 +617,16 @@ export class UvaMpService {
     this.lastReviewKey = `MPCUV|${fechaISO}`;
     this.syncActionButtons();
     hydrateLucideIcons(this.root);
+
+    const refs = this.shell.refs;
+    if (refs.tableSearchWrap) refs.tableSearchWrap.hidden = false;
+    if (refs.tableSearch?.value) {
+      refs.tableSearch.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+
+    this.bindResultsColumnMenu();
+    applyMpColumnVisibility(refs.resultsTable);
+    requestAnimationFrame(() => syncMpStickyOffsets(refs.resultsTable, getStickyCols()));
 
     this.cartillaAnalysis?.present({
       rows,
@@ -745,6 +801,8 @@ export class UvaMpService {
 
     this.hideSingleDateResults();
     this.renderResumenTodasFechas(items);
+    this.lastReviewAllKey = CARTILLA_CODE;
+    this.syncActionButtons();
 
     showMpDialog({
       icon: items.some((item) => item.tieneErrores) ? "warning" : "success",
@@ -756,19 +814,31 @@ export class UvaMpService {
   }
 
   onExportErrors() {
-    const fechaISO = this.shell.refs.inspectionSelect?.value || "";
-    if (!fechaISO) {
+    if (!this.excelLoaded || !this.rawRows.length) {
       showMpDialog({
         icon: "warning",
-        title: t("uvaMp.missingInspectionTitle"),
-        html: "Selecciona una <b>fecha de inspección</b> para exportar con errores resaltados."
+        title: t("plagasArandano.attention"),
+        text: t("uvaMp.noFile")
+      });
+      return;
+    }
+    if (this.lastReviewAllKey !== CARTILLA_CODE) {
+      showMpDialog({
+        icon: "warning",
+        title: "Revisión requerida",
+        html: "Primero pulsa <b>Todo</b> para revisar todas las fechas; luego podrás descargar el Excel completo."
       });
       return;
     }
 
     if (!ensureXlsxLibrary()) return;
 
-    const rows = this.getRowsForDate(fechaISO);
+    // Botón de «Todo el Excel»: todas las fechas del archivo.
+    const rows = this.rawRows.map((row, idx) => {
+      const copy = [...row];
+      copy._filaNum = idx + 1;
+      return copy;
+    });
     if (!rows.length) {
       showMpDialog({ icon: "info", title: t("plagasArandano.attention"), text: t("plagasArandano.errorArchivoVacio") });
       return;
@@ -778,8 +848,7 @@ export class UvaMpService {
     ejecutarValidacion(rows);
 
     const wsData = buildFullSheetDataWithErrors(rows, this.headers, getTotalColumnas(), getCellMeta);
-    const fechaLabel = formatISOToDMY(fechaISO).replaceAll("-", "");
-    writeUvaMpWorkbook(`UVA_MPCUV_Errores_${fechaLabel}.xlsx`, "MPCUV_Errores", wsData);
+    writeUvaMpWorkbook(`UVA_MPCUV_Errores_TodasFechas.xlsx`, "MPCUV_Errores", wsData);
 
     showMpDialog({
       icon: "success",

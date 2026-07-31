@@ -1,7 +1,7 @@
 {
   "mp": {
     "perfil": "mp",
-    "descripcion": "Arándano / Espárrago MP — 15 SAP + Nota Condición (no SAP) + 5 SAP",
+    "descripcion": "Arándano / Espárrago / Palta MP — 15 SAP + Nota Condición (no SAP) + 5 SAP",
     "layout": "split_15_nota_5",
     "nota_condicion_excel": 28,
     "despues_bloque_excel": 34,
@@ -73,9 +73,9 @@
   },
   "plagas": {
     "perfil": "plagas",
-    "descripcion": "Espárrago plagas IPP/ISP — bloque continuo de 21 columnas (Excel 13–33; Hora Insp en 34)",
+    "descripcion": "Espárrago IPP/ISP y Arándano PMPAR — bloque continuo de 21 columnas (Excel 13–33; Hora Insp en 34)",
     "layout": "bloque_continuo_21",
-    "cartillas": ["IPP", "ISP"],
+    "cartillas": ["IPP", "ISP", "PMPAR"],
     "despues_de_header": "Med Muestra",
     "inicio_excel": 13,
     "fin_excel": 33,

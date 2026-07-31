@@ -545,7 +545,7 @@ export class UvaPlagasService {
           <div class="${p("excel-insight__ring")}" aria-hidden="true">
             <svg viewBox="0 0 100 100" shape-rendering="geometricPrecision">
               <defs>
-                <linearGradient id="uvaPlagasInsightRingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <linearGradient id="pmparInsightRingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                   <stop offset="0%" stop-color="#5eb8d9"></stop>
                   <stop offset="100%" stop-color="#22c55e"></stop>
                 </linearGradient>

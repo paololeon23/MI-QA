@@ -4,23 +4,31 @@ import {
   buildPrimaryAiPrompt,
   buildPrimaryGenericSummary,
   getPrimaryAiRouteContext,
+  getAiLanguageCode,
   isPrimaryAiRoute,
   isPrimaryFactualQuestion,
   isPrimarySummaryQuestion,
+  isConversationalAdviceQuestion,
   isWeakPrimaryGeminiAnswer,
-  resolveConversationTurn,
-  resolveMentionedCropId
+  isPrimaryGreetingQuestion,
+  resolveConversationTurn
 } from "./primary-ai-assistant.service.js";
 import { ensureCropHectaresData } from "../config/crop-hectares.registry.js?v=20260800";
 import { finalizeIncognitoAiText } from "../utils/brand-pixel.util.js";
+import { i18nService } from "./i18n.service.js";
 
 /**
  * Arquitectura:
  * 1) JSON / HTML = precisión (fuente de verdad)
- * 2) Gemini = solo redacta el resumen con esos hechos
+ * 2) Gemini (generateContent) = redacta con tono de IA (sin inventar)
+ *
+ * Modelos válidos: gemini-2.5-flash, gemini-2.0-flash, …
+ * No usar nombres inventados (gemini-3.6-flash, etc.) → 400/404.
  */
 
 const GEMINI_TIMEOUT_MS = 15000;
+const RETRYABLE_STATUS = new Set([429, 503]);
+const NEXT_MODEL_STATUS = new Set([400, 404]);
 
 /** Config efectiva: defaults públicos + override local (gitignore) si existe. */
 let geminiConfig = { ...geminiConfigDefaults };
@@ -46,14 +54,18 @@ async function ensureGeminiConfigLoaded() {
 function friendlyApiError(err) {
   const msg = String(err?.message || "");
   const lower = msg.toLowerCase();
+  const status = Number(err?.status) || 0;
   if (lower.includes("timeout") || lower.includes("timed out") || err?.name === "TimeoutError") {
     return "La IA tardó demasiado.";
   }
   if (lower.includes("failed to fetch") || lower.includes("network")) {
-    return "No hay conexión con Gemini (red o API).";
+    return "No hay conexión con la IA (red o API).";
   }
-  if (lower.includes("prepayment") || lower.includes("credits") || lower.includes("billing")) {
-    return "Los créditos de Gemini se agotaron.";
+  if (status === 429 || lower.includes("quota") || lower.includes("rate")) {
+    return "Cuota Gemini agotada o límite de peticiones (429). Espera un momento.";
+  }
+  if (status === 503 || lower.includes("unavailable") || lower.includes("overloaded")) {
+    return "Gemini no está disponible ahora (503). Reintenta en unos segundos.";
   }
   if (
     lower.includes("api key") ||
@@ -61,9 +73,10 @@ function friendlyApiError(err) {
     lower.includes("permission") ||
     lower.includes("unrestricted") ||
     lower.includes("blocked") ||
-    lower.includes("403")
+    status === 403 ||
+    status === 401
   ) {
-    return "La API key fue rechazada. En AI Studio restrínela a Gemini API o crea una auth key nueva.";
+    return "La API key de Gemini fue rechazada. Revisa GEMINI_API_KEY / gemini.config.local.js.";
   }
   return msg || "Error de red o API";
 }
@@ -91,6 +104,24 @@ function timeoutSignal(ms) {
   return controller.signal;
 }
 
+function sleep(ms, signal) {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(signal.reason || new DOMException("Aborted", "AbortError"));
+      return;
+    }
+    const timer = setTimeout(resolve, ms);
+    signal?.addEventListener?.(
+      "abort",
+      () => {
+        clearTimeout(timer);
+        reject(signal.reason || new DOMException("Aborted", "AbortError"));
+      },
+      { once: true }
+    );
+  });
+}
+
 function authHeaders() {
   return {
     "Content-Type": "application/json",
@@ -115,35 +146,6 @@ export function extractGeminiAnswerText(data) {
     const text = (visible.length ? visible : parts.map((p) => p?.text).filter(Boolean)).join("\n").trim();
     return cleanModelText(text);
   }
-
-  if (typeof data?.output_text === "string" && data.output_text.trim()) {
-    return cleanModelText(data.output_text);
-  }
-  if (typeof data?.outputText === "string" && data.outputText.trim()) {
-    return cleanModelText(data.outputText);
-  }
-
-  const outputs = data?.outputs || data?.output || [];
-  if (Array.isArray(outputs)) {
-    const chunks = outputs
-      .map((o) => o?.text?.text || o?.text || "")
-      .filter((t) => typeof t === "string" && t.trim());
-    if (chunks.length) return cleanModelText(chunks.join("\n"));
-  }
-
-  const steps = data?.steps || [];
-  if (Array.isArray(steps)) {
-    const texts = [];
-    for (const step of steps) {
-      const content = step?.modelOutput?.content || step?.model_output?.content || [];
-      for (const c of content) {
-        const t = c?.text?.text || c?.text || "";
-        if (typeof t === "string" && t.trim()) texts.push(t.trim());
-      }
-    }
-    if (texts.length) return cleanModelText(texts.join("\n"));
-  }
-
   return "";
 }
 
@@ -155,6 +157,26 @@ function buildGenerationConfig(options = {}) {
     topK: options.topK ?? base.topK ?? 40,
     maxOutputTokens: options.maxOutputTokens ?? base.maxOutputTokens ?? 280
   };
+}
+
+/** Modelos reales de AI Studio (evitar 3.x inventados → 400/404). */
+function normalizeGeminiModels(list = []) {
+  const allowed = [];
+  const seen = new Set();
+  for (const raw of list) {
+    let m = String(raw || "")
+      .trim()
+      .replace(/^google\//, "");
+    if (!m || m.includes("/")) continue;
+    // Alias peligrosos que ya generaron 404/400 en el dashboard
+    if (/gemini-3\.\d/i.test(m) || /gemini-3\.6/i.test(m)) {
+      m = "gemini-2.5-flash";
+    }
+    if (seen.has(m)) continue;
+    seen.add(m);
+    allowed.push(m);
+  }
+  return allowed.length ? allowed : ["gemini-2.5-flash", "gemini-2.0-flash"];
 }
 
 async function postGemini(url, body, options = {}) {
@@ -196,73 +218,87 @@ async function postGemini(url, body, options = {}) {
   return text.trim();
 }
 
-async function requestGenerateContent(model, prompt, options = {}, withExtras = true) {
+/**
+ * generateContent — mismo patrón que AI Studio recomienda:
+ * POST .../models/gemini-2.5-flash:generateContent
+ */
+async function requestGenerateContent(model, prompt, options = {}) {
   const { endpointBase, systemInstruction } = geminiConfig;
   const url = `${endpointBase}/${encodeURIComponent(model)}:generateContent`;
   const generationConfig = buildGenerationConfig(options);
+  const fullPrompt = systemInstruction ? `${systemInstruction}\n\n${prompt}` : prompt;
 
-  if (withExtras) {
-    generationConfig.thinkingConfig = { thinkingBudget: 0 };
-  }
-
-  const body = {
-    contents: [{ role: "user", parts: [{ text: prompt }] }],
-    generationConfig
-  };
-  if (withExtras && systemInstruction) {
-    body.systemInstruction = { parts: [{ text: systemInstruction }] };
-  } else if (!withExtras && systemInstruction) {
-    // Sin systemInstruction ni thinking: prompt autocontenido
-    body.contents = [{ parts: [{ text: `${systemInstruction}\n\n${prompt}` }] }];
-    delete body.generationConfig.thinkingConfig;
-  }
-
-  return postGemini(url, body, options);
-}
-
-async function requestInteractions(model, prompt, options = {}) {
-  const { interactionsUrl, systemInstruction } = geminiConfig;
-  const input = systemInstruction ? `${systemInstruction}\n\n---\n${prompt}` : prompt;
-  return postGemini(interactionsUrl, { model, input }, options);
-}
-
-async function requestGeminiModel(model, prompt, options = {}) {
-  // 1) generateContent (fiable en navegador)
+  // 1) Cuerpo mínimo (como el ejemplo de AI Studio) — evita 400 por campos extra
   try {
-    return await requestGenerateContent(model, prompt, options, true);
+    return await postGemini(
+      url,
+      {
+        contents: [{ parts: [{ text: fullPrompt }] }],
+        generationConfig
+      },
+      options
+    );
   } catch (err) {
-    if (err?.name === "AbortError" && options.signal?.aborted) throw err;
-    if (err?.isTimeout || err?.name === "TimeoutError") throw err;
-    const msg = String(err?.message || "").toLowerCase();
-    if (msg.includes("thinking") || msg.includes("unknown name") || msg.includes("systeminstruction")) {
-      try {
-        return await requestGenerateContent(model, prompt, options, false);
-      } catch (err2) {
-        if (err2?.name === "AbortError" && options.signal?.aborted) throw err2;
-      }
+    const status = Number(err?.status) || 0;
+    if (status === 404 || status === 429 || status === 503) throw err;
+    // 2) Reintento aún más simple (sin generationConfig)
+    if (status === 400) {
+      return postGemini(
+        url,
+        {
+          contents: [{ parts: [{ text: fullPrompt }] }]
+        },
+        options
+      );
     }
-  }
-
-  // 2) Interactions API (doc nueva)
-  try {
-    return await requestInteractions(model, prompt, options);
-  } catch (err) {
-    if (err?.name === "AbortError" && options.signal?.aborted) throw err;
     throw err;
   }
 }
 
+async function requestGeminiModel(model, prompt, options = {}) {
+  const maxAttempts = 3;
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await requestGenerateContent(model, prompt, options);
+    } catch (err) {
+      lastError = err;
+      if (err?.name === "AbortError" && options.signal?.aborted) throw err;
+      if (err?.isTimeout || err?.name === "TimeoutError") throw err;
+
+      const status = Number(err?.status) || 0;
+      if (NEXT_MODEL_STATUS.has(status)) throw err;
+
+      if (RETRYABLE_STATUS.has(status) && attempt < maxAttempts) {
+        const waitMs = 600 * attempt * attempt;
+        await sleep(waitMs, options.signal);
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw lastError || new Error("No se pudo contactar a Gemini.");
+}
+
+function hasGeminiKey() {
+  const key = String(geminiConfig.apiKey || "").trim();
+  return Boolean(key) && !key.startsWith("TU_");
+}
+
 export async function generateGeminiText(prompt, options = {}) {
   await ensureGeminiConfigLoaded();
-  const { apiKey, model, fallbackModels = [] } = geminiConfig;
-  if (!apiKey || apiKey.startsWith("TU_")) {
-    throw new Error("Falta configurar la API key de Gemini.");
+
+  if (!hasGeminiKey()) {
+    throw new Error("Falta configurar GEMINI_API_KEY (o apiKey en gemini.config.local.js).");
   }
 
   const preferred = Array.isArray(options.preferModels) ? options.preferModels : [];
-  const models = [...preferred, model, ...fallbackModels].filter(
-    (m, i, arr) => m && arr.indexOf(m) === i
-  );
+  const models = normalizeGeminiModels([
+    ...preferred,
+    geminiConfig.model,
+    ...(geminiConfig.fallbackModels || [])
+  ]);
 
   let lastError = null;
   for (const candidate of models) {
@@ -271,18 +307,20 @@ export async function generateGeminiText(prompt, options = {}) {
     } catch (err) {
       lastError = err;
       if (err?.name === "AbortError" && options.signal?.aborted) throw err;
-      // Timeout: probar siguiente modelo una vez más rápido
       if (err?.isTimeout || err?.name === "TimeoutError") continue;
+      const status = Number(err?.status) || 0;
+      // 400/404 → siguiente modelo; 429/503 ya reintentaron dentro del modelo
+      if (NEXT_MODEL_STATUS.has(status) || RETRYABLE_STATUS.has(status)) continue;
     }
   }
 
-  throw lastError || new Error("No se pudo contactar a Gemini.");
+  throw lastError || new Error(friendlyApiError(lastError) || "No se pudo contactar a Gemini.");
 }
 
 /**
  * Datos (JSON/HTML) → precisión.
- * Gemini → solo redacta resumen con esos hechos.
- * options.history: { lastCropId, lastIntent, lastQuestion } para seguir la conversación.
+ * Gemini → conversación + tips anclados a esos hechos.
+ * options.history: { lastCropId, lastIntent, lastQuestion, messages[] }
  */
 export async function generatePrimaryAssistantReply(userQuestion = "", options = {}) {
   await ensureGeminiConfigLoaded();
@@ -290,6 +328,27 @@ export async function generatePrimaryAssistantReply(userQuestion = "", options =
   const ctx = getPrimaryAiRouteContext(hash);
   const question = String(userQuestion || "").trim();
   const historyIn = options.history || {};
+  const uiLang = getAiLanguageCode();
+  const nonSpanishUi = !String(uiLang).startsWith("es");
+
+  const localizedFallback = () => {
+    try {
+      const v = i18nService?.translate?.("primaryAi.localFallback");
+      if (v && v !== "primaryAi.localFallback") return v;
+    } catch {
+      /* ignore */
+    }
+    if (String(uiLang).startsWith("en")) {
+      return "i already have the on-screen data. ask again in a short sentence.";
+    }
+    if (String(uiLang).startsWith("fr")) {
+      return "j'ai déjà les données à l'écran. repose ta question en une phrase courte.";
+    }
+    if (String(uiLang).startsWith("zh")) {
+      return "屏幕数据已就绪。请用一句话再问一次。";
+    }
+    return "ya tengo los datos en pantalla. vuelve a preguntar en una frase corta.";
+  };
 
   try {
     await Promise.race([
@@ -306,8 +365,8 @@ export async function generatePrimaryAssistantReply(userQuestion = "", options =
     finalizeIncognitoAiText(buildPrimaryGenericSummary(hash));
   const historyOut =
     typeof localResult === "object" && localResult?.history
-      ? localResult.history
-      : historyIn;
+      ? { ...historyIn, ...localResult.history }
+      : { ...historyIn };
   const effectiveQuestion =
     (typeof localResult === "object" && localResult?.effectiveQuestion) || question;
 
@@ -317,49 +376,64 @@ export async function generatePrimaryAssistantReply(userQuestion = "", options =
     history: historyOut
   });
 
+  // Fuera de alcance / saludo: el texto local ya respeta idioma (saludo) o es contextual.
   if (!ctx.allowed) {
-    return pack(dataText, "data");
+    return pack(nonSpanishUi ? localizedFallback() : dataText, "data");
   }
 
-  const qNorm = String(effectiveQuestion || "")
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
-
-  const wantsDataOnly =
-    isPrimaryFactualQuestion(effectiveQuestion) ||
-    Boolean(resolveMentionedCropId(effectiveQuestion)) ||
-    Boolean(historyOut.lastCropId && /cuales|variedad|fundo|hectarea|detalle/.test(qNorm)) ||
-    /\b(cuant|fundo|hectarea|ha\b|variedad|parcela|codigo|item|filtro)\b/.test(qNorm);
-
-  // Preguntas de dato / seguimiento de dato: sin IA inventando
-  if (question && wantsDataOnly && !isPrimarySummaryQuestion(effectiveQuestion)) {
-    return pack(dataText, "data");
+  if (isPrimaryGreetingQuestion(effectiveQuestion) || isPrimaryGreetingQuestion(question)) {
+    return pack(dataText, "greeting");
   }
 
+  const isAdvice = isConversationalAdviceQuestion(effectiveQuestion);
+  const isFactual = !isAdvice && isPrimaryFactualQuestion(effectiveQuestion);
+  // Tip local anclado a datos: no reescribir (evita cifras rotas tipo «con 6 con 6»)
+  if (isAdvice && /\btip:\s*/i.test(dataText)) {
+    return pack(dataText, "data");
+  }
+  // Datos duros ya resueltos en JSON: no pasar por Gemini (evita fugas de prompt en inglés)
+  const groundedLocal =
+    /\d+(?:\.\d+)?\s*ha/i.test(dataText) ||
+    /variedad con m[aá]s hect|fundo con m[aá]s hect|top\s*\d|suma .+ ha/i.test(dataText) ||
+    /gen[eé]tica con m[aá]s variedades|hay \d+ variedades en el cat[aá]logo|hay \d+ gen[eé]ticas/i.test(
+      dataText
+    );
+  if (isFactual && groundedLocal) {
+    return pack(dataText, "data");
+  }
+  const defaultAsk =
+    i18nService?.translate?.("primaryAi.defaultAsk") ||
+    "Dame un resumen claro de este módulo.";
   const prompt = buildPrimaryAiPrompt(
-    effectiveQuestion || "Dame un resumen claro de este módulo.",
+    effectiveQuestion || question || defaultAsk,
     hash,
-    dataText
+    dataText,
+    { advice: isAdvice || !isFactual }
   );
 
   try {
     const text = await generateGeminiText(prompt, {
       signal: options.signal,
       timeoutMs: GEMINI_TIMEOUT_MS,
-      temperature: 0.15,
-      topP: 0.35,
-      maxOutputTokens: 220
+      temperature: isFactual ? 0.15 : isAdvice ? 0.45 : 0.3,
+      topP: isFactual ? 0.35 : 0.55,
+      maxOutputTokens: isFactual ? 420 : 520
     });
 
-    if (isWeakPrimaryGeminiAnswer(text, effectiveQuestion)) {
-      return pack(dataText, "data");
+    if (isWeakPrimaryGeminiAnswer(text, effectiveQuestion, dataText)) {
+      // No devolver borrador en español si la UI no es español.
+      return pack(nonSpanishUi ? localizedFallback() : dataText, "data");
     }
 
-    return pack(text, "gemini-summary");
+    const softened = String(text || "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .replace(/^([¡¿]?)([A-ZÁÉÍÓÚÑÜ])/, (_, p, c) => `${p}${c.toLowerCase()}`);
+
+    return pack(softened, isAdvice ? "llm-advice" : isFactual ? "llm-data" : "llm-chat");
   } catch (err) {
     if (err?.name === "AbortError" && options.signal?.aborted) throw err;
-    return pack(dataText, "data");
+    return pack(nonSpanishUi ? localizedFallback() : dataText, "data");
   }
 }
 

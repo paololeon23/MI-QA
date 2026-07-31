@@ -75,6 +75,13 @@ class ShellController {
 
     document.querySelectorAll("[data-sidebar-group].is-flyout-open").forEach((openGroup) => {
       openGroup.classList.remove("is-flyout-open");
+      const flyout = openGroup.querySelector("[data-sidebar-flyout]");
+      if (flyout) {
+        flyout.style.top = "";
+        flyout.style.bottom = "";
+        flyout.style.maxHeight = "";
+        flyout.style.overflowY = "";
+      }
     });
   }
 

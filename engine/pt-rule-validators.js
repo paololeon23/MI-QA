@@ -11,7 +11,9 @@ function normalizarDestino(destino) {
     EUROPA: "EUROPA",
     CANADA: "CANADA",
     USA: "USA",
-    BRASIL: "BRASIL"
+    BRASIL: "LATAM",
+    COLOMBIA: "LATAM",
+    LATAM: "LATAM"
   };
   const upper = normalizarTexto(destino).toUpperCase();
   return map[upper] || upper;
@@ -211,11 +213,12 @@ export function evaluarTrazabilidadPt(filas, regla, contexto) {
       filasAfectadasSet.add(registro.fila);
     }
 
-    const varNombre = varEntry?.variedad || "";
-    if (varNombre === "Sekoya Pop Orgánica" && traz[4] !== "E") {
-      detalle.push(crearDetalle(registro.fila, traz, "Falta letra E en trazabilidad (Sekoya Pop Orgánica)", "compuesta"));
-      filasAfectadasSet.add(registro.fila);
-    }
+    // Desactivado por ahora: regla letra E en Sekoya Pop Orgánica ya no aplica
+    // const varNombre = varEntry?.variedad || "";
+    // if (varNombre === "Sekoya Pop Orgánica" && traz[4] !== "E") {
+    //   detalle.push(crearDetalle(registro.fila, traz, "Falta letra E en trazabilidad (Sekoya Pop Orgánica)", "compuesta"));
+    //   filasAfectadasSet.add(registro.fila);
+    // }
   });
 
   return { detalle, filasAfectadasSet, cols: [colTraz] };

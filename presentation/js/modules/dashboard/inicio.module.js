@@ -26,17 +26,9 @@ import {
 import { consumeGlobalSearchJump } from "../../utils/global-search-jump.util.js";
 import { maskIncognitoJsonText } from "../../utils/brand-pixel.util.js";
 
-const FUNDO_THEMES = {
-  A9: { label: "Fundo A9", accent: "#0E1B40", soft: "rgba(125, 226, 255, 0.18)", border: "rgba(31, 54, 104, 0.28)" },
-  C5: { label: "Fundo C5", accent: "#1F3668", soft: "rgba(125, 226, 255, 0.14)", border: "rgba(31, 54, 104, 0.22)" },
-  C6: { label: "Fundo C6", accent: "#3d5a8a", soft: "rgba(125, 226, 255, 0.2)", border: "rgba(61, 90, 138, 0.28)" },
-  LN: { label: "Fundo LN", accent: "#1F3668", soft: "rgba(125, 226, 255, 0.24)", border: "rgba(125, 226, 255, 0.4)" },
-  LC: { label: "Fundo LC", accent: "#3d5a8a", soft: "rgba(125, 226, 255, 0.16)", border: "rgba(61, 90, 138, 0.24)" }
-};
-
 function fundoDisplayLabel(fundo) {
-  const theme = FUNDO_THEMES[fundo];
-  return maskIncognitoJsonText(theme?.label ?? `Fundo ${fundo}`);
+  const code = maskIncognitoJsonText(fundo);
+  return i18nService.translate("inicio.fundoNamed", { code });
 }
 
 let activeFundoId = "";
@@ -447,7 +439,12 @@ function renderTablesSection() {
       <p class="inicio-varieties__tables-subtitle" data-i18n="inicio.tablesSubtitle"></p>
     </div>
 
-    <div class="inicio-varieties__tabs" id="fundoTabsList" role="tablist" aria-label="Fundos">
+    <div
+      class="inicio-varieties__tabs"
+      id="fundoTabsList"
+      role="tablist"
+      data-i18n-aria-label="inicio.chartFilterAllFundos"
+    >
       ${buildFundoTabsMarkup()}
     </div>
 
@@ -466,7 +463,11 @@ function renderTablesSection() {
             />
           </label>
           <label class="inicio-varieties__table-select-wrap">
-            <select class="inicio-varieties__table-select" id="selFundoTableEtapa" aria-label="Etapa">
+            <select
+              class="inicio-varieties__table-select"
+              id="selFundoTableEtapa"
+              data-i18n-aria-label="inicio.chartFilterEtapa"
+            >
               ${buildEtapaFilterOptionsMarkup(activeFundoId)}
             </select>
           </label>

@@ -73,6 +73,18 @@ function findNotaCondicionJs(headers) {
   for (let i = 0; i < headers.length; i += 1) {
     if (isNotaCondicionHeader(normHeader(headers[i]))) return i;
   }
+  // Fallback: "Tipo de formato" debería estar en JS 28; si aparece antes, Nota está justo delante
+  for (let i = 0; i < headers.length; i += 1) {
+    const n = normHeader(headers[i]);
+    if (n.includes("tipo de formato") || n.includes("tipo formato")) {
+      return Math.max(0, i - 1);
+    }
+  }
+  // Fallback: Hora Insp debería estar en JS 33; si está antes, Nota ≈ hora - 6
+  const horaJs = findHoraInspJs(headers);
+  if (horaJs >= 0 && horaJs < AFTER_SAP5_JS) {
+    return Math.max(0, horaJs - 6);
+  }
   return -1;
 }
 
@@ -207,7 +219,7 @@ export function expandMissingSapLayout(headers, dataRows = [], perfil = null) {
 }
 
 /**
- * Plagas IPP/ISP: bloque continuo de 21 columnas (Excel 13–33) antes de Hora Insp / Prodiplona.
+ * Plagas IPP/ISP/PMPAR: bloque continuo de 21 columnas (Excel 13–33) antes de Hora Insp / Prodiplona.
  * @param {unknown[]} headers
  * @param {unknown[][]} dataRows
  * @param {object|null} [perfil] perfil plagas desde sap-columnas.json

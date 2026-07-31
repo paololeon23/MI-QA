@@ -28,19 +28,29 @@
   left: 196px;
   min-width: 260px;
   width: 260px;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 #agvMpApp .agv-mp-table.agv-mp-table--esparrago .agv-mp-sticky-col-9 {
   left: 456px;
   min-width: 118px;
   width: 118px;
+  max-width: 118px;
+  box-shadow: 2px 0 6px rgba(15, 23, 42, 0.06);
 }
 
 #agvMpApp .agv-mp-table.agv-mp-table--esparrago thead th.agv-mp-sticky-col {
-  z-index: 6;
+  z-index: 12;
   background: #f1f5f9;
 }
 
 #agvMpApp .agv-mp-table.agv-mp-table--esparrago tbody td.agv-mp-sticky-col {
   z-index: 4;
+}
+
+#agvMpApp .agv-mp-table.agv-mp-table--esparrago thead th {
+  z-index: 10;
+  background: #f1f5f9;
 }

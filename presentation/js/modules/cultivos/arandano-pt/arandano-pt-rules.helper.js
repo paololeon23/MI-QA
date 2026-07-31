@@ -5,6 +5,7 @@ import {
 } from "../../../../../engine/rule-engine.js";
 import { buildPtCompuestaColumnMap } from "../../../../../engine/pt-rule-validators.js";
 import { CARTILLA_ORDER } from "./arandano-pt.config.js";
+import { filterOutPtSapCols } from "../shared/mp-results-perf.util.js";
 
 export const REGLAS_POR_CARTILLA = {
   PTHPA: "rules/modulos/arandano-pt-pthpar.rules.json",
@@ -43,7 +44,7 @@ export function buildProfileFromReglas(reglas) {
       tPulpa: js(cfg["columna-t-pulpa"]),
       trazabilidad: js(cfg["columna-trazabilidad"])
     },
-    columnasFront: ui["columnas-front"] || [],
+    columnasFront: filterOutPtSapCols(ui["columnas-front"] || []),
     headerLabels: Object.fromEntries(
       Object.entries(ui["header-labels"] || {}).map(([k, v]) => [Number(k), v])
     ),

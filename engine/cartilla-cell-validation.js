@@ -67,9 +67,10 @@ function isValidHoraHHMM(val) {
 
 function compareColumnValues(val, other, ctx) {
   if (ctx?.normalizeDate) {
-    const a = ctx.normalizeDate(val) || cellDisplayValue(val);
-    const b = ctx.normalizeDate(other) || cellDisplayValue(other);
-    if (a && b) return a === b;
+    const aIso = ctx.normalizeDate(val);
+    const bIso = ctx.normalizeDate(other);
+    // Solo comparar como fechas si ambas se normalizan; evita ISO vs texto suelto
+    if (aIso && bIso) return aIso === bIso;
   }
   return cellDisplayValue(val) === cellDisplayValue(other);
 }
@@ -107,13 +108,21 @@ export function getCellValidationIssues(idx, rawVal, ctx, config, options = {}) 
             colIdx
           });
         } else if (rule.tipo === "valor_exacto" && cellVal && !matchesExactValue(cellVal, rule.valor)) {
-          issues.push({ kind: "value", message: ruleMessage(rule, "Valor incorrecto"), colIdx });
+          issues.push({
+            kind: "value",
+            message: runtimeRuleMessage(config, colIdx, rule, cellVal, "igualdad", ruleMessage(rule, "Valor incorrecto")),
+            colIdx
+          });
         } else if (
           rule.tipo === "texto_exacto" &&
           cellVal &&
           cellVal.toLowerCase() !== String(rule.valor).toLowerCase()
         ) {
-          issues.push({ kind: "value", message: ruleMessage(rule, "Texto incorrecto"), colIdx });
+          issues.push({
+            kind: "value",
+            message: runtimeRuleMessage(config, colIdx, rule, cellVal, "igualdad", ruleMessage(rule, "Texto incorrecto")),
+            colIdx
+          });
         } else if (
           rule.tipo === "contiene_texto" &&
           cellVal &&

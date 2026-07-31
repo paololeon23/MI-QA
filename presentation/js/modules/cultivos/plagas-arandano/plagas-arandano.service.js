@@ -4,13 +4,19 @@ import { hydrateLucideIcons } from "../../../utils/lucide-icon.util.js";
 import { showPlagasDialog } from "./plagas-arandano-dialog.js";
 import { cargarReglasDesdeRuta } from "../../../../../engine/rule-engine.js";
 import { mergeValidacionesDesdeReglas } from "../../../../../engine/cartilla-rules.adapter.js";
-import { ejecutarValidacionPlagasArandano } from "./plagas-arandano.validation.js";
+import {
+  ejecutarValidacionPlagasArandano,
+  sortErrorRowsForDisplay
+} from "./plagas-arandano.validation.js";
 import { translateExcelHeader } from "../../../utils/excel-header-i18n.util.js";
 import { refreshTranslatedHeaderRow } from "../../../utils/table-header-i18n.util.js";
 import {
   createCartillaAnalysisController,
   headersToAnalysisColumns
 } from "../shared/cartilla-analysis.js";
+import { loadSapColumnasCatalog, getSapPerfil } from "../../../config/sap-columnas.registry.js";
+import { expandPlagasSapLayout } from "../shared/mp-sap-layout.util.js";
+import { applyDateDisplayFormatToRows } from "../shared/excel-date-format.util.js";
 
 const VALIDACIONES_PATH = "presentation/data/plagas-arandano-validaciones.json";
 const REGLAS_PATH = "rules/modulos/arandano-plagas.rules.json";
@@ -137,6 +143,7 @@ export class PlagasArandanoService {
     this.varMap = {};
     this.rawData = [];
     this.processedData = [];
+    this.lastLotesDuplicados = [];
     this.columns = [];
     this.excelLoaded = false;
     this.columnsToShow = [];
@@ -156,7 +163,8 @@ export class PlagasArandanoService {
     const [rulesRes, varRes, reglasModulo] = await Promise.all([
       fetch(`${VALIDACIONES_PATH}?v=${version}`),
       fetch(`${VAR_MAP_PATH}?v=${version}`),
-      cargarReglasDesdeRuta(`${REGLAS_PATH}?v=${version}`).catch(() => null)
+      cargarReglasDesdeRuta(`${REGLAS_PATH}?v=${version}`).catch(() => null),
+      loadSapColumnasCatalog(version).catch(() => null)
     ]);
     if (!rulesRes.ok || !varRes.ok) {
       throw new Error("No se pudieron cargar las reglas de Plagas Arándano");
@@ -249,7 +257,7 @@ export class PlagasArandanoService {
     return meta;
   }
 
-  validateArchivoOnLoad(rawSheet) {
+  validateArchivoOnLoad(rawSheet, { deferColumnCount = false } = {}) {
     const rules = this.config?.validacion_archivo || [];
     const skip = this.config?.filas_ignoradas_al_cargar ?? 5;
     const minRows = skip + 2;
@@ -263,6 +271,7 @@ export class PlagasArandanoService {
 
     for (const rule of rules) {
       if (rule.regla === "cantidad_columnas") {
+        if (deferColumnCount) continue;
         const expected = rule.valor ?? this.config?.total_columnas ?? 111;
         const headerRow = rawSheet[skip] || [];
         if (headerRow.length !== expected) {
@@ -438,6 +447,7 @@ export class PlagasArandanoService {
   resetDashboard() {
     this.rawData = [];
     this.processedData = [];
+    this.lastLotesDuplicados = [];
     this.columns = [];
     this.excelLoaded = false;
 
@@ -533,14 +543,21 @@ export class PlagasArandanoService {
     }
 
     const reader = new FileReader();
-    reader.onload = (ev) => {
+    reader.onload = async (ev) => {
+      try {
+        await loadSapColumnasCatalog(appConfig.cacheBustingVersion).catch(() => null);
+      } catch {
+        /* ok: sin catálogo no expandimos */
+      }
+
       const wb = window.XLSX.read(new Uint8Array(ev.target.result), { type: "array" });
       const rawSheet = window.XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {
         header: 1,
         raw: false
       });
 
-      const validation = this.validateArchivoOnLoad(rawSheet);
+      // Primero cartilla/cabecera; el conteo de columnas se valida tras expandir SAP.
+      const validation = this.validateArchivoOnLoad(rawSheet, { deferColumnCount: true });
       if (!validation.ok) {
         showPlagasDialog({
           icon: "error",
@@ -557,16 +574,45 @@ export class PlagasArandanoService {
       this.excelCabecera = this.parseExcelCabecera(rawSheet);
       this.renderExcelInsight();
 
-      let sheet = rawSheet.slice();
       const skip = this.config.filas_ignoradas_al_cargar || 5;
-      sheet.splice(0, skip);
+      const headerRow = rawSheet[skip] || [];
+      const dataRows = rawSheet
+        .slice(skip + 1)
+        .filter((row) => row.some((cell) => cell !== "" && cell !== null));
 
-      this.columns = sheet[0].map((header, i) => ({
+      // Mismas 21 SAP que espárrago plagas (Productor…Peso Bruto) si el Excel viene compacto.
+      const perfilPlagas = getSapPerfil("plagas");
+      const {
+        headers,
+        rows,
+        expanded,
+        insertedSap21
+      } = expandPlagasSapLayout(headerRow, dataRows, perfilPlagas);
+
+      const expectedCols = this.config?.total_columnas ?? 111;
+      if (headers.length !== expectedCols) {
+        const hasHora = headers.some((h) =>
+          String(h || "")
+            .toLowerCase()
+            .includes("hora insp")
+        );
+        if (!hasHora || headers.length < 34) {
+          showPlagasDialog({
+            icon: "error",
+            title: t("plagasArandano.error"),
+            text: t("plagasArandano.errorColumns", { count: expectedCols })
+          });
+          this.resetDashboard();
+          return;
+        }
+      }
+
+      this.columns = headers.map((header, i) => ({
         id: `col_${i + 1}`,
         header,
         originalIndex: i
       }));
-      this.rawData = sheet.slice(1).filter((row) => row.some((cell) => cell !== "" && cell !== null));
+      this.rawData = applyDateDisplayFormatToRows(rows, headers, [4, 20, 21, 41, 51, 77]);
 
       const idxCosecha = 19;
       const idxInspeccion = this.config.filtro_principal.indice_js;
@@ -592,12 +638,16 @@ export class PlagasArandanoService {
       this.syncFechas();
 
       const cartillaCode = this.config?.cartilla || "PMPAR";
-      const totalColumnas = this.config?.total_columnas || this.columns.length;
+      const totalColumnas = this.columns.length;
+      const sapNote =
+        expanded && insertedSap21 > 0
+          ? ` · huecos SAP plagas: <b>+${insertedSap21}</b>`
+          : "";
       showPlagasDialog({
         icon: "success",
         title: "Excel cargado",
-        html: `Cartilla <b>${htmlEscape(cartillaCode)}</b> · <b>${this.rawData.length}</b> registros · <b>${totalColumnas}</b> columnas`,
-        timer: 1800,
+        html: `Cartilla <b>${htmlEscape(cartillaCode)}</b> · <b>${this.rawData.length}</b> registros · <b>${totalColumnas}</b> columnas${sapNote}`,
+        timer: 2200,
         showConfirmButton: false
       });
     };
@@ -1156,9 +1206,14 @@ export class PlagasArandanoService {
     this.processedData = this.rawData.filter((r) => r[idxInspeccion] === this.inspectionSelect.value);
     this.limpiarMarcasValidacion(this.processedData);
     const { lotesDuplicados } = this.ejecutarValidacion(this.processedData);
+    this.lastLotesDuplicados = lotesDuplicados || [];
 
-    const filasConError = this.processedData.filter(
-      (r) => r._errorLote || (r._errors && r._errors.length > 0)
+    const filasConError = sortErrorRowsForDisplay(
+      this.processedData.filter(
+        (r) => r._errorLote || (r._errors && r._errors.length > 0)
+      ),
+      9,
+      this.lastLotesDuplicados
     );
     this.renderReviewStats(filasConError, lotesDuplicados);
     this.renderTable();
@@ -1219,8 +1274,12 @@ export class PlagasArandanoService {
     this.resultsHeader.innerHTML = "";
     this.resultsBody.innerHTML = "";
 
-    const filasConError = this.processedData.filter(
-      (r) => r._errorLote || (r._errors && r._errors.length > 0)
+    const filasConError = sortErrorRowsForDisplay(
+      this.processedData.filter(
+        (r) => r._errorLote || (r._errors && r._errors.length > 0)
+      ),
+      9,
+      this.lastLotesDuplicados || []
     );
 
     this.updateResultsHeader(filasConError);
@@ -1353,7 +1412,9 @@ export class PlagasArandanoService {
   }
 
   columnaExportComoNumero(jsCol) {
+    // 10 = Cant Muestra; 14–16 / 28–110 (exc. 71) = rangos numéricos de plagas
     return (
+      jsCol === 10 ||
       (jsCol >= 14 && jsCol <= 16) ||
       (jsCol >= 28 && jsCol <= 110 && jsCol !== 71)
     );
@@ -1365,6 +1426,8 @@ export class PlagasArandanoService {
     if (!this.columnaExportComoNumero(jsCol)) return val;
     const n = parseFlexibleNumber(val);
     if (Number.isNaN(n)) return valorCeldaParaMostrar(val);
+    // Cant Muestra: número con 2 decimales (500 → 500.00)
+    if (jsCol === 10) return { t: "n", v: n, z: "0.00" };
     return n;
   }
 
@@ -1401,6 +1464,9 @@ export class PlagasArandanoService {
     if (!cellClass) {
       if (val === undefined) return "";
       return val;
+    }
+    if (val && typeof val === "object" && "v" in val) {
+      return { ...val, s: this.estiloExportCeldaError(cellClass) };
     }
     return {
       v: val === undefined ? "" : val,

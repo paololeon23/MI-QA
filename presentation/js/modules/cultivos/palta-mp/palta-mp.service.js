@@ -13,7 +13,9 @@ import {
   getColLmrJs,
   getColLoteJs,
   getExcelCabecera,
-  getValidacionArchivo
+  getValidacionArchivo,
+  getPaltaMpValidaciones,
+  getStickyCols
 } from "./palta-mp.config.js";
 import {
   ejecutarValidacion,
@@ -38,7 +40,16 @@ import {
   buildLazyDateDetailPlaceholders,
   bindLazyDateDetailTables
 } from "../shared/mp-results-perf.util.js";
+import { expandMissingSapLayout } from "../shared/mp-sap-layout.util.js";
+import { applyDateDisplayFormatToRows } from "../shared/excel-date-format.util.js";
+import { loadSapColumnasCatalog, getSapPerfil } from "../../../config/sap-columnas.registry.js";
 import { createCartillaAnalysisController, headersToAnalysisColumns } from "../shared/cartilla-analysis.js";
+import {
+  applyMpColumnVisibility,
+  bindMpColumnContextMenu,
+  bindMpTableSearch
+} from "../shared/mp-column-menu.util.js";
+import { syncMpStickyOffsets } from "../shared/mp-sticky-offsets.util.js";
 
 function t(key, vars = {}) {
   let text = i18nService.translate(key);
@@ -46,6 +57,28 @@ function t(key, vars = {}) {
     text = text.replace(`{{${name}}}`, String(value));
   });
   return text;
+}
+
+function parseTempNumber(val) {
+  const raw = String(valorCelda(val) ?? "")
+    .trim()
+    .replace(",", ".");
+  if (!raw) return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Una sola observación si hay T° Transporte > T° Pulpa (no es error de celda). */
+function buildPaltaMpTempObservations(rows) {
+  const temps = getPaltaMpValidaciones()?.validaciones_resumen?.temperaturas;
+  const pulpaJs = (temps?.pulpa_excel ?? 79) - 1;
+  const transporteJs = (temps?.ambiente_excel ?? 81) - 1;
+  const hasMayor = rows.some((row) => {
+    const pulpa = parseTempNumber(row[pulpaJs]);
+    const transporte = parseTempNumber(row[transporteJs]);
+    return pulpa != null && transporte != null && transporte > pulpa;
+  });
+  return hasMayor ? [t("cartillaAnalysis.obsTransporteMayorPulpa")] : [];
 }
 
 function htmlEscape(value) {
@@ -87,13 +120,20 @@ export class PaltaMpService {
     this.lotesDuplicados = [];
     this.excelLoaded = false;
     this.lastReviewKey = "";
+    this.lastReviewAllKey = "";
     this.abortController = null;
     this.root = null;
+    this._sapInsertedJs = [];
+    this._sapLayoutNotice = null;
+    this.searchBound = false;
   }
 
   async init(appRoot) {
     this.root = appRoot;
-    await loadPaltaMpValidaciones(appConfig.cacheBustingVersion);
+    await Promise.all([
+      loadPaltaMpValidaciones(appConfig.cacheBustingVersion),
+      loadSapColumnasCatalog(appConfig.cacheBustingVersion).catch(() => null)
+    ]);
 
     this.shell = new CartillaShellUi({
       root: appRoot,
@@ -148,7 +188,9 @@ export class PaltaMpService {
     if (refs.runReviewBtn) refs.runReviewBtn.disabled = !canUseActions || !fecha;
     if (refs.exportBtn) refs.exportBtn.disabled = !hasCurrentReview;
     if (refs.reviewAllBtn) refs.reviewAllBtn.disabled = !canUseActions;
-    if (refs.exportExcelErroresBtn) refs.exportExcelErroresBtn.disabled = !canUseActions || !fecha;
+    if (refs.exportExcelErroresBtn) {
+      refs.exportExcelErroresBtn.disabled = !(canUseActions && this.lastReviewAllKey === CARTILLA_CODE);
+    }
   }
 
   bindEvents() {
@@ -165,6 +207,37 @@ export class PaltaMpService {
     refs.exportExcelErroresBtn?.addEventListener("click", () => this.onExportErrors(), { signal });
     refs.exportBtn?.addEventListener("click", () => this.onExportFiltered(), { signal });
     refs.notificationIcon?.addEventListener("click", () => this.onNotificationClick(), { signal });
+
+    this.bindResultsColumnMenu();
+    if (!this.searchBound) {
+      bindMpTableSearch(refs.tableSearch, refs.resultsBody, {
+        idColJs: 0,
+        loteColJs: getColLoteJs()
+      });
+      this.searchBound = true;
+    }
+  }
+
+  bindResultsColumnMenu() {
+    const refs = this.shell?.refs;
+    if (!refs?.resultsTable) return;
+    let menuEl = refs.colMenuEl;
+    if (!menuEl) {
+      menuEl = document.getElementById("agv-mp-col-menu");
+      if (!menuEl) {
+        menuEl = document.createElement("div");
+        menuEl.id = "agv-mp-col-menu";
+        menuEl.className = "agv-mp-col-menu";
+        menuEl.hidden = true;
+        menuEl.setAttribute("role", "menu");
+        (refs.resultsTable.closest(".agv-mp-table-box") || this.root)?.appendChild(menuEl);
+      }
+      if (this.shell?.refs) this.shell.refs.colMenuEl = menuEl;
+    }
+    bindMpColumnContextMenu(refs.resultsTable, menuEl, {
+      protectedColIndices: new Set(getStickyCols()),
+      onVisibilityChange: () => syncMpStickyOffsets(refs.resultsTable, getStickyCols())
+    });
   }
 
   onClear() {
@@ -188,6 +261,9 @@ export class PaltaMpService {
     this.lotesDuplicados = [];
     this.excelLoaded = false;
     this.lastReviewKey = "";
+    this.lastReviewAllKey = "";
+    this._sapInsertedJs = [];
+    this._sapLayoutNotice = null;
     this.hideResumenTodasFechas();
     this.hideSingleDateResults();
   }
@@ -251,18 +327,49 @@ export class PaltaMpService {
         return;
       }
 
-      this.headers = sheet[0] || [];
-      if (this.headers.length !== getTotalColumnas()) {
+      const rawHeaders = sheet[0] || [];
+      const rawDataRows = sheet
+        .slice(1)
+        .filter((row) => row.some((cell) => cell !== "" && cell != null));
+
+      // Si Nota Condición no está en col 28 → faltan SAP: insertar 15 + 5 vacías (Hora Insp → 34).
+      const {
+        headers,
+        rows: layoutRows,
+        expanded: sapLayoutExpanded,
+        insertedSap15,
+        insertedSap5,
+        insertedJsIndexes
+      } = expandMissingSapLayout(rawHeaders, rawDataRows, getSapPerfil("mp"));
+
+      if (headers.length !== getTotalColumnas()) {
         showMpDialog({
           icon: "error",
           title: "Estructura incorrecta",
-          html: `El archivo tiene <b>${this.headers.length}</b> columnas.<br>Se requieren <b>${getTotalColumnas()}</b>.`
+          html: `El archivo tiene <b>${headers.length}</b> columnas${
+            sapLayoutExpanded
+              ? ` (tras completar huecos SAP: +${insertedSap15 + insertedSap5})`
+              : ""
+          }.<br>Se requieren <b>${getTotalColumnas()}</b>.`
         });
         if (refs.fileInput) refs.fileInput.value = "";
         return;
       }
 
-      this.rawRows = sheet.slice(1).filter((row) => row.some((cell) => cell !== "" && cell != null));
+      this.headers = headers;
+      this.rawRows = applyDateDisplayFormatToRows(layoutRows, headers, [20, 21, 41, 51, 64, 65]).map(
+        (row) => {
+          const copy = Array.isArray(row) ? [...row] : [];
+          while (copy.length < getTotalColumnas()) copy.push("");
+          if (sapLayoutExpanded) copy._sapLayoutExpanded = true;
+          return copy;
+        }
+      );
+      this._sapInsertedJs = insertedJsIndexes || [];
+      this._sapLayoutNotice = sapLayoutExpanded
+        ? { insertedSap15, insertedSap5 }
+        : null;
+
       if (!this.rawRows.length) {
         showMpDialog({
           icon: "error",
@@ -283,11 +390,14 @@ export class PaltaMpService {
       this.renderExcelInsight();
       this.syncActionButtons();
 
+      const sapNote = this._sapLayoutNotice
+        ? `<br><small>Se alineó el bloque SAP (+${this._sapLayoutNotice.insertedSap15} + ${this._sapLayoutNotice.insertedSap5}). Las columnas SAP vacías sí se validan como obligatorias.</small>`
+        : "";
       showMpDialog({
         icon: "success",
         title: "Excel cargado",
-        html: `Cartilla <b>${htmlEscape(CARTILLA_CODE)}</b> · <b>${this.rawRows.length}</b> registros · <b>${getTotalColumnas()}</b> columnas`,
-        timer: 1800,
+        html: `Cartilla <b>${htmlEscape(CARTILLA_CODE)}</b> · <b>${this.rawRows.length}</b> registros · <b>${getTotalColumnas()}</b> columnas${sapNote}`,
+        timer: sapNote ? 3200 : 1800,
         showConfirmButton: false
       });
     } catch (error) {
@@ -515,6 +625,8 @@ export class PaltaMpService {
     if (refs.resultsHeader) refs.resultsHeader.innerHTML = "";
     if (refs.resultsBody) refs.resultsBody.innerHTML = "";
     if (refs.resultsTable) refs.resultsTable.hidden = true;
+    if (refs.tableSearchWrap) refs.tableSearchWrap.hidden = true;
+    if (refs.tableSearch) refs.tableSearch.value = "";
     if (refs.resultsSection) {
       refs.resultsSection.classList.remove(
         "is-visible",
@@ -527,6 +639,7 @@ export class PaltaMpService {
     this.cartillaAnalysis?.clear();
     this.processedRows = [];
     this.lastReviewKey = "";
+    this.lastReviewAllKey = "";
     this.syncActionButtons();
   }
 
@@ -568,9 +681,14 @@ export class PaltaMpService {
     this.runValidationAndRender(rows, fechaISO);
   }
 
-  runValidationAndRender(rows, fechaISO) {
+  /** Misma validación (reglas + SAP + fechas 64=20) para una o todas las fechas. */
+  validateRowsSameRules(rows) {
     limpiarMarcasValidacion(rows);
-    const { lotesDuplicados } = ejecutarValidacion(rows);
+    return ejecutarValidacion(rows);
+  }
+
+  runValidationAndRender(rows, fechaISO) {
+    const { lotesDuplicados } = this.validateRowsSameRules(rows);
     this.lotesDuplicados = lotesDuplicados;
     this.processedRows = rows;
 
@@ -589,6 +707,16 @@ export class PaltaMpService {
     this.lastReviewKey = `MPCP|${fechaISO}`;
     this.syncActionButtons();
 
+    const refs = this.shell.refs;
+    if (refs.tableSearchWrap) refs.tableSearchWrap.hidden = false;
+    if (refs.tableSearch?.value) {
+      refs.tableSearch.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+
+    this.bindResultsColumnMenu();
+    applyMpColumnVisibility(refs.resultsTable);
+    requestAnimationFrame(() => syncMpStickyOffsets(refs.resultsTable, getStickyCols()));
+
     this.cartillaAnalysis?.present({
       rows,
       filasConError,
@@ -597,7 +725,8 @@ export class PaltaMpService {
       colLoteJs: getColLoteJs(),
       columns: headersToAnalysisColumns(this.headers),
       cartilla: CARTILLA_CODE,
-      fechaLabel: formatISOToDMY(fechaISO)
+      fechaLabel: formatISOToDMY(fechaISO),
+      observations: buildPaltaMpTempObservations(rows)
     });
   }
 
@@ -607,10 +736,10 @@ export class PaltaMpService {
       ...new Set(this.rawRows.map((r) => parseExcelDateISO(r[colJs])).filter(Boolean))
     ].sort();
 
+    // Una pasada por cada fecha de inspección con las mismas reglas (incl. 64 = 20)
     return fechas.map((fechaISO) => {
       const rows = this.getRowsForDate(fechaISO);
-      limpiarMarcasValidacion(rows);
-      const { lotesDuplicados } = ejecutarValidacion(rows);
+      const { lotesDuplicados } = this.validateRowsSameRules(rows);
       const filasDetalle = rows.filter((row) => filaTieneError(row));
 
       return {
@@ -752,6 +881,8 @@ export class PaltaMpService {
 
     this.hideSingleDateResults();
     this.renderResumenTodasFechas(items);
+    this.lastReviewAllKey = CARTILLA_CODE;
+    this.syncActionButtons();
 
     showMpDialog({
       icon: items.some((item) => item.tieneErrores) ? "warning" : "success",
@@ -763,30 +894,40 @@ export class PaltaMpService {
   }
 
   onExportErrors() {
-    const fechaISO = this.shell.refs.inspectionSelect?.value || "";
-    if (!fechaISO) {
+    if (!this.excelLoaded || !this.rawRows.length) {
       showMpDialog({
         icon: "warning",
-        title: t("paltaMp.missingInspectionTitle"),
-        html: "Selecciona una <b>fecha de inspección</b> para exportar con errores resaltados."
+        title: t("plagasArandano.attention"),
+        text: t("paltaMp.noFile")
+      });
+      return;
+    }
+    if (this.lastReviewAllKey !== CARTILLA_CODE) {
+      showMpDialog({
+        icon: "warning",
+        title: "Revisión requerida",
+        html: "Primero pulsa <b>Todo</b> para revisar todas las fechas; luego podrás descargar el Excel completo."
       });
       return;
     }
 
     if (!ensureXlsxLibrary()) return;
 
-    const rows = this.getRowsForDate(fechaISO);
+    // Botón de «Todo el Excel»: todas las fechas del archivo.
+    const rows = this.rawRows.map((row, idx) => {
+      const copy = [...row];
+      copy._filaNum = idx + 1;
+      return copy;
+    });
     if (!rows.length) {
       showMpDialog({ icon: "info", title: t("plagasArandano.attention"), text: t("plagasArandano.errorArchivoVacio") });
       return;
     }
 
-    limpiarMarcasValidacion(rows);
-    ejecutarValidacion(rows);
+    this.validateRowsSameRules(rows);
 
     const wsData = buildFullSheetDataWithErrors(rows, this.headers, getTotalColumnas(), getCellMeta);
-    const fechaLabel = formatISOToDMY(fechaISO).replaceAll("-", "");
-    writePaltaWorkbook(`PALTA_MPCP_Errores_${fechaLabel}.xlsx`, "MPCP_Errores", wsData);
+    writePaltaWorkbook(`PALTA_MPCP_Errores_TodasFechas.xlsx`, "MPCP_Errores", wsData);
 
     showMpDialog({
       icon: "success",

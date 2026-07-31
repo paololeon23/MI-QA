@@ -11,13 +11,143 @@ function defaultHtmlEscape(value) {
     .replace(/"/g, "&quot;");
 }
 
-function isWeakCause(cause) {
+function isSapMissingCause(cause, t) {
+  const c = String(cause || "").trim().toLowerCase();
+  const sap = String(t?.("cartillaAnalysis.missingSap") || "Falta datos SAP")
+    .trim()
+    .toLowerCase();
+  return (
+    c === sap ||
+    c.includes("falta dato sap") ||
+    c.includes("falta datos sap") ||
+    c.includes("faltan datos sap") ||
+    c.includes("missing sap") ||
+    c.includes("donnée sap") ||
+    c.includes("données sap") ||
+    c.includes("缺少 sap")
+  );
+}
+
+function isWeakCause(cause, t) {
   const c = String(cause || "").toLowerCase();
+  // «Falta datos SAP» es causa principal (no genérica).
+  if (isSapMissingCause(c, t)) return false;
   return (
     c.includes("obligatorio") ||
     c.includes("desviación de validación") ||
     c.includes("desviacion de validacion")
   );
+}
+
+/** Solo «Desviación de validación» / equivalentes: no sirve como causa para listar el lote. */
+function isGenericOnlyCause(cause, t) {
+  const c = String(cause || "").trim().toLowerCase();
+  if (!c) return true;
+  if (isSapMissingCause(c, t)) return false;
+  const generic = String(t?.("cartillaAnalysis.genericError") || "Desviación de validación")
+    .trim()
+    .toLowerCase();
+  return (
+    c === generic ||
+    c === "desviación de validación" ||
+    c === "desviacion de validacion" ||
+    c === "validation deviation" ||
+    c === "écart de validation" ||
+    c === "校验偏差"
+  );
+}
+
+/**
+ * Bloque SAP Excel 13–33 (JS 12–32): Productor…Peso Bruto + Nota Condición.
+ * Solo «falta dato» → «Falta datos SAP». Errores de valor/formato se muestran tal cual.
+ */
+function isSapZoneColNum(colNum) {
+  const n = Number(colNum);
+  return Number.isFinite(n) && n >= 13 && n <= 33;
+}
+
+/** Columnas del bloque SAP (por nombre, por si falta colNum). */
+function isSapColumnName(column) {
+  const c = String(column || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .trim();
+  if (/\(sap\)/.test(c) || /\bsap\b/.test(c)) return true;
+  // «Calibre» del bloque SAP (JS 22). No «Calibre 18/20/26…» de calidad MP.
+  if (/^calibre(\s*\(.*\))?$/.test(c)) return true;
+  return (
+    /\bproductor\b/.test(c) ||
+    /\bsociedad\b/.test(c) ||
+    /\bcentro\b/.test(c) ||
+    /\balmacen\b/.test(c) ||
+    /\bmaterial\b/.test(c) ||
+    /\bguia\b/.test(c) ||
+    /\bremision\b/.test(c) ||
+    /\betapa\b/.test(c) ||
+    /\bcampo\b/.test(c) ||
+    /\bturno\b/.test(c) ||
+    /\bfundo\b/.test(c) ||
+    /\bvariedad\b/.test(c) ||
+    /\bcosecha\b/.test(c) ||
+    /\bproduccion\b/.test(c) ||
+    /\btecnologia\b/.test(c) ||
+    /\bembalado\b/.test(c) ||
+    /\bcategoria\b/.test(c) ||
+    /\blinea\b/.test(c) ||
+    /\bnota condicion\b/.test(c) ||
+    /\bformato\b/.test(c) ||
+    /\betiqueta\b/.test(c) ||
+    /\bjaba\b/.test(c) ||
+    /\bviaje\b/.test(c) ||
+    /\bpeso bruto\b/.test(c)
+  );
+}
+
+/** ¿El mensaje indica celda vacía / obligatorio (no un valor incorrecto)? */
+function isMissingDataCause(cause, t) {
+  const raw = String(cause || "").trim();
+  if (!raw) return true;
+  if (isSapMissingCause(raw, t)) return true;
+  const low = raw
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "");
+  if (low.includes("obligatorio")) return true;
+  if (low.includes("sin dato")) return true;
+  if (low.includes("falta dato") || low.includes("faltan dato")) return true;
+  if (low.includes("campo vacio") || low === "vacio" || low.includes("vacio")) return true;
+  // Igualdad / rango / formato / LMR → NO es “falta SAP”.
+  if (low.includes("debe ser") || low.includes("igual")) return false;
+  if (low.includes("lmr") || low.includes("mayoritaria")) return false;
+  if (low.includes("rango") || low.includes("entre ")) return false;
+  if (low.includes("no debe") || low.includes("prohibid")) return false;
+  if (low.includes("formato") || low.includes("longitud")) return false;
+  return false;
+}
+
+function isSapFailure(column, colNum, cause, t) {
+  if (isSapMissingCause(cause, t)) return true;
+  if (!isMissingDataCause(cause, t)) return false;
+  const n = Number(colNum);
+  // Con índice fiable: solo el bloque SAP Excel 13–33.
+  if (Number.isFinite(n) && n >= 1) {
+    return isSapZoneColNum(n);
+  }
+  // Sin colNum: fallback por nombre canónico SAP.
+  return isSapColumnName(column);
+}
+
+/** Vacío / formato SAP → mensaje corto (solo columnas SAP vacías). */
+function promoteCause(cause, t, column = "", colNum = null) {
+  const raw = String(cause || "").trim();
+  const low = raw.toLowerCase();
+  // No mezclar duplicados u otros mensajes no-SAP.
+  if (low.includes("duplic") || low.includes("lote duplic")) return raw;
+  if (isSapFailure(column, colNum, raw, t)) return t("cartillaAnalysis.missingSap");
+  // Obligatorio genérico en columna NO-SAP: no promover a «Falta datos SAP».
+  if (!raw) return t("cartillaAnalysis.genericError");
+  return raw;
 }
 
 function cellHasDisplayData(row, colJs) {
@@ -27,9 +157,107 @@ function cellHasDisplayData(row, colJs) {
   return String(raw).trim() !== "";
 }
 
+/** T° Ambiente / T° Pulpa / temperatura → un solo mensaje corto. */
+function isTempColumn(column) {
+  const c = String(column || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "");
+  return (
+    /\bambiente\b/.test(c) ||
+    /\bpulpa\b/.test(c) ||
+    /\btemperatura\b/.test(c) ||
+    /^t\s*[°º]/.test(c) ||
+    /^t\s*amb/.test(c)
+  );
+}
+
+function isDuplicateCauseText(text) {
+  const e = String(text || "").toLowerCase();
+  return e.includes("duplic");
+}
+
+/** Fecha LMR distinta a la mayoritaria → no spamear fila por fila. */
+function isLmrMajorityCauseText(text) {
+  const e = String(text || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "");
+  return e.includes("lmr") && (e.includes("mayoritaria") || e.includes("majority") || e.includes("majoritaire"));
+}
+
+function formatPreciseErrorText(pair, row, t) {
+  const col = String(pair.column || "").trim() || "Col";
+  const cause = String(pair.cause || "").trim();
+  if (pair.sapMissing || isSapMissingCause(cause, t)) {
+    return t("cartillaAnalysis.missingSap");
+  }
+  if (isDuplicateCauseText(cause)) {
+    return t("plagasArandano.duplicateLots");
+  }
+  if (isTempColumn(col)) {
+    const js = Number.isFinite(pair.colNum) ? Number(pair.colNum) - 1 : NaN;
+    const empty = Number.isFinite(js) ? !cellHasDisplayData(row, js) : true;
+    // Valor fuera de rango / inválido: mensaje concreto; vacío: «Error temperatura».
+    if (!empty && cause && !isWeakCause(cause, t) && !isGenericOnlyCause(cause, t) && !isMissingDataCause(cause, t)) {
+      return `${col}: ${cause}`;
+    }
+    return t("cartillaAnalysis.missingTemps");
+  }
+  const js = Number.isFinite(pair.colNum) ? Number(pair.colNum) - 1 : NaN;
+  const empty = Number.isFinite(js) ? !cellHasDisplayData(row, js) : false;
+  if (empty) {
+    return t("cartillaAnalysis.noDataIn", { column: col });
+  }
+  if (cause && !isWeakCause(cause, t) && !isGenericOnlyCause(cause, t)) {
+    return `${col}: ${cause}`;
+  }
+  if (cause) return `${col}: ${cause}`;
+  return col;
+}
+
 /**
- * Solo errores de celdas rojas CON dato (mismo criterio visual que la tabla).
- * No incluye vacíos/obligatorio vacío ni columnas sin pintar con valor.
+ * Un solo texto no-SAP por ID/Lote (no listar Ambiente + Pulpa por separado).
+ */
+function summarizeNonSapErrorText(pairs, row, t) {
+  const nonSap = pairs.filter((p) => !p.sapMissing);
+  if (!nonSap.length) return "";
+
+  const hasTemp = nonSap.some((p) => isTempColumn(p.column));
+  const hasDup = nonSap.some((p) => isDuplicateCauseText(p.cause));
+  const otherPairs = nonSap.filter(
+    (p) => !isTempColumn(p.column) && !isDuplicateCauseText(p.cause)
+  );
+
+  // Duplicados: un mensaje corto (se unen por lote más abajo).
+  if (hasDup && !otherPairs.length && !hasTemp) {
+    return t("plagasArandano.duplicateLots");
+  }
+
+  if (hasTemp && !otherPairs.length && !hasDup) {
+    return t("cartillaAnalysis.missingTemps");
+  }
+
+  const otherLabels = [];
+  otherPairs.forEach((p) => {
+    const label = String(p.column || "").trim();
+    if (label && !otherLabels.includes(label)) otherLabels.push(label);
+  });
+
+  const parts = [];
+  if (hasDup) parts.push(t("plagasArandano.duplicateLots"));
+  if (hasTemp) parts.push(t("cartillaAnalysis.missingTemps"));
+  if (otherLabels.length === 1) {
+    parts.push(formatPreciseErrorText(otherPairs[0], row, t));
+  } else if (otherLabels.length > 1) {
+    parts.push(t("cartillaAnalysis.missingFields", { columns: otherLabels.join(", ") }));
+  }
+  return parts.filter(Boolean).join(" · ");
+}
+
+/**
+ * Errores de fila para el panel gerencial.
+ * Incluye vacíos obligatorios (SAP faltante) y celdas con dato inválido.
  * @returns {{ causes: string[], columns: string[], pairs: { cause: string, column: string, weak: boolean, colNum: number|null }[] }}
  */
 export function extractRowErrorHints(row, options = {}) {
@@ -38,24 +266,43 @@ export function extractRowErrorHints(row, options = {}) {
     duplicateLotes = new Set(),
     colLoteJs = 9,
     headerByColNum = new Map(),
-    t = (k) => k
+    t = (k) => k,
+    includeEmptyObligatorio = true,
+    skipSapValidation = false
   } = options;
+
+  const isSapColNum = (colNum) => {
+    const n = Number(colNum);
+    return (n >= 13 && n <= 27) || (n >= 29 && n <= 33);
+  };
 
   const pairs = [];
   const seen = new Set();
 
   const pushPair = (cause, column, colNum = null) => {
-    const c = String(cause || t("cartillaAnalysis.genericError")).trim();
-    if (!c) return;
+    if (skipSapValidation && isSapColNum(colNum)) return;
     const col = String(column || "").trim() || (colNum != null ? `Col ${colNum}` : "Col");
-    const key = `${colNum ?? col}|${c}`;
+    if (skipSapValidation && isSapColumnName(col) && !/\bnota condicion\b/.test(
+      col.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "")
+    )) {
+      // Columna SAP por nombre sin colNum fiable: no reportar en PT.
+      if (colNum == null) return;
+    }
+    const rawCause = cause || t("cartillaAnalysis.genericError");
+    if (skipSapValidation && isSapMissingCause(rawCause, t)) return;
+    const sapMissing = skipSapValidation ? false : isSapFailure(col, colNum, rawCause, t);
+    const c = promoteCause(rawCause, t, col, colNum);
+    if (!c) return;
+    // Una sola clave SAP por fila: no acumular Formato/Etiqueta/Fundo por separado.
+    const key = sapMissing ? `SAP|${t("cartillaAnalysis.missingSap")}` : `${colNum ?? col}|${c}`;
     if (seen.has(key)) return;
     seen.add(key);
     pairs.push({
-      cause: c,
-      column: col,
+      cause: sapMissing ? t("cartillaAnalysis.missingSap") : c,
+      column: sapMissing ? "SAP" : col,
       colNum: colNum == null ? null : Number(colNum),
-      weak: isWeakCause(c)
+      weak: sapMissing ? false : isWeakCause(c, t),
+      sapMissing
     });
   };
 
@@ -65,12 +312,13 @@ export function extractRowErrorHints(row, options = {}) {
     return headerByColNum.get(n) || `Col ${n}`;
   };
 
+  const shouldIncludeCell = (_err, _js) => true;
+
   const filaMap = errorMap?.get?.(row._filaNum);
   if (filaMap?.size) {
     filaMap.forEach((err, colNum) => {
       const js = Number(colNum) - 1;
-      // Solo celdas con dato en rojo (no vacíos obligatorios).
-      if (!cellHasDisplayData(row, js)) return;
+      if (!shouldIncludeCell(err, js)) return;
       pushPair(
         err?.problema || err?.tipo || t("cartillaAnalysis.genericError"),
         resolveHeader(colNum),
@@ -82,28 +330,55 @@ export function extractRowErrorHints(row, options = {}) {
   if (row._errorCols instanceof Map) {
     row._errorCols.forEach((msg, colJs) => {
       const js = Number(colJs);
-      if (!cellHasDisplayData(row, js)) return;
-      const cause =
-        typeof msg === "string" ? msg : msg?.problema || t("cartillaAnalysis.genericError");
+      const err = typeof msg === "string" ? { problema: msg } : msg || {};
+      if (!shouldIncludeCell(err, js)) return;
       const colNum = js + 1;
-      pushPair(cause, resolveHeader(colNum), colNum);
+      const header = resolveHeader(colNum);
+      let cause =
+        typeof msg === "string" ? msg.trim() : String(msg?.problema || "").trim();
+      if (!cause) {
+        cause = cellHasDisplayData(row, js)
+          ? `${header}: valor incorrecto`
+          : t("cartillaAnalysis.noDataIn", { column: header });
+      }
+      pushPair(cause, header, colNum);
     });
   } else if (row._errorCols instanceof Set) {
     row._errorCols.forEach((colJs) => {
       const js = Number(colJs);
-      if (!cellHasDisplayData(row, js)) return;
+      if (!includeEmptyObligatorio && !cellHasDisplayData(row, js)) return;
       const colNum = js + 1;
-      pushPair(t("cartillaAnalysis.genericError"), resolveHeader(colNum), colNum);
+      const header = resolveHeader(colNum);
+      // Vacío obligatorio: mensaje de la columna (no asumir SAP).
+      const cause = cellHasDisplayData(row, js)
+        ? `${header}: valor incorrecto`
+        : t("cartillaAnalysis.noDataIn", { column: header });
+      pushPair(cause, header, colNum);
     });
   }
 
   if (Array.isArray(row._errors) && row._errors.length) {
     row._errors.forEach((err) => {
-      if (typeof err === "string") return;
+      // Plagas / módulos que guardan: "Columna 13: Campo obligatorio"
+      if (typeof err === "string") {
+        const m = err.match(/^Columna\s+(\d+)\s*:\s*(.*)$/i);
+        if (m) {
+          const colNum = Number(m[1]);
+          const header = resolveHeader(colNum);
+          const msg =
+            String(m[2] || "").trim() || t("cartillaAnalysis.noDataIn", { column: header });
+          const js = colNum - 1;
+          if (!includeEmptyObligatorio && !cellHasDisplayData(row, js)) return;
+          pushPair(msg, header, colNum);
+          return;
+        }
+        if (err.trim()) pushPair(err.trim(), "—", null);
+        return;
+      }
       const colNum = err.colNum ?? (err.colJs != null ? err.colJs + 1 : err.col);
       if (colNum == null) return;
       const js = Number(colNum) - 1;
-      if (!cellHasDisplayData(row, js)) return;
+      if (!shouldIncludeCell(err, js)) return;
       pushPair(
         err?.message || err?.problema || err?.msg || t("cartillaAnalysis.genericError"),
         resolveHeader(colNum),
@@ -113,11 +388,13 @@ export function extractRowErrorHints(row, options = {}) {
   }
 
   const lote = String(row[colLoteJs] ?? "").trim();
-  if (
-    lote &&
+  const isRealDuplicate =
+    Boolean(lote) &&
     cellHasDisplayData(row, colLoteJs) &&
-    (row._errorLote || row.__duplicado || duplicateLotes?.has?.(lote))
-  ) {
+    (Boolean(row.__duplicado) || Boolean(duplicateLotes?.has?.(lote)));
+  // Solo marcar «duplicado» si realmente lo es.
+  // `_errorLote` también se usa por longitud/obligatorio → no confundir.
+  if (isRealDuplicate) {
     pushPair(t("plagasArandano.duplicateLots"), resolveHeader(colLoteJs + 1), colLoteJs + 1);
   }
 
@@ -146,7 +423,9 @@ export function buildCartillaAnalysis(params) {
     fechaLabel = "",
     t,
     htmlEscape = defaultHtmlEscape,
-    translateHeader = (h) => h
+    translateHeader = (h) => h,
+    skipSapValidation = false,
+    observations = []
   } = params;
 
   const total = rows.length;
@@ -171,10 +450,98 @@ export function buildCartillaAnalysis(params) {
   const causeCount = new Map();
   const colCount = new Map();
   const loteDetails = new Map();
+  /** Líneas precisas: ID · Lote · Error (una por incidencia). */
+  const errorLines = [];
+  const errorLineKeys = new Set();
+
+  const pushErrorLine = (id, lote, error, sap = false) => {
+    const errText = String(error || "").trim();
+    if (!errText) return;
+    const isDup = isDuplicateCauseText(errText);
+    const isLmr = isLmrMajorityCauseText(errText);
+    // Duplicados / LMR: una sola fila resumen (no spam).
+    const key = isDup
+      ? `DUP|${lote}`
+      : isLmr
+        ? `LMR|majority`
+        : `${id}|${lote}|${sap ? "SAP" : "OTHER"}`;
+    if (errorLineKeys.has(key)) {
+      const existing = errorLines.find((line) => {
+        if (isDup) return line.dup && line.lote === lote;
+        if (isLmr) return line.lmrSummary;
+        return line.id === (id || "—") && line.lote === lote && Boolean(line.sap) === Boolean(sap);
+      });
+      if (existing && isDup && id) {
+        const ids = String(existing.id)
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+        if (id && !ids.includes(id)) {
+          ids.push(id);
+          existing.id = ids.join(", ");
+        }
+      } else if (existing && isLmr) {
+        existing.count = (existing.count || 1) + 1;
+        existing.error = t("cartillaAnalysis.lmrMajoritySummary", {
+          count: String(existing.count)
+        });
+        if (lote && lote !== "—") {
+          const lotes = String(existing.lote || "")
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean);
+          if (!lotes.includes(lote) && lotes.length < 3) {
+            lotes.push(lote);
+            existing.lote = lotes.join(", ");
+          } else if (!lotes.includes(lote) && lotes.length === 3 && !String(existing.lote).includes("…")) {
+            existing.lote = `${lotes.join(", ")}…`;
+          }
+        }
+      } else if (existing && !sap && !isDup) {
+        const parts = existing.error.split(" · ").map((s) => s.trim()).filter(Boolean);
+        errText.split(" · ").forEach((part) => {
+          const p = part.trim();
+          if (p && !parts.includes(p)) parts.push(p);
+        });
+        existing.error = parts.join(" · ");
+      }
+      return;
+    }
+    errorLineKeys.add(key);
+    errorLines.push({
+      id: isLmr ? "—" : id || "—",
+      lote: isLmr ? lote || "—" : lote,
+      error: isDup
+        ? t("plagasArandano.duplicateLots")
+        : isLmr
+          ? t("cartillaAnalysis.lmrMajoritySummary", { count: "1" })
+          : errText,
+      sap: Boolean(sap),
+      dup: isDup,
+      lmrSummary: isLmr,
+      count: isLmr ? 1 : undefined
+    });
+  };
 
   filasConError.forEach((row) => {
     const lote = String(row[colLoteJs] ?? "").trim() || t("cartillaAnalysis.unknownLot");
     const id = String(row[colIdJs] ?? "").trim();
+
+    const { pairs: rawPairs } = extractRowErrorHints(row, {
+      errorMap,
+      duplicateLotes,
+      colLoteJs,
+      headerByColNum,
+      t,
+      includeEmptyObligatorio: true,
+      skipSapValidation
+    });
+
+    // Solo lotes con causa real (no el genérico «Desviación de validación»).
+    const pairs = rawPairs.filter((p) => !isGenericOnlyCause(p.cause, t));
+    if (!pairs.length) return;
+
+    const causes = pairs.map((p) => p.cause);
     const entry = loteDetails.get(lote) || {
       lote,
       ids: [],
@@ -186,14 +553,6 @@ export function buildCartillaAnalysis(params) {
     entry.count += 1;
     if (id && !entry.ids.includes(id)) entry.ids.push(id);
 
-    const { causes, pairs } = extractRowErrorHints(row, {
-      errorMap,
-      duplicateLotes,
-      colLoteJs,
-      headerByColNum,
-      t
-    });
-
     pairs.forEach((p) => {
       if (p.column) {
         entry.columns.add(p.column);
@@ -201,56 +560,72 @@ export function buildCartillaAnalysis(params) {
       }
     });
 
-    // Literal: "ID · Columna roja · mensaje" (máx. 4 celdas con dato).
-    for (const p of pairs) {
-      if (entry.hints.length >= 4) break;
-      const idPart = id ? `ID ${id} · ` : "";
-      const hint = `${idPart}${p.column} · ${p.cause}`;
-      if (hint && !entry.hints.includes(hint)) {
-        entry.hints.push(hint);
-        if (!p.weak) entry.strong += 1;
-      }
+    const hasSap = pairs.some((p) => p.sapMissing);
+    if (hasSap) {
+      pushErrorLine(id, lote, t("cartillaAnalysis.missingSap"), true);
+      const short = t("cartillaAnalysis.missingSap");
+      if (!entry.hints.includes(short)) entry.hints.push(short);
+      entry.strong += 1;
     }
+
+    const nonSapSummary = summarizeNonSapErrorText(pairs, row, t);
+    if (nonSapSummary) {
+      pushErrorLine(id, lote, nonSapSummary, false);
+      if (!entry.hints.includes(nonSapSummary)) entry.hints.push(nonSapSummary);
+      entry.strong += 1;
+    }
+
     loteDetails.set(lote, entry);
 
-    if (!causes.length) {
-      causeCount.set(
-        t("cartillaAnalysis.genericError"),
-        (causeCount.get(t("cartillaAnalysis.genericError")) || 0) + 1
-      );
-      return;
-    }
-    // Si la fila ya tiene error fuerte, no sumar «Campo obligatorio» al ranking.
     const hasStrong = pairs.some((p) => !p.weak);
     causes.forEach((cause) => {
-      if (hasStrong && isWeakCause(cause)) return;
+      if (hasSap && !isSapMissingCause(cause, t) && isWeakCause(cause, t)) return;
+      if (isWeakCause(cause, t) && hasStrong && !isSapMissingCause(cause, t)) return;
       causeCount.set(cause, (causeCount.get(cause) || 0) + 1);
     });
   });
 
+  errorLines.sort((a, b) => {
+    // Primero duplicados, luego SAP, luego LMR resumen, luego el resto.
+    const rank = (line) => (line.dup ? 0 : line.sap ? 1 : line.lmrSummary ? 2 : 3);
+    const ra = rank(a);
+    const rb = rank(b);
+    if (ra !== rb) return ra - rb;
+    const loteCmp = String(a.lote).localeCompare(String(b.lote));
+    if (loteCmp) return loteCmp;
+    return String(a.id).localeCompare(String(b.id));
+  });
+
   const rankedCauses = [...causeCount.entries()].sort((a, b) => {
-    const aWeak = isWeakCause(a[0]) ? 1 : 0;
-    const bWeak = isWeakCause(b[0]) ? 1 : 0;
+    const aSap = isSapMissingCause(a[0], t) ? 0 : 1;
+    const bSap = isSapMissingCause(b[0], t) ? 0 : 1;
+    if (aSap !== bSap) return aSap - bSap;
+    const aWeak = isWeakCause(a[0], t) ? 1 : 0;
+    const bWeak = isWeakCause(b[0], t) ? 1 : 0;
     if (aWeak !== bWeak) return aWeak - bWeak;
     return b[1] - a[1];
   });
   const topCause = rankedCauses[0] || null;
   const topColumn = [...colCount.entries()].sort((a, b) => b[1] - a[1])[0] || null;
-  const topLotes = [...loteDetails.values()]
+  const allErrorLotes = [...loteDetails.values()]
+    .filter((entry) => (entry.hints || []).length > 0)
     .sort(
       (a, b) =>
         (b.strong || 0) - (a.strong || 0) ||
         b.count - a.count ||
         a.lote.localeCompare(b.lote)
-    )
-    .slice(0, 8)
-    .map((entry) => ({
-      lote: entry.lote,
-      ids: entry.ids.slice(0, 6),
-      columns: [...entry.columns].slice(0, 12),
-      hints: (entry.hints || []).slice(0, 4),
-      count: entry.count
-    }));
+    );
+  // Todos los lotes con causa (si a todos les falta SAP, salen todos).
+  const totalErrorLotes = allErrorLotes.length;
+  const topLotes = allErrorLotes.map((entry) => ({
+    lote: entry.lote,
+    ids: entry.ids.slice(0, 6),
+    columns: [...entry.columns].slice(0, 12),
+    hints: (entry.hints || []).slice(0, 4),
+    count: entry.count
+  }));
+  const hasNonSapLines = errorLines.some((line) => !line.sap);
+  const sapDominant = topCause && isSapMissingCause(topCause[0], t) && !hasNonSapLines;
   const dupSize = duplicateLotes?.size ?? 0;
 
   const trafficLabel =
@@ -263,9 +638,22 @@ export function buildCartillaAnalysis(params) {
   const reading =
     level === "ok"
       ? t("cartillaAnalysis.readingOk")
-      : topCause
-        ? t("cartillaAnalysis.readingErrors", { cause: topCause[0], lots: String(topLotes.length) })
-        : t("cartillaAnalysis.readingErrorsGeneric");
+      : sapDominant && totalErrorLotes > 0
+        ? t("cartillaAnalysis.readingMissingSap", {
+            lots: String(totalErrorLotes)
+          })
+        : topCause && totalErrorLotes > 0
+          ? t("cartillaAnalysis.readingErrors", {
+              cause: topCause[0],
+              lots: String(totalErrorLotes)
+            })
+          : errors > 0
+            ? t("cartillaAnalysis.readingErrorsGeneric")
+            : t("cartillaAnalysis.readingOk");
+
+  const observationNotes = (Array.isArray(observations) ? observations : [])
+    .map((note) => String(note || "").trim())
+    .filter(Boolean);
 
   return {
     cartilla,
@@ -277,9 +665,15 @@ export function buildCartillaAnalysis(params) {
     level,
     trafficLabel,
     reading,
+    observations: observationNotes,
     topCause,
     topColumn,
     topLotes,
+    errorLines,
+    totalErrorLotes,
+    totalErrorLines: errorLines.length,
+    sapDominant: Boolean(sapDominant),
+    hasNonSapLines: Boolean(hasNonSapLines),
     duplicateCount: dupSize,
     icon: level === "ok" ? "success" : level === "warn" ? "warning" : "error",
     htmlEscape
@@ -309,33 +703,51 @@ function renderKpis(analysis, t) {
     </div>`;
 }
 
+function renderObservations(analysis, t) {
+  const esc = analysis.htmlEscape;
+  const notes = Array.isArray(analysis.observations) ? analysis.observations : [];
+  if (!notes.length) return "";
+  return `<aside class="agv-cartilla-analysis__observations" role="note">
+    <span class="agv-cartilla-analysis__observations-label">${esc(t("cartillaAnalysis.observations"))}</span>
+    ${notes.map((note) => `<p class="agv-cartilla-analysis__observation">${esc(note)}</p>`).join("")}
+  </aside>`;
+}
+
 function renderDetails(analysis, t) {
   const esc = analysis.htmlEscape;
-  const causeText = analysis.topCause
-    ? `${esc(analysis.topCause[0])} (${analysis.topCause[1]})`
-    : esc(t("cartillaAnalysis.noCause"));
-  const columnText = analysis.topColumn
-    ? `${esc(analysis.topColumn[0])} (${analysis.topColumn[1]})`
-    : esc(t("cartillaAnalysis.seeTable"));
+  const sap = Boolean(analysis.sapDominant);
+  const lines = Array.isArray(analysis.errorLines) ? analysis.errorLines : [];
 
-  const lotesHtml = analysis.topLotes.length
-    ? `<ul class="agv-cartilla-analysis__lots">${analysis.topLotes
+  const causeText = sap
+    ? esc(t("cartillaAnalysis.missingSap"))
+    : analysis.topCause
+      ? `${esc(analysis.topCause[0])} (${analysis.topCause[1]})`
+      : esc(t("cartillaAnalysis.noCause"));
+
+  const lotsLabel = lines.some((l) => !l.sap)
+    ? t("cartillaAnalysis.topIncidents")
+    : sap
+      ? t("cartillaAnalysis.topLotsSap")
+      : t("cartillaAnalysis.topLots");
+
+  const lotesHtml = lines.length
+    ? `<ul class="agv-cartilla-analysis__lots">${lines
         .map((item) => {
-          const lote = Array.isArray(item) ? item[0] : item.lote;
-          const ids = Array.isArray(item) ? [] : item.ids || [];
-          const idsText = ids.length ? ids.join(", ") : "—";
-          const hints = Array.isArray(item) ? [] : item.hints || [];
-          const hintsHtml = hints.length
-            ? `<div class="agv-cartilla-analysis__lot-cols">${hints
-                .map((h) => esc(h))
-                .join("<br>")}</div>`
-            : "";
-          return `<li class="agv-cartilla-analysis__lot">
-            <div class="agv-cartilla-analysis__lot-main">
-              <strong class="agv-cartilla-analysis__lot-code">${esc(lote)}</strong>
-              <span class="agv-cartilla-analysis__lot-id">${esc(t("cartillaAnalysis.lotId", { id: idsText }))}</span>
-            </div>
-            ${hintsHtml}
+          if (item.lmrSummary) {
+            return `<li class="agv-cartilla-analysis__lot agv-cartilla-analysis__lot--precise agv-cartilla-analysis__lot--summary">
+              <span class="agv-cartilla-analysis__lot-error" title="${esc(item.error || "")}">${esc(item.error || "")}</span>
+            </li>`;
+          }
+          const id = item.id || "—";
+          const lote = item.lote || "—";
+          const error = item.error || "";
+          const sapCls = item.sap ? " agv-cartilla-analysis__lot--sap" : "";
+          return `<li class="agv-cartilla-analysis__lot agv-cartilla-analysis__lot--precise${sapCls}">
+            <span class="agv-cartilla-analysis__lot-id" title="ID">${esc(id)}</span>
+            <span class="agv-cartilla-analysis__lot-sep" aria-hidden="true">·</span>
+            <strong class="agv-cartilla-analysis__lot-code" title="Lote">${esc(lote)}</strong>
+            <span class="agv-cartilla-analysis__lot-sep" aria-hidden="true">·</span>
+            <span class="agv-cartilla-analysis__lot-error" title="${esc(error)}">${esc(error)}</span>
           </li>`;
         })
         .join("")}</ul>`
@@ -347,6 +759,24 @@ function renderDetails(analysis, t) {
           t("cartillaAnalysis.duplicates", { count: String(analysis.duplicateCount) })
         )}</p>`
       : "";
+
+  if (sap && !analysis.hasNonSapLines) {
+    return `
+    <div class="agv-cartilla-analysis__block">
+      <span class="agv-cartilla-analysis__block-label">${esc(t("cartillaAnalysis.mainCause"))}</span>
+      <p class="agv-cartilla-analysis__block-value">${causeText}</p>
+    </div>
+    <div class="agv-cartilla-analysis__block agv-cartilla-analysis__block--lots">
+      <span class="agv-cartilla-analysis__block-label">${esc(lotsLabel)}</span>
+      ${lotesHtml}
+    </div>
+    ${dupLine}
+    <p class="agv-cartilla-analysis__reading">${esc(analysis.reading)}</p>`;
+  }
+
+  const columnText = analysis.topColumn
+    ? `${esc(analysis.topColumn[0])} (${analysis.topColumn[1]})`
+    : esc(t("cartillaAnalysis.seeTable"));
 
   return `
     <div class="agv-cartilla-analysis__grid">
@@ -360,7 +790,7 @@ function renderDetails(analysis, t) {
       </div>
     </div>
     <div class="agv-cartilla-analysis__block agv-cartilla-analysis__block--lots">
-      <span class="agv-cartilla-analysis__block-label">${esc(t("cartillaAnalysis.topLots"))}</span>
+      <span class="agv-cartilla-analysis__block-label">${esc(lotsLabel)}</span>
       ${lotesHtml}
     </div>
     ${dupLine}
@@ -369,6 +799,7 @@ function renderDetails(analysis, t) {
 
 export function htmlCartillaAnalysisModal(analysis, t) {
   const esc = analysis.htmlEscape;
+  // Modal / «Ver detalle»: solo errores. Observaciones no van aquí.
   return `
     <div class="agv-cartilla-analysis agv-cartilla-analysis--modal agv-cartilla-analysis--${analysis.level}">
       <p class="agv-cartilla-analysis__meta">${esc(analysis.cartilla)} · ${esc(analysis.fechaLabel)}</p>
@@ -390,7 +821,8 @@ export function htmlCartillaAnalysisPanel(analysis, t) {
       </div>
       ${renderKpis(analysis, t)}
       ${renderDetails(analysis, t)}
-    </div>`;
+    </div>
+    ${renderObservations(analysis, t)}`;
 }
 
 /**
@@ -482,12 +914,19 @@ export function deriveFilasConErrorFromDom(
     if (!row) return;
     const errorCells = tr.querySelectorAll(selector);
     if (!errorCells.length) return;
-    const cols = new Set();
+    const cols = new Map();
     errorCells.forEach((td) => {
       const js = Number(td.dataset.excelCol);
-      if (Number.isFinite(js) && js >= 0) cols.add(js);
+      if (!Number.isFinite(js) || js < 0) return;
+      const title = String(td.title || "").trim();
+      cols.set(js, title || cols.get(js) || "");
     });
     row._errorCols = cols;
+    if (!Array.isArray(row._errors) || !row._errors.length) {
+      row._errors = [...cols.entries()]
+        .filter(([, msg]) => msg)
+        .map(([js, msg]) => `Columna ${js + 1}: ${msg}`);
+    }
     out.push(row);
   });
   return out;

@@ -15,6 +15,7 @@ import {
   paintCellValidation,
   parseFlexibleNumber
 } from "../../../../../engine/cartilla-cell-validation.js";
+import { isPtSapDataColJs, PT_SKIP_SAP_VALIDATION } from "../shared/mp-results-perf.util.js";
 
 export function serialExcelAFecha(serial) {
   if (!serial || Number.isNaN(Number(serial))) return serial;
@@ -105,6 +106,7 @@ function collectAllIssues(row, fechaEmbalaje, config = null) {
   const incidencias = [];
 
   indicesToValidate(cfg).forEach((idx) => {
+    if (PT_SKIP_SAP_VALIDATION && isPtSapDataColJs(idx)) return;
     getCellValidationIssues(idx, row[idx], ctx, cfg).forEach((issue) => {
       incidencias.push(issue.message);
     });
@@ -143,7 +145,10 @@ export function applyCellValidation(td, fila, colIdx, valor, fechaEmbalaje, conf
   if (copyClass) td.classList.add("agv-pt-cell-copy");
   td.title = "";
 
-  const issues = getCellValidationIssues(colIdx, valor, ctx, cfg);
+  const issues =
+    PT_SKIP_SAP_VALIDATION && isPtSapDataColJs(colIdx)
+      ? []
+      : getCellValidationIssues(colIdx, valor, ctx, cfg);
   if (colIdx === getColTrazabilidadJs()) {
     issues.push(...collectTrazabilidadIssues(fila, fechaEmbalaje));
   }

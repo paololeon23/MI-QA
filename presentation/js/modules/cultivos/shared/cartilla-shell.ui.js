@@ -9,6 +9,16 @@ function t(i18nPrefix, key, vars = {}) {
   return text;
 }
 
+/** Primera clave i18n que exista para el prefijo del módulo. */
+function tFirst(i18nPrefix, keys, fallback = "") {
+  for (const key of keys) {
+    const full = `${i18nPrefix}.${key}`;
+    const text = i18nService.translate(full);
+    if (text && text !== full) return text;
+  }
+  return fallback;
+}
+
 function htmlEscape(value) {
   return String(value)
     .replace(/&/g, "&amp;")
@@ -123,7 +133,13 @@ export class CartillaShellUi {
     }
 
     if (refs.inspectionSelect) {
-      refs.inspectionSelect.innerHTML = `<option value="" disabled selected>${htmlEscape(t(this.i18nPrefix, "selectDate"))}</option>`;
+      refs.inspectionSelect.innerHTML = `<option value="" disabled selected>${htmlEscape(
+        tFirst(
+          this.i18nPrefix,
+          ["selectPackagingDate", "selectDate"],
+          "Selecciona una fecha"
+        )
+      )}</option>`;
       refs.inspectionSelect.disabled = true;
     }
 
@@ -168,7 +184,13 @@ export class CartillaShellUi {
     }
 
     if (refs.cosechaSelect) {
-      refs.cosechaSelect.innerHTML = `<option value="" selected>${htmlEscape(t(this.i18nPrefix, "autoDate"))}</option>`;
+      refs.cosechaSelect.innerHTML = `<option value="" selected>${htmlEscape(
+        tFirst(
+          this.i18nPrefix,
+          ["selectHarvestDate", "autoDate", "lmrAutoDate"],
+          "Auto-Fecha"
+        )
+      )}</option>`;
       refs.cosechaSelect.disabled = true;
       refs.cosechaSelect.classList.remove(`${this.cls("input")}--warning`);
     }

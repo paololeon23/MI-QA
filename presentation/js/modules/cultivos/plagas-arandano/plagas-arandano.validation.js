@@ -77,3 +77,34 @@ export function ejecutarValidacionPlagasArandano(rows, config, options = {}) {
 export function rowHasMarkedErrors(row) {
   return Boolean(row._errorLote || (row._errors && row._errors.length > 0));
 }
+
+/** Filas con error: primero lotes duplicados (agrupados), luego el resto. */
+export function sortErrorRowsForDisplay(rows, loteIdx = 9, lotesDuplicados = []) {
+  if (!rows?.length) return [];
+  if (!lotesDuplicados?.length) return [...rows];
+
+  const dupSet = new Set(lotesDuplicados);
+  const loteKey = (row) => valorCeldaParaMostrar(row[loteIdx]).trim();
+  const seenLotes = new Set();
+  const loteOrder = [];
+  const rest = [];
+
+  rows.forEach((row) => {
+    const lote = loteKey(row);
+    if (lote && dupSet.has(lote)) {
+      if (!seenLotes.has(lote)) {
+        seenLotes.add(lote);
+        loteOrder.push(lote);
+      }
+    } else {
+      rest.push(row);
+    }
+  });
+
+  const dups = [];
+  loteOrder.forEach((lote) => {
+    rows.filter((r) => loteKey(r) === lote).forEach((r) => dups.push(r));
+  });
+
+  return [...dups, ...rest];
+}

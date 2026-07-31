@@ -254,23 +254,33 @@
     },
     {
       "numero": 59,
-      "nombre-de-la-columna": "Peso 01"
+      "nombre-de-la-columna": "Peso 01",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Peso 01 es obligatorio"
     },
     {
       "numero": 60,
-      "nombre-de-la-columna": "Peso 02"
+      "nombre-de-la-columna": "Peso 02",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Peso 02 es obligatorio"
     },
     {
       "numero": 61,
-      "nombre-de-la-columna": "Peso 03"
+      "nombre-de-la-columna": "Peso 03",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Peso 03 es obligatorio"
     },
     {
       "numero": 62,
-      "nombre-de-la-columna": "Peso 04"
+      "nombre-de-la-columna": "Peso 04",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Peso 04 es obligatorio"
     },
     {
       "numero": 63,
-      "nombre-de-la-columna": "Peso 05"
+      "nombre-de-la-columna": "Peso 05",
+      "es-obligatorio": true,
+      "si-falla-mostrar": "Peso 05 es obligatorio"
     },
     {
       "numero": 64,

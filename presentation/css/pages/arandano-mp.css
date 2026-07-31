@@ -1784,13 +1784,82 @@
 }
 
 /* Tabla resultados */
+#agvMpApp .agv-mp-table-panel {
+  display: flex;
+  flex-direction: column;
+  margin: 0 0.875rem 0.25rem;
+  border: 1px solid var(--agv-mp-line, #d0d7e2);
+  border-radius: var(--agv-mp-radius-sm, 0.375rem);
+  background: #fff;
+  overflow: hidden;
+}
+
+#agvMpApp .agv-mp-table-search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.65rem 0.875rem;
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  border-bottom: 1px solid var(--agv-mp-line, #d0d7e2);
+}
+
+#agvMpApp .agv-mp-table-search-wrap[hidden] {
+  display: none !important;
+}
+
+#agvMpApp .agv-mp-table-search-label {
+  margin: 0;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #475569;
+  white-space: nowrap;
+}
+
+#agvMpApp .agv-mp-table-search {
+  box-sizing: border-box;
+  flex: 1 1 16rem;
+  width: auto;
+  min-width: 14rem;
+  max-width: 28rem;
+  height: 2.125rem;
+  padding: 0 0.75rem;
+  font: inherit;
+  font-size: 0.8125rem;
+  letter-spacing: 0.01em;
+  color: #0f172a;
+  background: #fff;
+  border: 1px solid #94a3b8;
+  border-radius: 0.25rem;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+#agvMpApp .agv-mp-table-search::placeholder {
+  color: #94a3b8;
+  font-weight: 400;
+}
+
+#agvMpApp .agv-mp-table-search:focus {
+  border-color: #1f3668;
+  box-shadow: 0 0 0 2px rgba(31, 54, 104, 0.14);
+}
+
+#agvMpApp .agv-mp-row--search-hidden {
+  display: none !important;
+}
+
 #agvMpApp .agv-mp-table-box {
   overflow: auto;
   max-height: min(68vh, 760px);
   padding: 0;
   background: #fafbfc;
   -webkit-overflow-scrolling: touch;
-  border-radius: 0 0 var(--agv-mp-radius) var(--agv-mp-radius);
+  border-radius: 0;
+  border: none;
+  margin: 0;
 }
 
 #agvMpApp .agv-mp-table-box:has(#agv-mp-results-table[hidden]) {
@@ -1829,7 +1898,8 @@
   position: -webkit-sticky;
   position: sticky;
   top: 0;
-  z-index: 4;
+  /* Por encima de cualquier td sticky del body (z≤4) al hacer scroll vertical */
+  z-index: 10;
   background: #f1f5f9;
   color: #1f3668;
   font-size: 0.6875rem;
@@ -2021,6 +2091,32 @@
 
 .agv-mp-dialog--wide {
   width: min(100%, 28rem);
+}
+
+/* Export choice: compacto y limpio (no usa el ancho del análisis). */
+.agv-mp-dialog--export {
+  width: min(92vw, 22.5rem);
+  padding: 1.15rem 1rem 0.95rem;
+}
+
+.agv-mp-dialog--export .agv-mp-dialog__title {
+  margin-bottom: 0.85rem;
+}
+
+.agv-mp-dialog--export .agv-mp-dialog__actions {
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid #e8eef6;
+}
+
+.agv-mp-dialog--export .agv-mp-dialog__btn--primary {
+  min-height: 2.55rem;
+  font-size: 0.8125rem;
+  letter-spacing: 0.01em;
+}
+
+.agv-mp-dialog--export .agv-mp-dialog__btn--ghost {
+  min-height: 2.15rem;
 }
 
 .agv-mp-dialog__icon {
@@ -2439,18 +2535,35 @@
   max-width: 95px;
 }
 
-#agvMpApp .agv-mp-table:not(.agv-mp-table--uva):not(.agv-mp-table--esparrago):not(.agv-mp-table--palta) .agv-mp-sticky-col-6 {
+#agvMpApp .agv-mp-table:not(.agv-mp-table--uva):not(.agv-mp-table--esparrago):not(.agv-mp-table--palta) .agv-mp-sticky-col-3 {
   left: 190px;
+  width: 110px;
+  min-width: 110px;
+  max-width: 110px;
+}
+
+#agvMpApp .agv-mp-table:not(.agv-mp-table--uva):not(.agv-mp-table--esparrago):not(.agv-mp-table--palta) .agv-mp-sticky-col-4 {
+  left: 300px;
+  width: 72px;
+  min-width: 72px;
+  max-width: 72px;
+}
+
+#agvMpApp .agv-mp-table:not(.agv-mp-table--uva):not(.agv-mp-table--esparrago):not(.agv-mp-table--palta) .agv-mp-sticky-col-6 {
+  left: 372px;
   width: 230px;
   min-width: 230px;
   max-width: 230px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 #agvMpApp .agv-mp-table:not(.agv-mp-table--uva):not(.agv-mp-table--esparrago):not(.agv-mp-table--palta) .agv-mp-sticky-col-9 {
-  left: 420px;
+  left: 602px;
   width: 126px;
   min-width: 126px;
   max-width: 126px;
+  box-shadow: 2px 0 6px rgba(15, 23, 42, 0.06);
 }
 
 #agvMpApp .agv-mp-table:not(.agv-mp-table--uva):not(.agv-mp-table--esparrago):not(.agv-mp-table--palta) .agv-mp-sticky-col {
@@ -2462,6 +2575,8 @@
 }
 
 #agvMpApp .agv-mp-table:not(.agv-mp-table--uva) tbody td.agv-mp-sticky-col-1,
+#agvMpApp .agv-mp-table:not(.agv-mp-table--uva) tbody td.agv-mp-sticky-col-3,
+#agvMpApp .agv-mp-table:not(.agv-mp-table--uva) tbody td.agv-mp-sticky-col-4,
 #agvMpApp .agv-mp-table:not(.agv-mp-table--uva) tbody td.agv-mp-sticky-col-6,
 #agvMpApp .agv-mp-table:not(.agv-mp-table--uva) tbody td.agv-mp-sticky-col-9 {
   z-index: 3;
@@ -2472,13 +2587,15 @@
 }
 
 #agvMpApp .agv-mp-table:not(.agv-mp-table--uva) thead th.agv-mp-sticky-col-0 {
-  z-index: 6;
+  z-index: 12;
 }
 
 #agvMpApp .agv-mp-table:not(.agv-mp-table--uva) thead th.agv-mp-sticky-col-1,
+#agvMpApp .agv-mp-table:not(.agv-mp-table--uva) thead th.agv-mp-sticky-col-3,
+#agvMpApp .agv-mp-table:not(.agv-mp-table--uva) thead th.agv-mp-sticky-col-4,
 #agvMpApp .agv-mp-table:not(.agv-mp-table--uva) thead th.agv-mp-sticky-col-6,
 #agvMpApp .agv-mp-table:not(.agv-mp-table--uva) thead th.agv-mp-sticky-col-9 {
-  z-index: 5;
+  z-index: 11;
 }
 
 #agvMpApp .agv-mp-table:not(.agv-mp-table--uva) tbody tr:nth-child(even) td.agv-mp-sticky-col {

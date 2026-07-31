@@ -5,6 +5,7 @@ import {
   buildColumnLabelsByIndex,
   mergeValidacionesDesdeReglas
 } from "../../../../../engine/cartilla-rules.adapter.js";
+import { filterOutPtSapCols } from "../shared/mp-results-perf.util.js";
 
 let _validaciones = null;
 let _reglas = null;
@@ -65,7 +66,9 @@ export function getColLmrJs() {
 }
 
 export function getVisualColsPt() {
-  return getEsparragoPtValidaciones().columnas_visibles_frontend?.indices_js ?? [0, 1, 6, 9];
+  return filterOutPtSapCols(
+    getEsparragoPtValidaciones().columnas_visibles_frontend?.indices_js ?? [0, 1, 6, 9]
+  );
 }
 
 export function getStickyColsPt() {

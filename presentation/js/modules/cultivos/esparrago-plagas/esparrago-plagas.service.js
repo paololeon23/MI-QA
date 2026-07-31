@@ -10,7 +10,7 @@ import {
   cellDisplayValue,
   collectLotes,
   findDuplicates,
-  getRowErrorColumnIndices
+  getRowErrorEntries
 } from "./esparrago-plagas.validation.js";
 import {
   buildCompareSummaryHtml,
@@ -27,6 +27,7 @@ import {
   headersToAnalysisColumns
 } from "../shared/cartilla-analysis.js";
 import { expandPlagasSapLayout } from "../shared/mp-sap-layout.util.js";
+import { applyDateDisplayFormatToRows } from "../shared/excel-date-format.util.js";
 
 const CONFIG_PATH = "presentation/data/plagas-esparrago-validaciones.json";
 const CARTILLA_ORDER = ["IPP", "ISP"];
@@ -233,7 +234,9 @@ export class EsparragoPlagasService {
         } = expandPlagasSapLayout(rawHeaders, rawRows, perfilPlagas);
 
         this.headersByCartilla[cartilla] = headers;
-        this.rawDataByCartilla[cartilla] = rows;
+        this.rawDataByCartilla[cartilla] = applyDateDisplayFormatToRows(rows, headers, [
+          4, 20, 21, 77
+        ]);
         this.excelCabeceraByCartilla[cartilla] = this.parseExcelCabecera(data, cartilla);
         if (expanded) sapInsertedTotal += insertedSap21;
         archivosProcesados += 1;
@@ -389,7 +392,7 @@ export class EsparragoPlagasService {
 
     const rows = [...(stats.rowsIPP || []), ...(stats.rowsISP || [])];
     const annotateErrorCols = (row, tipo) => {
-      const cols = getRowErrorColumnIndices(
+      const entries = getRowErrorEntries(
         row,
         tipo,
         this.config,
@@ -400,7 +403,15 @@ export class EsparragoPlagasService {
         },
         { includeFixed: true }
       );
-      row._errorCols = new Set(cols);
+      // Map + _errors: el panel de análisis lista causas concretas (no genéricas).
+      const errorCols = new Map();
+      const errors = [];
+      entries.forEach(({ idx, message }) => {
+        errorCols.set(idx, message);
+        errors.push(`Columna ${idx + 1}: ${message}`);
+      });
+      row._errorCols = errorCols;
+      row._errors = errors;
       return row;
     };
     const filasConError = [

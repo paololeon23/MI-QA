@@ -161,9 +161,9 @@ function searchHectaresData(query) {
         hits.push({
           type: "data",
           href: "#/inicio",
-          title: `${totalLabel} ha — Fundo ${summary.fundo}`,
+          title: `${totalLabel} ha — ${i18nService.translate("inicio.fundoNamed", { code: summary.fundo })}`,
           location: i18nService.translate("labels.searchLocatedIn", {
-            place: `${i18nService.translate("routes.inicio")} › ${cropName} › Fundo ${summary.fundo}`
+            place: `${i18nService.translate("routes.inicio")} › ${cropName} › ${i18nService.translate("inicio.fundoNamed", { code: summary.fundo })}`
           }),
           path: "inicio",
           jump: {
@@ -189,7 +189,7 @@ function searchHectaresData(query) {
         href: "#/inicio",
         title: `${parcel.variedad} · ${areaLabel} ha`,
         location: i18nService.translate("labels.searchLocatedIn", {
-          place: `${i18nService.translate("routes.inicio")} › ${cropName} › Fundo ${parcel.fundo} › ${parcel.etapa}/${parcel.campo}`
+          place: `${i18nService.translate("routes.inicio")} › ${cropName} › ${i18nService.translate("inicio.fundoNamed", { code: parcel.fundo })} › ${parcel.etapa}/${parcel.campo}`
         }),
         path: "inicio",
         jump: {

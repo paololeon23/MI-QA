@@ -70,93 +70,63 @@
     },
     {
       "numero": 13,
-      "nombre-de-la-columna": "Productor",
-      "es-obligatorio": true,
-      "si-falla-mostrar": "Productor es obligatorio"
+      "nombre-de-la-columna": "Productor"
     },
     {
       "numero": 14,
-      "nombre-de-la-columna": "Guía de Remisión",
-      "es-obligatorio": true,
-      "si-falla-mostrar": "Guía de Remisión es obligatorio"
+      "nombre-de-la-columna": "Guía de Remisión"
     },
     {
       "numero": 15,
-      "nombre-de-la-columna": "Etapa",
-      "es-obligatorio": true,
-      "si-falla-mostrar": "Etapa es obligatorio"
+      "nombre-de-la-columna": "Etapa"
     },
     {
       "numero": 16,
-      "nombre-de-la-columna": "Campo",
-      "es-obligatorio": true,
-      "si-falla-mostrar": "Campo es obligatorio"
+      "nombre-de-la-columna": "Campo"
     },
     {
       "numero": 17,
-      "nombre-de-la-columna": "Turno",
-      "es-obligatorio": true,
-      "si-falla-mostrar": "Turno es obligatorio"
+      "nombre-de-la-columna": "Turno"
     },
     {
       "numero": 18,
-      "nombre-de-la-columna": "Fundo",
-      "es-obligatorio": true,
-      "si-falla-mostrar": "Fundo es obligatorio"
+      "nombre-de-la-columna": "Fundo"
     },
     {
       "numero": 19,
-      "nombre-de-la-columna": "Variedad",
-      "es-obligatorio": true,
-      "si-falla-mostrar": "Variedad es obligatorio"
+      "nombre-de-la-columna": "Variedad"
     },
     {
       "numero": 20,
-      "nombre-de-la-columna": "Fecha Cosecha",
-      "es-obligatorio": true,
-      "si-falla-mostrar": "Fecha Cosecha es obligatorio"
+      "nombre-de-la-columna": "Fecha Cosecha"
     },
     {
       "numero": 21,
-      "nombre-de-la-columna": "Fecha de Producción",
-      "es-obligatorio": true,
-      "si-falla-mostrar": "Fecha de Producción es obligatorio"
+      "nombre-de-la-columna": "Fecha de Producción"
     },
     {
       "numero": 22,
-      "nombre-de-la-columna": "Tecnologia de Postcosecha PT",
-      "es-obligatorio": true,
-      "si-falla-mostrar": "Tecnologia de Postcosecha PT es obligatorio"
+      "nombre-de-la-columna": "Tecnologia de Postcosecha PT"
     },
     {
       "numero": 23,
-      "nombre-de-la-columna": "Calibre",
-      "es-obligatorio": true,
-      "si-falla-mostrar": "Calibre es obligatorio"
+      "nombre-de-la-columna": "Calibre"
     },
     {
       "numero": 24,
-      "nombre-de-la-columna": "Tipo de Embalado",
-      "es-obligatorio": true,
-      "si-falla-mostrar": "Tipo de Embalado es obligatorio"
+      "nombre-de-la-columna": "Tipo de Embalado"
     },
     {
       "numero": 25,
-      "nombre-de-la-columna": "Categoria",
-      "es-obligatorio": true,
-      "si-falla-mostrar": "Categoria es obligatorio"
+      "nombre-de-la-columna": "Categoria"
     },
     {
       "numero": 26,
-      "nombre-de-la-columna": "Turno Linea",
-      "es-obligatorio": true,
-      "si-falla-mostrar": "Turno Linea es obligatorio"
+      "nombre-de-la-columna": "Turno Linea"
     },
     {
       "numero": 27,
-      "nombre-de-la-columna": "Linea",
-      "es-obligatorio": true,
-      "si-falla-mostrar": "Linea es obligatorio"
+      "nombre-de-la-columna": "Linea"
     },
     {
       "numero": 28,
@@ -166,33 +136,23 @@
     },
     {
       "numero": 29,
-      "nombre-de-la-columna": "Tipo de formato",
-      "es-obligatorio": true,
-      "si-falla-mostrar": "Tipo de formato es obligatorio"
+      "nombre-de-la-columna": "Tipo de formato"
     },
     {
       "numero": 30,
-      "nombre-de-la-columna": "Etiqueta",
-      "es-obligatorio": true,
-      "si-falla-mostrar": "Etiqueta es obligatorio"
+      "nombre-de-la-columna": "Etiqueta"
     },
     {
       "numero": 31,
-      "nombre-de-la-columna": "Jaba",
-      "es-obligatorio": true,
-      "si-falla-mostrar": "Jaba es obligatorio"
+      "nombre-de-la-columna": "Jaba"
     },
     {
       "numero": 32,
-      "nombre-de-la-columna": "Viaje",
-      "es-obligatorio": true,
-      "si-falla-mostrar": "Viaje es obligatorio"
+      "nombre-de-la-columna": "Viaje"
     },
     {
       "numero": 33,
-      "nombre-de-la-columna": "Peso Bruto",
-      "es-obligatorio": true,
-      "si-falla-mostrar": "Peso Bruto es obligatorio"
+      "nombre-de-la-columna": "Peso Bruto"
     },
     {
       "numero": 34,
@@ -700,6 +660,7 @@
       34,
       38,
       41,
+      48,
       57,
       58,
       59,
@@ -711,7 +672,8 @@
       "10": "Cant. M.",
       "27": "Nota C.",
       "33": "Calibre",
-      "41": "Fecha Insp."
+      "41": "Fecha Insp.",
+      "48": "Fecha LMR"
     }
   },
   "reorden-ptpha-ptlpa": [

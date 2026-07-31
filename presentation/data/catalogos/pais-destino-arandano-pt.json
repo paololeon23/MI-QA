@@ -7,7 +7,15 @@
     },
     {
       "cliente": "BENASSI",
-      "destino": "BRASIL"
+      "destino": "LATAM"
+    },
+    {
+      "cliente": "FRESH FRUITS",
+      "destino": "LATAM"
+    },
+    {
+      "cliente": "FRESH FRUIT",
+      "destino": "LATAM"
     },
     {
       "cliente": "WISH FARMS INC.",

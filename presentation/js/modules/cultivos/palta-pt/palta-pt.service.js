@@ -31,6 +31,8 @@ import {
   deriveFilasConErrorFromDom,
   headersToAnalysisColumns
 } from "../shared/cartilla-analysis.js";
+import { applyDateDisplayFormatToRows } from "../shared/excel-date-format.util.js";
+import { PT_SKIP_SAP_VALIDATION } from "../shared/mp-results-perf.util.js";
 
 function t(key, vars = {}) {
   let text = i18nService.translate(key);
@@ -48,14 +50,6 @@ function ensureXlsx() {
     text: t("plagasArandano.errorXlsxLibrary")
   });
   return false;
-}
-
-function htmlEscape(value) {
-  return String(value)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
 }
 
 function htmlEscape(value) {
@@ -196,7 +190,11 @@ export class PaltaPtService {
       }
 
       this.excelCabecera = this.parseExcelCabecera(data);
-      this.dataRows = data.slice(DATA_START_INDEX).filter((row) => row.some((c) => String(c ?? "").trim()));
+      this.dataRows = applyDateDisplayFormatToRows(
+        data.slice(DATA_START_INDEX).filter((row) => row.some((c) => String(c ?? "").trim())),
+        this.headers,
+        [20, 21, 41, 51, 64, 65]
+      );
       this.resetResultsUi();
 
       const fechas = uniquePackagingDates(this.dataRows);
@@ -278,7 +276,7 @@ export class PaltaPtService {
           <div class="${p("excel-insight__ring")}" aria-hidden="true">
             <svg viewBox="0 0 100 100" shape-rendering="geometricPrecision">
               <defs>
-                <linearGradient id="agvPtPaltaInsightRingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <linearGradient id="agvPtInsightRingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                   <stop offset="0%" stop-color="#5eb8d9"></stop>
                   <stop offset="100%" stop-color="#22c55e"></stop>
                 </linearGradient>
@@ -462,7 +460,8 @@ export class PaltaPtService {
       colLoteJs: 9,
       columns: headersToAnalysisColumns(this.headers),
       cartilla: CARTILLA_CODE,
-      fechaLabel: fechaEmb || "—"
+      fechaLabel: fechaEmb || "—",
+      skipSapValidation: PT_SKIP_SAP_VALIDATION
     });
   }
 

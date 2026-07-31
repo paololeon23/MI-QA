@@ -12,7 +12,10 @@ import {
 } from "./uva-pt.validation.js";
 import { hydrateLucideIcons } from "../../../utils/lucide-icon.util.js";
 import { translateExcelHeader } from "../../../utils/excel-header-i18n.util.js";
-import { refreshTranslatedHeaderRow } from "../../../utils/table-header-i18n.util.js";
+import {
+  resolveSapZoneHeader,
+  SAP_ZONE_HEADER_LABELS_BY_JS
+} from "../shared/mp-results-perf.util.js";
 import {
   applyPtColumnVisibility,
   bindColumnContextMenu,
@@ -99,7 +102,11 @@ function buildActionsCell(row, tr, onRowMark, onCopyReport) {
 }
 
 function columnLabel(col, headers) {
-  const raw = col === "Suma Tonalidades" ? col : headers[col] || `Col ${Number(col) + 1}`;
+  if (col === "Suma Tonalidades") return translateExcelHeader(col, -1);
+  if (typeof col === "number" && SAP_ZONE_HEADER_LABELS_BY_JS[col] != null) {
+    return resolveSapZoneHeader(col, headers?.[col] || "").label;
+  }
+  const raw = headers[col] || `Col ${Number(col) + 1}`;
   return translateExcelHeader(raw, typeof col === "number" ? col : -1);
 }
 
@@ -111,12 +118,37 @@ function buildPlainHeader(th, excelCol, displayIdx, headers) {
     excelCol === "Suma Tonalidades" ? excelCol : headers[excelCol] || `Col ${Number(excelCol) + 1}`;
   const label = columnLabel(excelCol, headers);
   th.textContent = label;
-  th.title = `${label} — clic para ocultar/mostrar columnas`;
+  if (SAP_ZONE_HEADER_LABELS_BY_JS[excelCol] != null) {
+    th.classList.add("agv-pt-table__col-header--sap");
+    th.title = resolveSapZoneHeader(excelCol, headers?.[excelCol] || "").title;
+  } else {
+    th.title = `${label} — clic para ocultar/mostrar columnas`;
+  }
   if (typeof excelCol === "number") applySticky(th, excelCol);
 }
 
 export function refreshUvaPtHeaderLabels(headerRow, headers) {
-  refreshTranslatedHeaderRow(headerRow, (idx) => headers[idx] || "");
+  if (!headerRow) return;
+  headerRow.querySelectorAll("th[data-excel-col], th[data-col-index]").forEach((th) => {
+    const excelColRaw = th.dataset.excelCol;
+    const excelCol =
+      excelColRaw != null && excelColRaw !== ""
+        ? Number.isFinite(Number(excelColRaw))
+          ? Number(excelColRaw)
+          : excelColRaw
+        : null;
+    if (excelCol == null && th.dataset.excelHeader === "Suma Tonalidades") {
+      th.textContent = columnLabel("Suma Tonalidades", headers);
+      return;
+    }
+    if (excelCol == null) return;
+    const label = columnLabel(excelCol, headers);
+    th.dataset.excelHeader =
+      typeof excelCol === "number"
+        ? headers[excelCol] || `Col ${excelCol + 1}`
+        : String(excelCol);
+    th.textContent = label;
+  });
 }
 
 function ensureProtectedColsVisible(tableEl) {

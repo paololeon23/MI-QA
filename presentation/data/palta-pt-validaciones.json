@@ -68,12 +68,12 @@
   "columnas_visibles_frontend": {
     "indices_js": [
       0,
-      3,
-      4,
       6,
       9,
+      3,
+      4,
       10,
-      27,
+      12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
       33,
       37,
       38,
@@ -91,7 +91,7 @@
     "extra": [
       "E_C"
     ],
-    "descripcion": "COLUMNAS_FRONT + E_C derivado de trazabilidad col 73"
+    "descripcion": "Sticky Id/Usuario/Lote + contexto + zona SAP 13–33 (Nota WULUT) + operativas + E_C."
   },
   "filtros_tabla": {
     "destino_indice_js": 51,

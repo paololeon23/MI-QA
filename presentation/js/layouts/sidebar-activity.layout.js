@@ -75,6 +75,16 @@ export function buildSidebarActivityMarkup() {
           <button
             type="button"
             class="sidebar-activity__action"
+            id="btnSidebarActivityIncognito"
+            aria-pressed="false"
+            aria-label="${i18nService.translate("sidebar.activityIncognito")}"
+            title="${i18nService.translate("sidebar.activityIncognito")}"
+          >
+            ${lucideIcon("eye")}
+          </button>
+          <button
+            type="button"
+            class="sidebar-activity__action"
             id="btnSidebarActivityPin"
             aria-label="${i18nService.translate("sidebar.activityPin")}"
             title="${i18nService.translate("sidebar.activityPin")}"

@@ -159,7 +159,13 @@ export function showPtExportChoiceDialog({ title = "", html = "", choices = [] }
     overlay.setAttribute("aria-modal", "true");
 
     const dialog = document.createElement("div");
-    dialog.className = "agv-pt-dialog agv-pt-dialog--wide";
+    dialog.className = "agv-pt-dialog agv-pt-dialog--export";
+
+    const iconEl = document.createElement("div");
+    iconEl.className = "agv-pt-dialog__icon agv-pt-dialog__icon--info";
+    iconEl.setAttribute("aria-hidden", "true");
+    iconEl.textContent = "↓";
+    dialog.appendChild(iconEl);
 
     const titleEl = document.createElement("h3");
     titleEl.className = "agv-pt-dialog__title";

@@ -37,7 +37,7 @@ export function createTraceReviewController(options) {
     countryKey = "PERU",
     titleKey,
     inputLabelKey,
-    examplePlaceholder = "4A07A00125216"
+    examplePlaceholder = "6A07A00125216"
   } = options;
 
   return class TraceReviewModuleController extends GenericModuleController {
@@ -72,6 +72,7 @@ export function createTraceReviewController(options) {
         if (labelText) labelText.textContent = t(inputLabelKey);
       }
       if (this.input && !this.input.value) {
+        this.input.value = examplePlaceholder;
         this.input.placeholder = examplePlaceholder;
       }
 
@@ -82,6 +83,10 @@ export function createTraceReviewController(options) {
 
       try {
         this.catalog = await this.loadCatalog();
+        // Ejemplo 2026 precargado: listo para «Separar código» (se puede borrar).
+        if (this.input?.value) {
+          this.renderLive(this.input.value);
+        }
       } catch {
         this.showError(t("trazabilidadReview.catalogError"));
       }

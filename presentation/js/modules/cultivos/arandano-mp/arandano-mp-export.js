@@ -18,19 +18,12 @@ export function buildExportOrderMPBA() {
   return [...commonExportPrefix(), ...range(34, 104)];
 }
 
-/** MPHAR: prefijo + reorden bloque defectos. */
+/**
+ * MPHAR: el layout ya se normaliza al cargar (orden canónico).
+ * Export = orden natural 1..104 (prefijo común + resto).
+ */
 export function buildExportOrderMPHA() {
-  return [
-    ...commonExportPrefix(),
-    ...range(34, 82),
-    84,
-    83,
-    72,
-    ...range(85, 102),
-    104,
-    103,
-    92
-  ];
+  return [...commonExportPrefix(), ...range(34, 104)];
 }
 
 /** MPGAR: prefijo + ORDER_MPGAR (104 cols). */

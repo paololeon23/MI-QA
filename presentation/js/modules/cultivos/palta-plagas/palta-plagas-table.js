@@ -9,10 +9,27 @@ import {
 } from "./palta-plagas.validation.js";
 import { translateExcelHeader } from "../../../utils/excel-header-i18n.util.js";
 import { refreshTranslatedHeaderRow } from "../../../utils/table-header-i18n.util.js";
+import {
+  DEFAULT_MP_STICKY_COLS,
+  DEFAULT_MP_STICKY_HEADER_SHORT,
+  DEFAULT_MP_STICKY_HEADER_TITLE,
+  DEFAULT_MP_STICKY_WIDTHS,
+  syncMpStickyOffsets
+} from "../shared/mp-sticky-offsets.util.js";
 
 function applySticky(el, excelCol, stickyCols) {
   if (!stickyCols.includes(excelCol)) return;
   el.classList.add("agv-mp-sticky-col", `agv-mp-sticky-col-${excelCol}`);
+}
+
+function stickyHeaderLabel(idx, rawLabel) {
+  if (DEFAULT_MP_STICKY_HEADER_SHORT[idx] != null) return DEFAULT_MP_STICKY_HEADER_SHORT[idx];
+  return translateExcelHeader(rawLabel, idx);
+}
+
+function stickyHeaderTitle(idx, rawLabel) {
+  if (DEFAULT_MP_STICKY_HEADER_TITLE[idx] != null) return DEFAULT_MP_STICKY_HEADER_TITLE[idx];
+  return translateExcelHeader(rawLabel, idx);
 }
 
 function columnHasError(row, idx, ctx, config) {
@@ -33,7 +50,7 @@ export function renderPaltaPlagasTable({
   t
 }) {
   const visibleCols = config.columnas_visibles_frontend?.indices_js || COLUMNS_TO_SHOW;
-  const stickyCols = config.columnas_sticky || [0, 1, 6, 9];
+  const stickyCols = config.columnas_sticky || DEFAULT_MP_STICKY_COLS;
   const errorRows = rows.filter((r) => rowHasMarkedErrors(r));
   const ctx = { duplicadosLote: syncContext.duplicadosLote };
 
@@ -44,8 +61,8 @@ export function renderPaltaPlagasTable({
     const rawLabel = resolveColumnLabel(idx, headers, columnLabelsByIndex, config);
     th.dataset.colIndex = String(idx);
     th.dataset.excelHeader = rawLabel;
-    th.textContent = translateExcelHeader(rawLabel, idx);
-    th.title = th.textContent;
+    th.textContent = stickyHeaderLabel(idx, rawLabel);
+    th.title = stickyHeaderTitle(idx, rawLabel);
     applySticky(th, idx, stickyCols);
     if (idx >= 99 && idx <= 131) th.classList.add("agv-mp-col-texto-wrap");
     headerRow.appendChild(th);
@@ -62,6 +79,7 @@ export function renderPaltaPlagasTable({
     td.textContent = t("plagasArandano.noErrorsOnInspection");
     tr.appendChild(td);
     bodyRows.appendChild(tr);
+    syncMpStickyOffsets(headerRow.closest("table"), stickyCols, DEFAULT_MP_STICKY_WIDTHS);
     return { errorCount: 0, totalRows: rows.length };
   }
 
@@ -86,6 +104,7 @@ export function renderPaltaPlagasTable({
     bodyRows.appendChild(tr);
   });
 
+  syncMpStickyOffsets(headerRow.closest("table"), stickyCols, DEFAULT_MP_STICKY_WIDTHS);
   return { errorCount: errorRows.length, totalRows: rows.length };
 }
 
@@ -95,7 +114,7 @@ export function renderNestedErrorTableHtml(filas, headers, config, columnLabelsB
 
   const thead = visibleCols
     .map((idx) => {
-      const label = translateExcelHeader(resolveColumnLabel(idx, headers, columnLabelsByIndex, config), idx);
+      const label = stickyHeaderLabel(idx, resolveColumnLabel(idx, headers, columnLabelsByIndex, config));
       const wrapCls = idx >= 99 && idx <= 131 ? ' class="agv-mp-col-texto-wrap"' : "";
       return `<th${wrapCls} scope="col">${htmlEscape(label)}</th>`;
     })
@@ -103,7 +122,6 @@ export function renderNestedErrorTableHtml(filas, headers, config, columnLabelsB
 
   const tbody = filas
     .map((row) => {
-      const rowCtx = { row, duplicadosLote: [] };
       const tds = visibleCols
         .map((idx) => {
           const val = cellDisplayValue(row[idx]);
@@ -132,7 +150,10 @@ export function renderNestedErrorTableHtml(filas, headers, config, columnLabelsB
 }
 
 export function refreshPaltaPlagasHeaderLabels(headerRow, headers, columnLabelsByIndex, config) {
-  refreshTranslatedHeaderRow(headerRow, (idx) =>
-    resolveColumnLabel(idx, headers, columnLabelsByIndex, config)
-  );
+  refreshTranslatedHeaderRow(headerRow, (idx) => {
+    const raw = resolveColumnLabel(idx, headers, columnLabelsByIndex, config);
+    return stickyHeaderLabel(idx, raw);
+  });
+  const stickyCols = config?.columnas_sticky || DEFAULT_MP_STICKY_COLS;
+  syncMpStickyOffsets(headerRow?.closest("table"), stickyCols, DEFAULT_MP_STICKY_WIDTHS);
 }

@@ -12,25 +12,12 @@ import {
   getCellValidationIssues as getCellIssuesFromConfig,
   indicesToValidate
 } from "../../../../../engine/cartilla-cell-validation.js";
+import { formatDateValueToDMY } from "../shared/excel-date-format.util.js";
 
 export function formatYyyyMmDd(raw) {
-  const str = String(raw ?? "").trim();
-  if (!str) return "";
-  if (str.length === 8 && /^\d{8}$/.test(str)) {
-    const yyyy = str.slice(0, 4);
-    const mm = str.slice(4, 6);
-    const dd = str.slice(6, 8);
-    return `${dd}/${mm}/${yyyy}`;
-  }
-  if (/\d{1,2}\/\d{1,2}\/\d{4}/.test(str)) {
-    const [d, m, y] = str.split("/");
-    return `${d.padStart(2, "0")}/${m.padStart(2, "0")}/${y}`;
-  }
-  if (/\d{1,2}-\d{1,2}-\d{4}/.test(str)) {
-    const [d, m, y] = str.split("-");
-    return `${d.padStart(2, "0")}/${m.padStart(2, "0")}/${y}`;
-  }
-  return str;
+  const formatted = formatDateValueToDMY(raw);
+  if (formatted) return formatted;
+  return String(raw ?? "").trim();
 }
 
 export function parseFlexibleNumber(val) {

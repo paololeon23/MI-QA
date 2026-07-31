@@ -1,7 +1,10 @@
 /**
- * Copia este archivo como gemini.config.local.js y pega tu API key.
- * gemini.config.local.js está en .gitignore (no se publica).
+ * Copia este archivo como gemini.config.local.js y pega tu key de Google AI Studio.
+ * Netlify: variable de entorno GEMINI_API_KEY.
  */
 export const geminiConfig = {
-  apiKey: "TU_API_KEY_DE_AI_STUDIO"
+  provider: "gemini",
+  apiKey: "TU_GEMINI_API_KEY",
+  model: "gemini-2.5-flash",
+  fallbackModels: ["gemini-2.0-flash", "gemini-flash-latest"]
 };

@@ -181,7 +181,15 @@
     {
       "columna_excel": 29,
       "indice_js": 28,
-      "reglas": [{ "tipo": "obligatorio" }]
+      "campo": "Tipo de formato",
+      "reglas": [
+        { "tipo": "obligatorio" },
+        {
+          "tipo": "lista_valores",
+          "valores": [55, 56, 57, 58, 59, 61, 69, 73, 78],
+          "mensaje_error": "Tipo de formato debe ser 55, 56, 57, 58, 59, 61, 69, 73 o 78"
+        }
+      ]
     },
     {
       "columna_excel": 30,
@@ -237,7 +245,7 @@
   },
   "exportacion": {
     "columnas_como_numero": {
-      "indices_js": "14-16 y 28-110 excepto 17 y 71"
+      "indices_js": "10 (Cant Muestra) + 14-16 y 28-110 excepto 71"
     },
     "color_celda_vacia_rgb": "FFC94C4C",
     "color_celda_vacia_texto_rgb": "FFFFFFFF",

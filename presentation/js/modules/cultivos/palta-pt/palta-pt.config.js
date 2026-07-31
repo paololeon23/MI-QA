@@ -2,6 +2,7 @@
 
 import { cargarReglasDesdeRuta } from "../../../../../engine/rule-engine.js";
 import { mergeValidacionesDesdeReglas } from "../../../../../engine/cartilla-rules.adapter.js";
+import { filterOutPtSapCols } from "../shared/mp-results-perf.util.js";
 
 let _validaciones = null;
 let _reglas = null;
@@ -76,10 +77,18 @@ export function getColTrazabilidadJs() {
 
 export function getColumnasFront() {
   const cfg = getPaltaPtValidaciones().columnas_visibles_frontend;
-  if (cfg?.indices_js?.length) return [...cfg.indices_js, ...(cfg.extra ?? [])];
-  return [
-    0, 3, 4, 6, 9, 10, 27, 33, 37, 38, 51, 53, 54, 55, 60, 65, 69, 70, 71, 72, "E_C"
-  ];
+  const sticky = getStickyColsPt();
+  const stickySet = new Set(sticky);
+  const indices = filterOutPtSapCols(
+    cfg?.indices_js?.length
+      ? [...cfg.indices_js]
+      : [0, 3, 4, 6, 9, 10, 27, 33, 37, 38, 51, 53, 54, 55, 60, 65, 69, 70, 71, 72]
+  );
+  // Sticky contiguos al inicio (Action | Id | Usuario | Lote) para no desalinear al scroll
+  const head = sticky.filter((i) => indices.includes(i));
+  const rest = indices.filter((i) => !stickySet.has(i));
+  const extra = cfg?.extra ?? ["E_C"];
+  return [...head, ...rest, ...extra];
 }
 
 export function getStickyColsPt() {

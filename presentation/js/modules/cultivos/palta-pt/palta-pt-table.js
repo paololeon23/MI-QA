@@ -16,13 +16,48 @@ import {
 } from "./palta-pt.validation.js";
 import { hydrateLucideIcons } from "../../../utils/lucide-icon.util.js";
 import { translateExcelHeader } from "../../../utils/excel-header-i18n.util.js";
-import { refreshTranslatedHeaderRow } from "../../../utils/table-header-i18n.util.js";
+import {
+  resolveSapZoneHeader,
+  SAP_ZONE_HEADER_LABELS_BY_JS
+} from "../shared/mp-results-perf.util.js";
 import {
   applyPtColumnVisibility,
   bindColumnContextMenu,
-  bindCopyableCells,
-  syncTableColgroup
+  bindCopyableCells
 } from "../arandano-pt/arandano-pt-table.js";
+
+/** Anchos fijos sticky — mismos que Espárrago PT (Id/Usuario/Lote). */
+const PALTA_STICKY_COL_WIDTHS = {
+  0: 90,
+  6: 246,
+  9: 130
+};
+const PALTA_ACTION_COL_WIDTH = 92;
+
+function syncPaltaPtColgroup(tableEl, visualCols) {
+  if (!tableEl) return;
+  let cg = tableEl.querySelector("colgroup");
+  if (!cg) {
+    cg = document.createElement("colgroup");
+    tableEl.insertBefore(cg, tableEl.firstChild);
+  }
+  cg.replaceChildren();
+
+  const colAction = document.createElement("col");
+  colAction.className = "agv-pt-col-action";
+  colAction.style.width = `${PALTA_ACTION_COL_WIDTH}px`;
+  cg.appendChild(colAction);
+
+  visualCols.forEach((excelCol, displayIdx) => {
+    const col = document.createElement("col");
+    col.className = "agv-pt-col-data";
+    col.dataset.colIndex = String(displayIdx);
+    if (typeof excelCol === "number") col.dataset.excelCol = String(excelCol);
+    const stickyWidth = typeof excelCol === "number" ? PALTA_STICKY_COL_WIDTHS[excelCol] : null;
+    if (stickyWidth != null) col.style.width = `${stickyWidth}px`;
+    cg.appendChild(col);
+  });
+}
 
 const WHATSAPP_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="white" viewBox="0 0 16 16"><path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.06 3.973L0 16l4.104-1.076a7.863 7.863 0 0 0 3.89.593c4.365 0 7.923-3.559 7.923-7.928a7.858 7.858 0 0 0-2.316-5.563zM7.994 14.52a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592zm3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.729.729 0 0 0-.529.247c-.182.198-.691.677-.691 1.654 0 .977.71 1.916.81 2.049.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232z"/></svg>`;
 
@@ -104,6 +139,9 @@ function buildActionsCell(row, tr, fechaEmbalaje, onRowMark, onCopyReport) {
 
 function columnLabel(col, headers) {
   if (col === "E_C") return "E_C";
+  if (typeof col === "number" && SAP_ZONE_HEADER_LABELS_BY_JS[col] != null) {
+    return resolveSapZoneHeader(col, headers?.[col] || "").label;
+  }
   return translateExcelHeader(headers[col] || `Col ${Number(col) + 1}`, typeof col === "number" ? col : -1);
 }
 
@@ -129,12 +167,30 @@ function buildPlainHeader(th, excelCol, displayIdx, headers) {
   th.dataset.excelHeader = rawLabel;
   const label = columnLabel(excelCol, headers);
   th.textContent = label;
-  th.title = `${label} — clic para ocultar/mostrar columnas`;
+  if (SAP_ZONE_HEADER_LABELS_BY_JS[excelCol] != null) {
+    th.classList.add("agv-pt-table__col-header--sap");
+    th.title = resolveSapZoneHeader(excelCol, headers?.[excelCol] || "").title;
+  } else {
+    th.title = `${label} — clic para ocultar/mostrar columnas`;
+  }
   applySticky(th, excelCol);
 }
 
 export function refreshPaltaPtHeaderLabels(headerRow, headers) {
-  refreshTranslatedHeaderRow(headerRow, (idx) => headers[idx] || "");
+  if (!headerRow) return;
+  headerRow.querySelectorAll("th[data-excel-col]").forEach((th) => {
+    const excelCol = Number(th.dataset.excelCol);
+    if (!Number.isFinite(excelCol)) return;
+    const labelEl = th.querySelector(".agv-pt-filter-head__label");
+    const label = columnLabel(excelCol, headers);
+    if (labelEl) {
+      labelEl.textContent = label;
+      return;
+    }
+    if (th.classList.contains("agv-pt-data-header--filter")) return;
+    th.dataset.excelHeader = headers[excelCol] || `Col ${excelCol + 1}`;
+    th.textContent = label;
+  });
 }
 
 function populateFilterSelect(selectEl, valores, valorActual) {
@@ -309,7 +365,7 @@ export function renderPaltaPtTable({
 
   if (tableEl) {
     tableEl.classList.add("agv-pt-table--palta");
-    syncTableColgroup(tableEl, getColumnasFront().length);
+    syncPaltaPtColgroup(tableEl, getColumnasFront());
     if (!tableEl._ptHiddenCols) tableEl._ptHiddenCols = new Set();
     ensureProtectedColsVisible(tableEl);
     delete tableEl.dataset.filtersBound;

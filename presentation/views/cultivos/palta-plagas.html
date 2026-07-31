@@ -136,19 +136,21 @@
     <div id="agv-mp-resumen-todas" class="agv-mp-resumen" hidden></div>
 
     <section id="agv-mp-results-section" class="agv-mp-results" aria-live="polite" hidden>
-      <header class="agv-mp-results__head">
-        <span id="agv-mp-results-icon" class="agv-mp-results__icon" aria-hidden="true">
-          <i data-lucide="triangle-alert"></i>
-        </span>
-        <div class="agv-mp-results__titles">
-          <h3 id="agv-mp-results-title" class="agv-mp-results__title" data-i18n="plagasPalta.errorRowsTitle"></h3>
-          <p id="agv-mp-results-subtitle" class="agv-mp-results__subtitle"></p>
+      <header class="agv-mp-results__bar">
+        <div class="agv-mp-results__lead">
+          <span id="agv-mp-results-icon" class="agv-mp-results__icon" aria-hidden="true">
+            <i data-lucide="triangle-alert"></i>
+          </span>
+          <div>
+            <h3 id="agv-mp-results-title" class="agv-mp-results__title" data-i18n="plagasPalta.errorRowsTitle"></h3>
+            <p id="agv-mp-results-subtitle" class="agv-mp-results__subtitle"></p>
+          </div>
         </div>
-        <div id="agv-mp-total-filas" class="agv-mp-results__count"></div>
+        <span id="agv-mp-total-filas" class="agv-mp-results__chip"></span>
       </header>
       <div id="agv-mp-cartilla-analysis" class="agv-cartilla-analysis-host" hidden></div>
-      <div class="agv-mp-table-scroll">
-        <table id="agv-mp-results-table" class="agv-mp-table" hidden>
+      <div class="agv-mp-table-box">
+        <table id="agv-mp-results-table" class="agv-mp-table agv-mp-table--palta" hidden>
           <thead><tr id="agv-mp-results-header"></tr></thead>
           <tbody id="agv-mp-results-body"></tbody>
         </table>

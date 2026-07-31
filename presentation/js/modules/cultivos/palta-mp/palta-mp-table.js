@@ -1,18 +1,28 @@
-/** Tabla Palta MP — columnas reducidas (solo errores + sticky), Fragment DOM */
+/** Tabla Palta MP — columnas configuradas a validar + suma calibres (solo UI), Fragment DOM */
 
-import { getStickyCols, getTotalColumnas } from "./palta-mp.config.js";
 import {
+  getPaltaMpValidaciones,
+  getStickyCols,
+  getTotalColumnas
+} from "./palta-mp.config.js";
+import {
+  EXTRA_COL_SUMA_CALIBRES,
   getCellMeta,
   formatFechaCelda,
   valorCelda
 } from "./palta-mp.validation.js";
 import { hydrateLucideIcons } from "../../../utils/lucide-icon.util.js";
-import { DEFAULT_MP_CONTEXT_COLS_JS } from "../shared/mp-results-perf.util.js";
+import {
+  resolveSapZoneHeader,
+  SAP_ZONE_HEADER_LABELS_BY_JS
+} from "../shared/mp-results-perf.util.js";
 import { translateExcelHeader } from "../../../utils/excel-header-i18n.util.js";
 import { refreshTranslatedHeaderRow } from "../../../utils/table-header-i18n.util.js";
 
+const SUMA_CALIBRES_HEADER = "Σ Calibres 36–50 vs Cant. muestra";
+
 function isPinnedColumn(index) {
-  return getStickyCols().includes(index);
+  return typeof index === "number" && getStickyCols().includes(index);
 }
 
 export function applyStickyColumnClasses(el, index) {
@@ -21,20 +31,57 @@ export function applyStickyColumnClasses(el, index) {
 }
 
 function formatCellDisplay(row, colJs) {
+  if (colJs === EXTRA_COL_SUMA_CALIBRES) {
+    return getCellMeta(row, colJs).val;
+  }
   const raw = row[colJs];
   if ([19, 63, 64].includes(colJs)) return formatFechaCelda(raw);
   return valorCelda(raw);
 }
 
-/** Palta marca errores en row._errorCols (índices JS). */
+function formatPaltaHeader(headers, colJs) {
+  if (colJs === EXTRA_COL_SUMA_CALIBRES) return SUMA_CALIBRES_HEADER;
+  const excelHeader = headers?.[colJs] || "";
+  if (SAP_ZONE_HEADER_LABELS_BY_JS[colJs] != null) {
+    return resolveSapZoneHeader(colJs, excelHeader).label;
+  }
+  return translateExcelHeader(excelHeader, colJs);
+}
+
+function paltaHeaderTitle(headers, colJs) {
+  if (colJs === EXTRA_COL_SUMA_CALIBRES) {
+    return "Columna solo frontend: suma Excel 36–50 debe ser igual a Cant. muestra (11)";
+  }
+  const excelHeader = headers?.[colJs] || "";
+  if (SAP_ZONE_HEADER_LABELS_BY_JS[colJs] != null) {
+    return resolveSapZoneHeader(colJs, excelHeader).title;
+  }
+  return formatPaltaHeader(headers, colJs);
+}
+
+function isRealColumnIndex(i, totalCols) {
+  return typeof i === "number" && Number.isFinite(i) && i >= 0 && i < totalCols;
+}
+
+/** Orden fijo de columnas_visibles_frontend; errores fuera de lista van al final. */
 function pickPaltaColumnIndexes(totalCols, filas) {
-  const needed = new Set([...DEFAULT_MP_CONTEXT_COLS_JS, ...getStickyCols()]);
+  const cfg = getPaltaMpValidaciones();
+  const ordered = (cfg?.columnas_visibles_frontend?.indices_js || []).filter(
+    (i) => i === EXTRA_COL_SUMA_CALIBRES || isRealColumnIndex(i, totalCols)
+  );
+  const seen = new Set(ordered);
+
+  const extraErrors = [];
   (filas || []).forEach((row) => {
     row._errorCols?.forEach((colJs) => {
-      if (colJs >= 0 && colJs < totalCols) needed.add(colJs);
+      if (isRealColumnIndex(colJs, totalCols) && !seen.has(colJs)) {
+        seen.add(colJs);
+        extraErrors.push(colJs);
+      }
     });
   });
-  return [...needed].filter((i) => i >= 0 && i < totalCols).sort((a, b) => a - b);
+  extraErrors.sort((a, b) => a - b);
+  return [...ordered, ...extraErrors];
 }
 
 export function renderPaltaMpResultsTable({
@@ -106,9 +153,15 @@ export function renderPaltaMpResultsTable({
   colIndexes.forEach((i) => {
     const th = document.createElement("th");
     th.className = "agv-mp-table__col-header";
+    if (i === EXTRA_COL_SUMA_CALIBRES) th.classList.add("agv-mp-table__col-header--suma");
     th.dataset.colIndex = String(i);
-    th.dataset.excelHeader = String(headers[i] || "");
-    th.textContent = translateExcelHeader(headers[i] || "", i);
+    th.dataset.excelHeader =
+      i === EXTRA_COL_SUMA_CALIBRES ? SUMA_CALIBRES_HEADER : String(headers[i] || "");
+    th.textContent = formatPaltaHeader(headers, i);
+    th.title = paltaHeaderTitle(headers, i);
+    if (typeof i === "number" && SAP_ZONE_HEADER_LABELS_BY_JS[i] != null) {
+      th.classList.add("agv-mp-table__col-header--sap");
+    }
     applyStickyColumnClasses(th, i);
     headerFrag.appendChild(th);
   });
@@ -142,7 +195,13 @@ export function htmlTablaFilasConError(headers, filas, { htmlEscape, t, titled =
   const thead = colIndexes
     .map((i) => {
       const sticky = isPinnedColumn(i) ? ` agv-mp-sticky-col agv-mp-sticky-col-${i}` : "";
-      return `<th class="agv-mp-table__col-header${sticky}">${htmlEscape(translateExcelHeader(headers[i] || "", i))}</th>`;
+      const sap =
+        typeof i === "number" && SAP_ZONE_HEADER_LABELS_BY_JS[i] != null
+          ? " agv-mp-table__col-header--sap"
+          : "";
+      const suma = i === EXTRA_COL_SUMA_CALIBRES ? " agv-mp-table__col-header--suma" : "";
+      const title = htmlEscape(paltaHeaderTitle(headers, i));
+      return `<th class="agv-mp-table__col-header${sticky}${sap}${suma}" title="${title}">${htmlEscape(formatPaltaHeader(headers, i))}</th>`;
     })
     .join("");
 
@@ -179,5 +238,11 @@ export function htmlTablaFilasConError(headers, filas, { htmlEscape, t, titled =
 }
 
 export function refreshPaltaMpHeaderLabels(headerRow, headers) {
-  refreshTranslatedHeaderRow(headerRow, (idx) => headers[idx] || "");
+  refreshTranslatedHeaderRow(headerRow, (idx) => {
+    if (idx === EXTRA_COL_SUMA_CALIBRES || String(idx) === EXTRA_COL_SUMA_CALIBRES) {
+      return SUMA_CALIBRES_HEADER;
+    }
+    const n = Number(idx);
+    return formatPaltaHeader(headers, Number.isFinite(n) ? n : idx);
+  });
 }

@@ -85,6 +85,7 @@
       6,
       9,
       10,
+      12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
       37,
       38,
       40,
@@ -104,7 +105,8 @@
     ],
     "extra": [
       "Suma Tonalidades"
-    ]
+    ],
+    "descripcion": "Sticky + Cant. muestra + zona SAP 13–33 (Nota WULUT) + operativas + Suma Tonalidades."
   },
   "mostrar_solo_errores": false,
   "reglas_modulo": "rules/modulos/uva-pt.rules.json",

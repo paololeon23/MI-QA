@@ -106,7 +106,7 @@
   --sidebar-width-collapsed: 4.25rem;
   --topbar-height: 4rem;
   --footer-height: 3.25rem;
-  --content-max-width: 100rem;
+  --content-max-width: 100%;
 
   /* Z-index scale */
   --z-dropdown: 100;
@@ -138,7 +138,7 @@
     --font-size-4xl: 3.75rem;
     --sidebar-width: 15.5rem;
     --topbar-height: 4.75rem;
-    --content-max-width: 112rem;
+    --content-max-width: 100%;
   }
 }
 
@@ -154,7 +154,7 @@
     --font-size-4xl: 4.25rem;
     --sidebar-width: 17rem;
     --topbar-height: 5.25rem;
-    --content-max-width: 120rem;
+    --content-max-width: 180rem;
     --spacing-8: 2.75rem;
     --spacing-10: 3.25rem;
     --spacing-12: 4rem;

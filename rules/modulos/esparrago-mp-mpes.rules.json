@@ -358,8 +358,8 @@
       "numero": 76,
       "nombre-de-la-columna": "T° Ambiente",
       "minimo": 16,
-      "maximo": 28,
-      "si-falla-mostrar": "T° Ambiente debe estar entre 16 y 28"
+      "maximo": 30,
+      "si-falla-mostrar": "T° Ambiente debe estar entre 16 y 30"
     },
     {
       "numero": 77,

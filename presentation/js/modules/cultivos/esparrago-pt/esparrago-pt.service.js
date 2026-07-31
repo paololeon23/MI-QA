@@ -26,7 +26,9 @@ import {
 } from "./esparrago-pt-table.js";
 import { exportEsparragoPtFiltered } from "./esparrago-pt-export.js";
 import { expandMissingSapLayout } from "../shared/mp-sap-layout.util.js?v=2026072219";
+import { applyDateDisplayFormatToRows } from "../shared/excel-date-format.util.js";
 import { loadSapColumnasCatalog, getSapPerfil } from "../../../config/sap-columnas.registry.js";
+import { PT_SKIP_SAP_VALIDATION } from "../shared/mp-results-perf.util.js";
 import {
   createCartillaAnalysisController,
   deriveFilasConErrorFromDom,
@@ -198,7 +200,7 @@ export class EsparragoPtService {
 
       this.headers = headers;
       this.excelCabecera = this.parseExcelCabecera(data);
-      this.dataRows = layoutRows;
+      this.dataRows = applyDateDisplayFormatToRows(layoutRows, headers, [20, 21, 41, 51]);
       this._sapLayoutNotice = sapLayoutExpanded
         ? { insertedSap15, insertedSap5 }
         : null;
@@ -220,9 +222,10 @@ export class EsparragoPtService {
       this.syncButtons();
       this.renderExcelInsight();
 
-      const sapNote = this._sapLayoutNotice
-        ? `<br><small>Se completaron huecos SAP vacíos (+${this._sapLayoutNotice.insertedSap15} + ${this._sapLayoutNotice.insertedSap5}) para alinear Nota Condición (col 28) y el bloque siguiente (col 34).</small>`
-        : "";
+      const sapNote =
+        !PT_SKIP_SAP_VALIDATION && this._sapLayoutNotice
+          ? `<br><small>Se completaron huecos SAP vacíos (+${this._sapLayoutNotice.insertedSap15} + ${this._sapLayoutNotice.insertedSap5}) para alinear Nota Condición (col 28) y el bloque siguiente (col 34).</small>`
+          : "";
       showPtDialog({
         icon: "success",
         title: "Excel cargado",
@@ -390,9 +393,9 @@ export class EsparragoPtService {
     this.filteredTableRows = filtradas;
 
     const { errorSAP, errorDefectos, errorCalidad } = scanGlobalWarnings(filtradas);
-    if (errorSAP || errorDefectos || errorCalidad) {
+    if ((!PT_SKIP_SAP_VALIDATION && errorSAP) || errorDefectos || errorCalidad) {
       const mensajes = [];
-      if (errorSAP) mensajes.push(t("ptEsparrago.warnSap"));
+      if (!PT_SKIP_SAP_VALIDATION && errorSAP) mensajes.push(t("ptEsparrago.warnSap"));
       if (errorDefectos) mensajes.push(t("ptEsparrago.warnDefectos"));
       if (errorCalidad) mensajes.push(t("ptEsparrago.warnCalidad"));
       await showPtDialog({
@@ -455,6 +458,7 @@ export class EsparragoPtService {
       columns: headersToAnalysisColumns(this.headers),
       cartilla: CARTILLA_CODE,
       fechaLabel: formatISOToDMY(fecha) || fecha || "—",
+      skipSapValidation: PT_SKIP_SAP_VALIDATION,
       translateHeader: (_header, idx) =>
         resolvePtEsparragoColumnLabel(idx, this.headers, columnLabelsByIndex) ||
         String(_header ?? `Col ${idx + 1}`)

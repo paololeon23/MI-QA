@@ -55,6 +55,8 @@ export const AGV_MP_SHELL_IDS = {
   excelInsight: "agv-mp-excel-insight",
   notificationIcon: "agv-mp-notification-icon",
   notificationCount: "agv-mp-notification-count",
+  tableSearchWrap: "agv-mp-table-search-wrap",
+  tableSearch: "agv-mp-table-search",
   colMenu: "agv-mp-col-menu"
 };
 

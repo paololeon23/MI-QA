@@ -155,13 +155,32 @@ export function getCompareColumnLabel(idx, headers, config, columnLabelsByIndex 
 }
 
 export function getRowErrorColumnIndices(row, tipo, config, syncContext, options = {}) {
+  return getRowErrorEntries(row, tipo, config, syncContext, options).map((e) => e.idx);
+}
+
+/**
+ * Errores de fila con mensaje (para panel análisis / lotes con causa).
+ * @returns {{ idx: number, message: string, kind: string }[]}
+ */
+export function getRowErrorEntries(row, tipo, config, syncContext, options = {}) {
   const ctx = buildRowContext(tipo, syncContext);
   const fixed = config.columnas_compare?.fijas_js ?? [0, 6, 9];
   const includeFixed = options.includeFixed === true;
-  return indicesToValidate(config).filter((idx) => {
-    if (!includeFixed && fixed.includes(idx)) return false;
-    return getCellValidationIssues(idx, row[idx], ctx, config).length > 0;
+  const entries = [];
+
+  indicesToValidate(config).forEach((idx) => {
+    if (!includeFixed && fixed.includes(idx)) return;
+    const issues = getCellValidationIssues(idx, row[idx], ctx, config);
+    if (!issues.length) return;
+    const first = issues[0];
+    entries.push({
+      idx,
+      message: String(first.message || "Valor incorrecto").trim() || "Valor incorrecto",
+      kind: first.kind || "value"
+    });
   });
+
+  return entries;
 }
 
 export function sortCompareRowsForDisplay(rows, loteIdx = 9, duplicadosCartilla = []) {
