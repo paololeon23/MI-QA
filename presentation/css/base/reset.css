@@ -23,6 +23,11 @@ body {
   color: var(--color-text-primary);
 }
 
+body.is-sidebar-drawer-open {
+  overflow: hidden;
+  touch-action: none;
+}
+
 button,
 input,
 select,

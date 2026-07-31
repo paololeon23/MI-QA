@@ -2,7 +2,7 @@
   display: none;
 }
 
-/* Sidebar — Premium con colores por cultivo */
+/* Sidebar ? Premium con colores por cultivo */
 
 .sidebar {
   grid-area: sidebar;
@@ -19,7 +19,7 @@
   contain: layout style;
 }
 
-/* Sin animaciones durante colapso — evita pestañeo de colores */
+/* Sin animaciones durante colapso ? evita pesta�eo de colores */
 .application-shell.is-sidebar-collapsing .sidebar,
 .application-shell.is-sidebar-collapsing .sidebar * {
   transition: none !important;
@@ -167,7 +167,7 @@
   box-shadow: none;
 }
 
-/* Asistente IA — solo en panel primario del sidebar */
+/* Asistente IA ? solo en panel primario del sidebar */
 .sidebar-ai-trigger {
   position: relative;
   display: flex;
@@ -383,7 +383,7 @@ body:has(.pmpar-dialog-overlay) .sidebar-ai-trigger__cloud {
   box-shadow: 0 4px 12px rgba(31, 54, 104, 0.35);
 }
 
-/* Crop groups — fruit colors */
+/* Crop groups ? fruit colors */
 .sidebar-nav-group {
   position: relative;
   margin-bottom: var(--spacing-1);
@@ -501,7 +501,7 @@ body:has(.pmpar-dialog-overlay) .sidebar-ai-trigger__cloud {
   color: #64748b;
 }
 
-/* Cultivos — siempre navy #1f3668 */
+/* Cultivos ? siempre navy #1f3668 */
 .sidebar-nav-group[data-crop-theme] .sidebar-nav-group__icon {
   background: #1f3668;
   border-color: #1f3668;
@@ -680,7 +680,7 @@ body:has(.pmpar-dialog-overlay) .sidebar-ai-trigger__cloud {
   border-left-color: rgba(31, 54, 104, 0.35);
 }
 
-/* Flyout — collapsed mode */
+/* Flyout ? collapsed mode */
 .sidebar-nav-flyout {
   position: absolute;
   left: calc(100% + 8px);
@@ -873,7 +873,7 @@ body:has(.pmpar-dialog-overlay) .sidebar-ai-trigger__cloud {
   box-shadow: none;
 }
 
-/* Tooltips — collapsed */
+/* Tooltips ? collapsed */
 .application-shell.is-sidebar-collapsed [data-sidebar-tooltip] {
   position: relative;
 }
@@ -922,7 +922,7 @@ body:has(.pmpar-dialog-overlay) .sidebar-ai-trigger__cloud {
   display: none;
 }
 
-/* ── Panel de actividad (estilo timeline) ── */
+/* ?? Panel de actividad (estilo timeline) ?? */
 
 .sidebar-activity {
   --sidebar-activity-bg: linear-gradient(145deg, #3a5282 0%, #1f3668 100%);
@@ -1328,4 +1328,30 @@ body:has(.pmpar-dialog-overlay) .sidebar-ai-trigger__cloud {
 
 .application-shell.is-sidebar-collapsed .sidebar-activity.is-expanded [data-sidebar-tooltip]::after {
   display: none;
+}
+
+/* Mobile: sidebar off-canvas drawer */
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: min(17.5rem, 88vw);
+    height: 100vh;
+    height: 100dvh;
+    grid-area: unset;
+    transform: translate3d(-105%, 0, 0);
+    transition: transform 0.22s ease;
+    z-index: var(--z-overlay);
+    box-shadow: 12px 0 40px rgba(15, 23, 42, 0.22);
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    contain: none;
+  }
+
+  .application-shell.is-sidebar-drawer-open .sidebar {
+    transform: translate3d(0, 0, 0);
+  }
 }

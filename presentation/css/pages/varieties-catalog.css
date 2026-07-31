@@ -678,6 +678,40 @@
   .var-catalog-page__genetics-grid {
     grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
   }
+
+  .var-catalog-page__panel-head.inicio-varieties__table-card-head,
+  .var-catalog-page__panel-head,
+  .var-catalog-page .inicio-varieties__table-card-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .var-catalog-page__toolbar.inicio-varieties__scorecard-actions,
+  .var-catalog-page__toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    width: 100%;
+    flex: 1 1 auto;
+  }
+
+  .var-catalog-page__search.inicio-varieties__table-search,
+  .var-catalog-page__search {
+    max-width: none;
+    min-width: 0;
+    width: 100%;
+    flex: 1 1 auto;
+  }
+
+  .var-catalog-page__panel-head .inicio-varieties__table-select-wrap {
+    width: 100%;
+  }
+
+  .var-catalog-page__select.inicio-varieties__table-select,
+  .var-catalog-page__select {
+    width: 100%;
+    min-width: 0;
+  }
 }
 
 @media (max-width: 640px) {
@@ -703,25 +737,6 @@
 
   .var-catalog-page__genetics-grid {
     grid-template-columns: 1fr 1fr;
-  }
-
-  .var-catalog-page .inicio-varieties__table-card-head {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .var-catalog-page__toolbar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .var-catalog-page__search {
-    max-width: none;
-    flex: 1 1 100%;
-  }
-
-  .var-catalog-page__select {
-    width: 100%;
   }
 
   .var-catalog-page__version {

@@ -2452,14 +2452,59 @@
   .inicio-varieties__scorecard-actions {
     flex-direction: column;
     align-items: stretch;
+    width: 100%;
   }
 
   .inicio-varieties__table-search {
     max-width: none;
+    min-width: 0;
+    width: 100%;
+    flex: 1 1 auto;
+  }
+
+  .inicio-varieties__table-select-wrap {
+    width: 100%;
+  }
+
+  .inicio-varieties__table-select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  #fundoTablePanel .inicio-varieties__table-card-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  #fundoTablePanel .inicio-varieties__scorecard-actions {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  #fundoTablePanel .inicio-varieties__table-search {
+    max-width: none;
+    min-width: 0;
+    width: 100%;
+  }
+
+  #fundoTablePanel .inicio-varieties__table-select-wrap {
+    width: 100%;
+  }
+
+  #fundoTablePanel .inicio-varieties__table-select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  #fundoTablePanel .inicio-varieties__campaign-badge {
+    width: 100%;
+    justify-content: center;
   }
 
   .inicio-varieties__campaign-badge {
-    align-self: flex-start;
+    align-self: stretch;
+    text-align: center;
   }
 
   .inicio-varieties__chart-legend {
@@ -2486,6 +2531,72 @@
 
   .inicio-crops__grid,
   .inicio-features {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .inicio-page {
+    gap: var(--spacing-4);
+  }
+
+  .inicio-cover__panel {
+    border-radius: 0.875rem;
+  }
+
+  .inicio-cover__scene {
+    min-height: 10.5rem;
+    padding: 0.875rem;
+  }
+
+  .inicio-cover__copy {
+    padding: 0.75rem;
+    max-width: none;
+  }
+
+  .inicio-cover__title {
+    font-size: 1.0625rem;
+  }
+
+  .inicio-cover__subtitle {
+    font-size: 0.875rem;
+  }
+
+  .inicio-cover__desc {
+    font-size: 0.75rem;
+  }
+
+  .inicio-cover__insight {
+    padding: 0.875rem;
+    gap: 0.75rem;
+  }
+
+  .inicio-cover__insight-ring {
+    width: 4.75rem;
+    height: 4.75rem;
+  }
+
+  .inicio-cover__insight-ring-label strong {
+    font-size: 1.0625rem;
+  }
+
+  .inicio-cover__insight-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .inicio-hero {
+    padding: var(--spacing-4);
+  }
+
+  .inicio-hero--welcome {
+    padding: 0.75rem;
+  }
+
+  .inicio-hero__kpis {
+    grid-template-columns: 1fr;
+  }
+
+  .inicio-varieties__kpis {
     grid-template-columns: 1fr;
   }
 }

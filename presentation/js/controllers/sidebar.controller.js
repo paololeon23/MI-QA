@@ -14,6 +14,11 @@ import { mountSidebarAiAssistant } from "../modules/cultivos/esparrago-pt/esparr
 const SIDEBAR_STORAGE_KEY = "agv-sidebar-collapsed";
 const SIDEBAR_ACTIVITY_EXPANDED_KEY = "agv-sidebar-activity-expanded";
 const SIDEBAR_ACTIVITY_PINNED_KEY = "agv-sidebar-activity-pinned";
+const MOBILE_SHELL_MQ = window.matchMedia("(max-width: 768px)");
+
+function isMobileShell() {
+  return MOBILE_SHELL_MQ.matches;
+}
 
 function clearSidebarFlyoutPosition(flyout) {
   if (!flyout) return;
@@ -59,6 +64,7 @@ class SidebarController {
     this.applyStoredCollapseState();
     this.restoreAlwaysExpandedGroups();
     this.bindCollapseToggle();
+    this.bindMobileShellBehavior();
     this.bindSidebarSearch();
     this.bindGroupToggles();
     this.bindPrimaryLinkClicks();
@@ -66,6 +72,91 @@ class SidebarController {
     this.bindActivityPanel();
     this.bindFlyoutViewportGuard();
     this.aiAssistant = mountSidebarAiAssistant();
+  }
+
+  /** En celular: menú off-canvas; inicia cerrado y se cierra al navegar / tocar fondo. */
+  bindMobileShellBehavior() {
+    const applicationShell = document.getElementById("applicationRoot");
+    if (!applicationShell) return;
+
+    const onViewportChange = () => {
+      if (isMobileShell()) {
+        this.setSidebarCollapsed(true, { persist: false });
+        return;
+      }
+      applicationShell.classList.remove("is-sidebar-drawer-open");
+      document.body.classList.remove("is-sidebar-drawer-open");
+      this.applyStoredCollapseState();
+    };
+
+    if (typeof MOBILE_SHELL_MQ.addEventListener === "function") {
+      MOBILE_SHELL_MQ.addEventListener("change", onViewportChange);
+    } else {
+      MOBILE_SHELL_MQ.addListener(onViewportChange);
+    }
+
+    applicationShell.addEventListener("click", (event) => {
+      if (!isMobileShell()) return;
+      if (!applicationShell.classList.contains("is-sidebar-drawer-open")) return;
+
+      if (event.target === applicationShell) {
+        this.setSidebarCollapsed(true, { persist: true });
+        return;
+      }
+
+      const navLink = event.target.closest(".sidebar a[href^='#']");
+      if (navLink) {
+        window.setTimeout(() => {
+          this.setSidebarCollapsed(true, { persist: true });
+        }, 0);
+      }
+    });
+  }
+
+  setSidebarCollapsed(isCollapsed, { persist = true } = {}) {
+    const applicationShell = document.getElementById("applicationRoot");
+    const collapseButton = document.getElementById("btnSidebarCollapse");
+    if (!applicationShell) return;
+
+    if (isMobileShell()) {
+      // Móvil: siempre estilos de menú expandido; solo abre/cierra el drawer.
+      applicationShell.classList.remove("is-sidebar-collapsed");
+      applicationShell.classList.toggle("is-sidebar-drawer-open", !isCollapsed);
+      document.body.classList.toggle("is-sidebar-drawer-open", !isCollapsed);
+      this.updateCollapseButtonIcon(collapseButton, isCollapsed);
+      this.updateBrandLogo(false);
+      if (persist) {
+        writeLocalStorage(SIDEBAR_STORAGE_KEY, "true");
+      }
+      if (isCollapsed) {
+        closeAllSidebarFlyouts();
+      } else {
+        this.restoreAlwaysExpandedGroups();
+        updateActiveSidebarLink(window.location.hash || appConfig.defaultRoute);
+      }
+      return;
+    }
+
+    applicationShell.classList.remove("is-sidebar-drawer-open");
+    document.body.classList.remove("is-sidebar-drawer-open");
+    applicationShell.classList.toggle("is-sidebar-collapsed", isCollapsed);
+    if (persist) {
+      writeLocalStorage(SIDEBAR_STORAGE_KEY, String(isCollapsed));
+    }
+    this.updateCollapseButtonIcon(collapseButton, isCollapsed);
+    this.updateBrandLogo(isCollapsed);
+
+    if (isCollapsed) {
+      closeAllSidebarFlyouts();
+      document.querySelectorAll("[data-sidebar-group].is-expanded").forEach((group) => {
+        if (!group.hasAttribute("data-always-expanded")) {
+          group.classList.remove("is-expanded");
+        }
+      });
+    } else {
+      this.restoreAlwaysExpandedGroups();
+      updateActiveSidebarLink(window.location.hash || appConfig.defaultRoute);
+    }
   }
 
   bindFlyoutViewportGuard() {
@@ -108,26 +199,13 @@ class SidebarController {
 
   applyStoredCollapseState() {
     const applicationShell = document.getElementById("applicationRoot");
-    const collapseButton = document.getElementById("btnSidebarCollapse");
     if (!applicationShell) {
       return;
     }
 
-    const isCollapsed = readLocalStorage(SIDEBAR_STORAGE_KEY) === "true";
-    applicationShell.classList.toggle("is-sidebar-collapsed", isCollapsed);
-    this.updateCollapseButtonIcon(collapseButton, isCollapsed);
-    this.updateBrandLogo(isCollapsed);
-
-    if (isCollapsed) {
-      document.querySelectorAll("[data-sidebar-group].is-expanded").forEach((group) => {
-        if (!group.hasAttribute("data-always-expanded")) {
-          group.classList.remove("is-expanded");
-        }
-      });
-    } else {
-      this.restoreAlwaysExpandedGroups();
-      updateActiveSidebarLink(window.location.hash || appConfig.defaultRoute);
-    }
+    // En celular el menú empieza cerrado para no comer ancho de pantalla.
+    const isCollapsed = isMobileShell() || readLocalStorage(SIDEBAR_STORAGE_KEY) === "true";
+    this.setSidebarCollapsed(isCollapsed, { persist: false });
   }
 
   restoreAlwaysExpandedGroups() {
@@ -245,34 +323,19 @@ class SidebarController {
     }
 
     collapseButton.addEventListener("click", () => {
-      const willCollapse = !applicationShell.classList.contains("is-sidebar-collapsed");
+      const currentlyClosed = isMobileShell()
+        ? !applicationShell.classList.contains("is-sidebar-drawer-open")
+        : applicationShell.classList.contains("is-sidebar-collapsed");
+      const willCollapse = !currentlyClosed;
 
       applicationShell.classList.add("is-sidebar-collapsing");
 
-      if (willCollapse) {
-        document.querySelectorAll("[data-sidebar-group].is-expanded").forEach((group) => {
-          if (!group.hasAttribute("data-always-expanded")) {
-            group.classList.remove("is-expanded");
-          }
-        });
-      } else {
-        this.restoreAlwaysExpandedGroups();
-        updateActiveSidebarLink(window.location.hash || appConfig.defaultRoute);
-      }
-
-      document.querySelectorAll("[data-sidebar-group].is-flyout-open").forEach((openGroup) => {
-        openGroup.classList.remove("is-flyout-open");
-        clearSidebarFlyoutPosition(openGroup.querySelector("[data-sidebar-flyout]"));
-      });
+      closeAllSidebarFlyouts();
       closePrimaryPanelModules();
       setPinnedPrimaryModule(null);
-      updateActiveSidebarLink(window.location.hash || appConfig.defaultRoute, "route");
 
-      applicationShell.classList.toggle("is-sidebar-collapsed");
-      const isCollapsed = applicationShell.classList.contains("is-sidebar-collapsed");
-      writeLocalStorage(SIDEBAR_STORAGE_KEY, String(isCollapsed));
-      this.updateCollapseButtonIcon(collapseButton, isCollapsed);
-      this.updateBrandLogo(isCollapsed);
+      this.setSidebarCollapsed(willCollapse, { persist: true });
+      updateActiveSidebarLink(window.location.hash || appConfig.defaultRoute, "route");
       collapseButton.blur();
 
       window.requestAnimationFrame(() => {
