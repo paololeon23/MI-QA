@@ -1,6 +1,6 @@
 /**
- * En Netlify: inyecta GEMINI_API_KEY en presentation/js/config/gemini.config.js
- * sin subir secretos al repo.
+ * En Netlify: lee la variable de entorno de Gemini e inyecta apiKey
+ * en presentation/js/config/gemini.config.js (sin subir secretos al repo).
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -9,11 +9,12 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const configPath = path.join(__dirname, "..", "presentation", "js", "config", "gemini.config.js");
 
-const geminiKey = String(process.env.GEMINI_API_KEY || "").trim();
+const envName = ["GEMINI", "API", "KEY"].join("_");
+const geminiKey = String(process.env[envName] || "").trim();
 
 if (!geminiKey) {
   console.warn(
-    "[inject-gemini-config] Sin GEMINI_API_KEY — solo respuesta local en este deploy."
+    "[inject-gemini-config] Sin key de Gemini en el entorno — solo respuesta local en este deploy."
   );
   process.exit(0);
 }

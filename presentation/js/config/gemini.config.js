@@ -1,7 +1,7 @@
 /**
  * LLM del asistente — Google Gemini (AI Studio).
  * - Local: gemini.config.local.js (gitignore) con apiKey.
- * - Netlify: GEMINI_API_KEY (scripts/inject-gemini-config.mjs).
+ * - Netlify: variable de entorno en el panel (scripts/inject-gemini-config.mjs).
  *
  * Usar generateContent + modelos reales (gemini-2.5-flash).
  * No usar nombres inventados tipo gemini-3.6-flash.

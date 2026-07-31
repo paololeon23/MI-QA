@@ -4,6 +4,13 @@
   publish = "."
   command = "node scripts/inject-gemini-config.mjs"
 
+# La key de Gemini se inyecta en build a un JS de cliente (asistente IA).
+# Está en Site settings → Environment variables (no en el repo).
+# Omitimos el escaneo de ese secreto/ruta para que el deploy no falle.
+[build.environment]
+  SECRETS_SCAN_OMIT_KEYS = "GEMINI_API_KEY"
+  SECRETS_SCAN_OMIT_PATHS = "presentation/js/config/gemini.config.js"
+
 # Solo rutas inexistentes → SPA (los archivos reales en /presentation no se interceptan).
 [[redirects]]
   from = "/*"

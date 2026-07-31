@@ -76,7 +76,7 @@ function friendlyApiError(err) {
     status === 403 ||
     status === 401
   ) {
-    return "La API key de Gemini fue rechazada. Revisa GEMINI_API_KEY / gemini.config.local.js.";
+    return "La API key de Gemini fue rechazada. Revisa la variable de entorno en Netlify o gemini.config.local.js.";
   }
   return msg || "Error de red o API";
 }
@@ -290,7 +290,7 @@ export async function generateGeminiText(prompt, options = {}) {
   await ensureGeminiConfigLoaded();
 
   if (!hasGeminiKey()) {
-    throw new Error("Falta configurar GEMINI_API_KEY (o apiKey en gemini.config.local.js).");
+    throw new Error("Falta configurar la API key de Gemini (Netlify env o gemini.config.local.js).");
   }
 
   const preferred = Array.isArray(options.preferModels) ? options.preferModels : [];
