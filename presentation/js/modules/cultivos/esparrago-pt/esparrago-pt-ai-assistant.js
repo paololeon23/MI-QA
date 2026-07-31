@@ -103,7 +103,7 @@ const CHIP_CATALOG = {
     fuera: [{ id: "donde", label: "Quels modules peux-tu aider ?", question: "dans quels modules cet assistant aide-t-il ?" }]
   },
   "zh-CN": {
-    inicio: [
+  inicio: [
       { id: "top-var", label: "哪个品种公顷最多？", question: "哪个品种公顷数最多？" },
       { id: "top-fundo", label: "哪个农场公顷最多？", question: "哪个农场公顷数最多？" },
       { id: "area", label: "总共有多少公顷？", question: "总共有多少公顷？" },
@@ -112,20 +112,20 @@ const CHIP_CATALOG = {
       { id: "vars-n", label: "有多少品种？", question: "有多少品种？" },
       { id: "cultivos", label: "有哪些作物？", question: "系统里有哪些作物？" },
       { id: "top-fundos", label: "公顷前三农场", question: "按公顷给出前三农场" }
-    ],
-    variedades: [
+  ],
+  variedades: [
       { id: "genetica-top", label: "哪个遗传学品种最多？", question: "目录里哪个遗传学拥有最多品种？" },
       { id: "total", label: "目录里有多少品种？", question: "目录里有多少品种？" },
       { id: "cuantas-gen", label: "有多少遗传学？", question: "目录里有多少遗传学？" },
       { id: "visibles", label: "筛选后可见多少品种？", question: "当前筛选下可见多少品种？" }
-    ],
-    trazabilidad: [
+  ],
+  trazabilidad: [
       { id: "codigo", label: "当前编码是什么？", question: "当前输入了什么追溯编码？" },
       { id: "pais", label: "秘鲁还是智利？", question: "我现在在秘鲁还是智利追溯？" },
       { id: "packing", label: "显示哪个 packing？", question: "当前编码拆解显示哪个 packing？" },
       { id: "desglose", label: "拆解显示哪些值？", question: "屏幕上拆解显示了哪些值？" }
-    ],
-    cartillas: [
+  ],
+  cartillas: [
       { id: "filtro", label: "当前筛选是什么？", question: "当前检查卡筛选是什么？" },
       { id: "total", label: "有多少检查卡？", question: "有多少检查卡？" },
       { id: "cultivos", label: "检查卡有多少作物？", question: "检查卡目录里有多少作物？" },
